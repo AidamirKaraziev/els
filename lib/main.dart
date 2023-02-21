@@ -1,10 +1,10 @@
 import 'package:els/screns/auth/auth.dart';
+import 'package:els/screns/employee/bloc/employee_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'bloc/company_bloc/company_bloc.dart';
-import 'bloc/employee_bloc/employee_bloc.dart';
 import 'bloc/user_bloc/user_bloc.dart';
 
 
@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
           textTheme: GoogleFonts.ubuntuTextTheme(),
         ),
         home:
-        // const ObjectPage(),
+        // MyMap(),
         const Auth(),
       ),
     );

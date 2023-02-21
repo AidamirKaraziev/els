@@ -9,7 +9,7 @@ import 'package:percent_indicator/circular_percent_indicator.dart';
 
 import '../../bloc/user_bloc/user_bloc.dart';
 import '../../screns/companies/add_companies.dart';
-import '../../screns/employee/add_employee.dart';
+import '../../screns/employee/widgets/add_employee.dart';
 import '../../screns/object/object_widgets/add_object.dart';
 import '../../screns/object/object_widgets/editing_object.dart';
 import '../class_colors.dart';
@@ -158,22 +158,22 @@ class _MyHeaderState extends State<MyHeader> {
               const Spacer(),
               ///Колокольчик
               if(size.width > 400)
-                Badge(
-                  position:
-                  const BadgePosition(top: 0, end: 0),
-                  badgeContent: const Text('9',
-                      style: TextStyle(
-                          color: ColorApp.myColorWhite,
-                          fontWeight: FontWeight.w500)),
-                  toAnimate: false,
-                  badgeColor: ColorApp.myColorRed,
-                  child: IconButton(
-                    onPressed: () {},
-                    icon: const Icon(
-                        Icons.notifications_none_outlined,
-                        size: 25.0),
-                  ),
-                ),
+                // Badge(
+                //   position:
+                //   const BadgePosition(top: 0, end: 0),
+                //   badgeContent: const Text('9',
+                //       style: TextStyle(
+                //           color: ColorApp.myColorWhite,
+                //           fontWeight: FontWeight.w500)),
+                //   toAnimate: false,
+                //   badgeColor: ColorApp.myColorRed,
+                //   child: IconButton(
+                //     onPressed: () {},
+                //     icon: const Icon(
+                //         Icons.notifications_none_outlined,
+                //         size: 25.0),
+                //   ),
+                // ),
 
               SizedBox( width:size.width > 500 ? 40.0 : 10.0),
               ///Аватар Юзера

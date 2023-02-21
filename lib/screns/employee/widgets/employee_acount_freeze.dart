@@ -1,0 +1,87 @@
+import 'package:els/helper/class_colors.dart';
+import 'package:flutter/material.dart';
+
+import '../../ view_user/open_ view_user.dart';
+
+///api/v1/cp/admin/1/archive/ заморозка
+///api/v1/cp/admin/1/unzip/ разморозка
+
+
+/// Заморозка
+
+
+
+class EmployeeAccountFreeze extends StatelessWidget {
+  const EmployeeAccountFreeze({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 300.0,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Spacer(),
+              IconButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  icon: const Icon(
+                    Icons.close,
+                    color: ColorApp.myColorGreenAuth,
+                  )),
+            ],
+          ),
+          const SizedBox(height: 10.0),
+          const Text(
+            'Заморозка аккаунта',
+            style:
+            TextStyle(fontSize: 20.0, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 20.0),
+          const Text(
+            'Вы действительно хотите заморозить аккаунт?',
+            style:
+            TextStyle(fontSize: 15.0, fontWeight: FontWeight.w300),
+          ),
+          const SizedBox(height: 10.0),
+          Text(
+            ' ${String.fromCharCode(0x2022)} Пользователь больше не сможет входить в систему',
+            style:  const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w300),
+          ),
+          const SizedBox(height: 10.0),
+          Text(
+            ' ${String.fromCharCode(0x2022)} Аккаунт можно будет разморозить',
+            style: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w300),
+          ),
+          const SizedBox(height: 20.0),
+          Row(
+            children: [
+              ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(100.0, 40.0),
+                    primary: ColorApp.myColorGrayText,
+                    onPrimary: ColorApp.myColorBlack,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  }, child: const Text('Отмена', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.w500),)),
+              const SizedBox(width: 10.0),
+              ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(200.0, 40.0),
+                      primary: ColorApp.myColorGreenAuth
+                  ),
+                  onPressed: () async {
+                    await freezingUser(IntTest.pressHover);
+                    Navigator.pop(context);
+                  }, child: const Text('Подтвердить', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.w500),)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

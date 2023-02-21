@@ -18,10 +18,15 @@ class ColorApp{
   static const Color myColorYellow = Color(0xffF0BB01);
 }
 
+///Переменные
+
 class IntTest {
   static int indexScreens = 0;
+  static int pressHover = 0;
+  static int badgeCount = 2;
   static String myTitle = 'Главная';
   static String token = '';
   static String myIp = '185.119.58.63';
 }
+
 

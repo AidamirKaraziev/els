@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../helper/class_colors.dart';
+import '../../../helper/class_colors.dart';
 
 ///Вверхние кнопки в Сотрудники
 

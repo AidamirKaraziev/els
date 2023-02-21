@@ -17,8 +17,6 @@ var singleCheckBox = false;
 
 bool openPassword = true;
 
-
-
 class LogAndPass extends StatefulWidget {
   const LogAndPass({Key? key}) : super(key: key);
 
@@ -50,7 +48,7 @@ class _LogAndPassState extends State<LogAndPass> {
       var ress = jsonDecode(response.body);
       IntTest.token = ress['data']['token'];
       await preferences.setString('token', ress['data']['token']);
-      print(IntTest.token);
+      // print(IntTest.token);
       if (IntTest.token != null) {
         UserBloc().add(UserGetEvent());
       }

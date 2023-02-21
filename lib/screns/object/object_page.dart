@@ -1,9 +1,9 @@
-// ignore_for_file: use_key_in_widget_constructors
-
 import 'package:flutter/material.dart';
-
 import '../../helper/class_colors.dart';
-import '../../helper/my_map/my_map.dart';
+import '../home_page/home_page.dart';
+import 'object_widgets/editing_object.dart';
+import 'object_widgets/object_accountFreeze.dart';
+
 
 class ObjectPage extends StatefulWidget {
   const ObjectPage({Key? key}) : super(key: key);
@@ -40,7 +40,10 @@ class _ObjectPageState extends State<ObjectPage> {
                             children: [
                               /// Назад
                               IconButton(
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    IntTest.indexScreens = 3;
+                                    pointsMapController.add(IntTest.indexScreens);
+                                  },
                                   icon: const Icon(
                                     Icons.arrow_circle_left_rounded,
                                     color: ColorApp.myColorGreenAuth,
@@ -60,8 +63,8 @@ class _ObjectPageState extends State<ObjectPage> {
                                       showDialog(
                                           context: context,
                                           builder: (context) =>
-                                              const AlertDialog(
-                                                  // content: EditingCompany(),
+                                               AlertDialog(
+                                                  content: EditingObject(),
                                                   ));
                                     });
                                   },
@@ -75,7 +78,7 @@ class _ObjectPageState extends State<ObjectPage> {
                                       showDialog(
                                           context: context,
                                           builder: (context) => const AlertDialog(
-                                              // content: CompanyAccountFreeze(),
+                                              content: ObjectAccountFreeze(),
                                               ));
                                     });
                                   },

@@ -1,8 +1,8 @@
 import 'package:els/screns/companies/add_contact_person.dart';
 import 'package:els/screns/companies/company_account_freeze.dart';
 import 'package:flutter/material.dart';
-
 import '../../helper/class_colors.dart';
+import '../home_page/home_page.dart';
 import 'editing_company.dart';
 
 class CompanyPage extends StatefulWidget {
@@ -30,7 +30,12 @@ class _CompanyPageState extends State<CompanyPage> {
                         children: [
                           /// Назад
                           IconButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                setState(() {
+                                  IntTest.indexScreens = 4;
+                                  pointsMapController.add(IntTest.indexScreens);
+                                });
+                              },
                               icon: const Icon(
                                 Icons.arrow_circle_left_rounded,
                                 color: ColorApp.myColorGreenAuth,

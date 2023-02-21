@@ -1,4 +1,4 @@
-import 'package:badges/badges.dart';
+import 'package:badges/badges.dart' as badges;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -41,24 +41,23 @@ class UserProfile extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if(state is UserGetState)
-                  Badge(
-                    toAnimate: false,
-                    badgeContent: IconButton(onPressed: () {},
-                      icon: const Icon(
-                        Icons.camera_alt_outlined, color: Colors.white,),),
-                    badgeColor: ColorApp.myColorGreenAuth,
-                    position: BadgePosition.bottomEnd(bottom: -4, end: -3),
-
-                    child: CircleAvatar(
-                      radius: 70.0,
-                      backgroundImage: const AssetImage('assets/user.png'),
-                      foregroundImage: NetworkImage('http://${state.getUser[0]['photo']}'),
-                    ),
-                  ),
+                    Badge(
+                      smallSize: 30.0,
+                      largeSize: 50.0,
+                      alignment: const AlignmentDirectional(100,90),
+                      backgroundColor: ColorApp.myColorGreen,
+                      label: IconButton(onPressed: (){},icon: const Icon(Icons.camera_alt_outlined,color: ColorApp.myColorWhite,)),
+                      child: CircleAvatar(
+                        radius: 70.0,
+                        backgroundImage: const AssetImage('assets/user.png'),
+                        foregroundImage: NetworkImage('http://${state.getUser[0]['photo']}'),
+                    )),
                   const SizedBox(height: 10.0),
                   if(state is UserGetState)
                   Center(
-                    child: Text(state.getUser[0]['name'] != null ? '${state.getUser[0]['name']}' : 'Не заполнено',style: const TextStyle(
+                    child: Text(state.getUser[0]['name'] != null ? '${state.getUser[0]['name']}' : 'Не заполнено',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
                         fontSize: 16.0, fontWeight: FontWeight.w600)),
                   ),
                   const SizedBox(height: 10.0),

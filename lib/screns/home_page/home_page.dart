@@ -1,12 +1,11 @@
-import 'package:badges/badges.dart';
+import 'dart:async';
 import 'package:els/bloc/company_bloc/company_bloc.dart';
-import 'package:els/bloc/employee_bloc/employee_bloc.dart';
 import 'package:els/screns/applications/applications_screen.dart';
 import 'package:els/screns/companies/add_companies.dart';
 import 'package:els/screns/companies/companies_screen.dart';
 import 'package:els/screns/companies/company_page.dart';
-import 'package:els/screns/employee/add_employee.dart';
-import 'package:els/screns/employee/employees_screen.dart';
+import 'package:els/screns/employee/widgets/add_employee.dart';
+import 'package:els/screns/employee/view/employees_screen.dart';
 import 'package:els/screns/home/home_screen.dart';
 import 'package:els/screns/object/object_screen.dart';
 import 'package:els/screns/object/object_widgets/editing_object.dart';
@@ -18,68 +17,71 @@ import 'package:els/screns/works/works_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+import '../ view_user/open_ view_user.dart';
 import '../../bloc/user_bloc/user_bloc.dart';
 import '../../helper/button/side_menu_button.dart';
 import '../../helper/class_colors.dart';
+import '../employee/bloc/employee_bloc.dart';
 import '../object/object_page.dart';
 import '../object/object_widgets/add_object.dart';
 
 ///Главная User
+
+///Это временно ===================================================
+StreamController pointsMapController = StreamController.broadcast();
+/// ===============================================================
 
 class HomePage extends StatefulWidget {
   const HomePage({
     Key? key,
   }) : super(key: key);
 
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-
-  // String myTitle = 'Главная';
-  //
-  // int indexScreens = 0;
-  //
-  // bool addEmployee = false;
-
   ///Список Страниц
   final List<Widget> _screens = [
-    ///Главная
+    ///Главная 0
     const HomeScreen(),
 
-    ///Графики
+    ///Графики 1
     const ScheduleScreen(),
 
-    ///Заявки
+    ///Заявки 2
     const ApplicationsScreen(),
 
-    ///Обьекты
+    ///Обьекты 3
     const ObjectScreen(),
 
-    ///Компании
+    ///Компании 4
     const CompaniesScreen(),
 
-    ///Отчеты
+    ///Отчеты 5
     const ReportScreen(),
 
-    ///Сотрудники
+    ///Сотрудники 6
     const EmployeesScreen(),
 
-    ///Задачи
+    ///Задачи 7
     const TaskScreen(),
 
-    ///Охрана Труда
+    ///Охрана Труда 8
     const WorksScreen(),
 
-    ///Окно Юзера
+    ///Окно Юзера 9
     const UserPage(),
 
-    ///Окно Компании
+    ///Окно Компании 10
     const CompanyPage(),
 
-    ///Окно Обьекта
+    ///Окно Обьекта 11
     const ObjectPage(),
+
+    ///Окно выбранного компании 12
+    const OpenViewUser()
   ];
 
   final GlobalKey<ScaffoldState> myOpenDrawer = GlobalKey<ScaffoldState>();
@@ -298,33 +300,33 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 10.0),
 
                     ///Окно компании
-                    MenuButton(
-                      myIcons: Icons.store_outlined,
-                      title: 'Просмотр компании',
-                      press: () async {
-                        IntTest.indexScreens = 10;
-                        IntTest.myTitle = 'компании';
-                        setState(() {});
-                      },
-                      colorButton: IntTest.indexScreens == 10
-                          ? ColorApp.myColorGreenLine
-                          : Colors.transparent,
-                    ),
-                    const SizedBox(height: 10.0),
+                    // MenuButton(
+                    //   myIcons: Icons.store_outlined,
+                    //   title: 'Просмотр компании',
+                    //   press: () async {
+                    //     IntTest.indexScreens = 10;
+                    //     IntTest.myTitle = 'компании';
+                    //     setState(() {});
+                    //   },
+                    //   colorButton: IntTest.indexScreens == 10
+                    //       ? ColorApp.myColorGreenLine
+                    //       : Colors.transparent,
+                    // ),
+                    // const SizedBox(height: 10.0),
 
                     ///Окно Обьекта
-                    MenuButton(
-                      myIcons: Icons.emoji_objects_outlined,
-                      title: 'Просмотр Обьекта',
-                      press: () async {
-                        IntTest.indexScreens = 11;
-                        IntTest.myTitle = 'Просмотр Обьекта';
-                        setState(() {});
-                      },
-                      colorButton: IntTest.indexScreens == 11
-                          ? ColorApp.myColorGreenLine
-                          : Colors.transparent,
-                    ),
+                    // MenuButton(
+                    //   myIcons: Icons.emoji_objects_outlined,
+                    //   title: 'Просмотр Обьекта',
+                    //   press: () async {
+                    //     IntTest.indexScreens = 11;
+                    //     IntTest.myTitle = 'Просмотр Обьекта';
+                    //     setState(() {});
+                    //   },
+                    //   colorButton: IntTest.indexScreens == 11
+                    //       ? ColorApp.myColorGreenLine
+                    //       : Colors.transparent,
+                    // ),
                   ],
                 ),
               ),
@@ -544,33 +546,33 @@ class _HomePageState extends State<HomePage> {
                                 const SizedBox(height: 10.0),
 
                                 ///Окно компании
-                                MenuButton(
-                                  myIcons: Icons.store_outlined,
-                                  title: 'Просмотр компании',
-                                  press: () async {
-                                    IntTest.indexScreens = 10;
-                                    IntTest.myTitle = 'компании';
-                                    setState(() {});
-                                  },
-                                  colorButton: IntTest.indexScreens == 10
-                                      ? ColorApp.myColorGreenLine
-                                      : Colors.transparent,
-                                ),
+                                // MenuButton(
+                                //   myIcons: Icons.store_outlined,
+                                //   title: 'Просмотр компании',
+                                //   press: () async {
+                                //     IntTest.indexScreens = 10;
+                                //     IntTest.myTitle = 'компании';
+                                //     setState(() {});
+                                //   },
+                                //   colorButton: IntTest.indexScreens == 10
+                                //       ? ColorApp.myColorGreenLine
+                                //       : Colors.transparent,
+                                // ),
                                 const SizedBox(height: 10.0),
 
                                 ///Окно Обьекта
-                                MenuButton(
-                                  myIcons: Icons.emoji_objects_outlined,
-                                  title: 'Просмотр Обьекта',
-                                  press: () async {
-                                    IntTest.indexScreens = 11;
-                                    IntTest.myTitle = 'Просмотр Обьекта';
-                                    setState(() {});
-                                  },
-                                  colorButton: IntTest.indexScreens == 11
-                                      ? ColorApp.myColorGreenLine
-                                      : Colors.transparent,
-                                ),
+                                // MenuButton(
+                                //   myIcons: Icons.emoji_objects_outlined,
+                                //   title: 'Просмотр Обьекта',
+                                //   press: () async {
+                                //     IntTest.indexScreens = 11;
+                                //     IntTest.myTitle = 'Просмотр Обьекта';
+                                //     setState(() {});
+                                //   },
+                                //   colorButton: IntTest.indexScreens == 11
+                                //       ? ColorApp.myColorGreenLine
+                                //       : Colors.transparent,
+                                // ),
                               ],
                             ),
                           ),
@@ -584,183 +586,207 @@ class _HomePageState extends State<HomePage> {
                       child: Column(
                         children: [
                           /// Header
-                          Expanded(
-                              flex: 1,
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: size.width > 600 ? 20.0 : 10.0),
-                                child: Row(
-                                  children: [
-                                    ///Иконка меню
-                                    if (size.width <= 1350)
-                                      Row(
-                                        children: [
-                                          IconButton(onPressed: (){
-                                            myOpenDrawer.currentState!.openDrawer();
-                                            setState(() {});
-                                          }, icon: Icon(Icons.menu,size: size.width > 350 ? 25.0 : 20)),
-                                          const SizedBox(width: 10.0),
-                                        ],
-                                      ),
-                                    ///Text
-                                    Text(IntTest.myTitle,
-                                        style:  TextStyle(
-                                            fontSize: size.width > 350 ? 25.0 : 18.0,
-                                            fontWeight: size.width > 350 ?  FontWeight.w700 : FontWeight.w500)),
-                                    ///Иконки Обьекты
-                                    if (IntTest.indexScreens == 3)
-                                      Row(
-                                        children: [
-                                          const SizedBox(width: 10.0),
-                                          ///Добавить Обьект
-                                          IconButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  showDialog(
-                                                      context: context,
-                                                      builder: (context) => AlertDialog(
-                                                        content:  AddObject(),
-                                                      ));
-                                                });
-                                              },
-                                              icon: const Icon(
-                                                  Icons.add_box_rounded,
-                                                  size: 25.0,
-                                                  color: ColorApp
-                                                      .myColorGreenAuth)),
-                                          ///Поиск Обьекта
-                                          IconButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  showDialog(
-                                                      context: context,
-                                                      builder: (context) => AlertDialog(
-                                                        content:  EditingObject(),
-                                                      ));
-                                                });
-                                              },
-                                              icon: const Icon(Icons.search,
-                                                  size: 25.0,
-                                                  color:
-                                                  ColorApp.myColorGray)),
-                                        ],
-                                      ),
-                                    ///Иконки Компании
-                                    if (IntTest.indexScreens == 4)
-                                      Row(
-                                        children: [
-                                          const SizedBox(width: 10.0),
-                                          ///Добавить Компанию
-                                          IconButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  showDialog(
-                                                      context: context,
-                                                      builder: (context) =>  AlertDialog(
-                                                        content: AddCompany(),
-                                                      ));
-                                                });
-                                              },
-                                              icon: const Icon(
-                                                  Icons.add_box_rounded,
-                                                  size: 25.0,
-                                                  color: ColorApp
-                                                      .myColorGreenAuth)),
-                                        ],
-                                      ),
-                                    ///Иконки Сотрудники
-                                    if (IntTest.indexScreens == 6)
-                                      Row(
-                                        children: [
-                                          const SizedBox(width: 10.0),
-                                          ///Добавить Сотрудника
-                                          IconButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  showDialog(
-                                                      context: context,
-                                                      builder: (context) =>  const AlertDialog(
-                                                        content:  AddEmployee(),
-                                                      ));
-                                                });
-                                              },
-                                              icon: const Icon(
-                                                  Icons.add_box_rounded,
-                                                  size: 25.0,
-                                                  color: ColorApp
-                                                      .myColorGreenAuth)),
-                                          ///Архивировать Сотрудника
-                                          if(size.width > 500)
-                                          IconButton(
-                                              onPressed: () {},
-                                              icon: const Icon(
-                                                  Icons.archive_outlined,
-                                                  size: 25.0,
-                                                  color:
+                          StreamBuilder(
+                            stream: pointsMapController.stream,
+                            builder: (context, ind) => Expanded(
+                                flex: 1,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: size.width > 600 ? 20.0 : 10.0),
+                                  child: Row(
+                                    children: [
+                                      ///Иконка меню
+                                      if (size.width <= 1350)
+                                        Row(
+                                          children: [
+                                            IconButton(onPressed: (){
+                                              myOpenDrawer.currentState!.openDrawer();
+                                              setState(() {});
+                                            }, icon: Icon(Icons.menu,size: size.width > 350 ? 25.0 : 20)),
+                                            const SizedBox(width: 10.0),
+                                          ],
+                                        ),
+                                      ///Text
+                                      Text(IntTest.myTitle,
+                                          style:  TextStyle(
+                                              fontSize: size.width > 350 ? 25.0 : 18.0,
+                                              fontWeight: size.width > 350 ?  FontWeight.w700 : FontWeight.w500)),
+                                      ///Иконки Обьекты
+                                      if (IntTest.indexScreens == 3)
+                                        Row(
+                                          children: [
+                                            const SizedBox(width: 10.0),
+                                            ///Добавить Обьект
+                                            IconButton(
+                                                onPressed: () {
+                                                  setState(() {
+                                                    showDialog(
+                                                        context: context,
+                                                        builder: (context) => AlertDialog(
+                                                          content:  AddObject(),
+                                                        ));
+                                                  });
+                                                },
+                                                icon: const Icon(
+                                                    Icons.add_box_rounded,
+                                                    size: 25.0,
+                                                    color: ColorApp
+                                                        .myColorGreenAuth)),
+                                            ///Поиск Обьекта
+                                            IconButton(
+                                                onPressed: () {
+                                                  setState(() {
+                                                    showDialog(
+                                                        context: context,
+                                                        builder: (context) => AlertDialog(
+                                                          content:  EditingObject(),
+                                                        ));
+                                                  });
+                                                },
+                                                icon: const Icon(Icons.search,
+                                                    size: 25.0,
+                                                    color:
+                                                    ColorApp.myColorGray)),
+                                          ],
+                                        ),
+                                      ///Иконки Компании
+                                      if (IntTest.indexScreens == 4)
+                                        Row(
+                                          children: [
+                                            const SizedBox(width: 10.0),
+                                            ///Добавить Компанию
+                                            IconButton(
+                                                onPressed: () {
+                                                  setState(() {
+                                                    showDialog(
+                                                        context: context,
+                                                        builder: (context) =>  AlertDialog(
+                                                          content: AddCompany(),
+                                                        ));
+                                                  });
+                                                },
+                                                icon: const Icon(
+                                                    Icons.add_box_rounded,
+                                                    size: 25.0,
+                                                    color: ColorApp
+                                                        .myColorGreenAuth)),
+                                          ],
+                                        ),
+                                      ///Иконки Сотрудники
+                                      if (IntTest.indexScreens == 6)
+                                        Row(
+                                          children: [
+                                            const SizedBox(width: 10.0),
+                                            ///Добавить Сотрудника
+                                            IconButton(
+                                                onPressed: () {
+                                                  setState(() {
+                                                    showDialog(
+                                                        context: context,
+                                                        builder: (context) =>  const AlertDialog(
+                                                          content:  AddEmployee(),
+                                                        ));
+                                                  });
+                                                },
+                                                icon: const Icon(
+                                                    Icons.add_box_rounded,
+                                                    size: 25.0,
+                                                    color: ColorApp
+                                                        .myColorGreenAuth)),
+                                            ///Архивировать Сотрудника
+                                            if(size.width > 500)
+                                              IconButton(
+                                                  onPressed: () {},
+                                                  icon: const Icon(
+                                                      Icons.archive_outlined,
+                                                      size: 25.0,
+                                                      color:
                                                       ColorApp.myColorGray)),
-                                          ///Поиск Сотрудника
-                                          if(size.width > 500)
-                                          IconButton(
-                                              onPressed: () {},
-                                              icon: const Icon(Icons.search,
-                                                  size: 25.0,
-                                                  color:
+                                            ///Поиск Сотрудника
+                                            if(size.width > 500)
+                                              IconButton(
+                                                  onPressed: () {},
+                                                  icon: const Icon(Icons.search,
+                                                      size: 25.0,
+                                                      color:
                                                       ColorApp.myColorGray)),
-                                        ],
-                                      ),
-
-                                    const Spacer(),
-                                    ///Колокольчик
-                                    if(size.width > 400)
-                                    Badge(
-                                      position:
-                                          const BadgePosition(top: 0, end: 0),
-                                      badgeContent: const Text('9',
-                                          style: TextStyle(
-                                              color: ColorApp.myColorWhite,
-                                              fontWeight: FontWeight.w500)),
-                                      toAnimate: false,
-                                      badgeColor: ColorApp.myColorRed,
-                                      child: IconButton(
-                                        onPressed: () {},
-                                        icon: const Icon(
-                                            Icons.notifications_none_outlined,
-                                            size: 25.0),
-                                      ),
-                                    ),
-
-                                    SizedBox( width:size.width > 500 ? 40.0 : 10.0),
-                                     ///Аватар Юзера
-                                     if(state is UserGetState)
-                                      CircularPercentIndicator(
-                                        radius: size.width > 350 ? 33.0 : 23.0,
-                                        lineWidth: 5.0,
-                                        percent: 0.7,
-                                        progressColor: ColorApp.myColorGreenAuth,
-                                        backgroundColor: ColorApp.myColorAvatar,
-                                        center: GestureDetector(
-                                          onTap: (){
-                                            IntTest.indexScreens = 9;
-                                            IntTest.myTitle = state.getUser[0]['name'];
-                                            setState(() {});
-                                          },
-                                          child: CircleAvatar(
-                                            radius: size.width > 350 ? 29.0 : 20.0,
-                                            backgroundColor: Colors.transparent,
-                                            backgroundImage: const AssetImage('assets/user.png'),
-                                            foregroundImage: NetworkImage('http://${state.getUser[0]['photo']}'),
-                                            // child: Text('${state.getUser[0]['name'][0]}',style: const TextStyle(color: ColorApp.myColorWhite,fontWeight: FontWeight.w600,fontSize: 20.0)),
+                                          ],
+                                        ),
+                                      ///Иконки выбранного юзера
+                                      if (IntTest.indexScreens == 12)
+                                        Row(
+                                          children: [
+                                            const SizedBox(width: 10.0),
+                                            /// Изменить
+                                            IconButton(
+                                                onPressed: () {
+                                                  setState(() {
+                                                    showDialog(
+                                                        context: context,
+                                                        builder: (context) =>
+                                                        const AlertDialog(
+                                                          // content: EditingCompany(),
+                                                        ));
+                                                  });
+                                                },
+                                                icon: const Icon(Icons.edit_outlined,
+                                                    color: ColorApp.myColorGreenAuth)),
+                                          ],
+                                        ),
+                                      const Spacer(),
+                                      ///Колокольчик
+                                      if(size.width > 400)
+                                        Badge(
+                                          alignment: const AlignmentDirectional(21,4),
+                                          backgroundColor: ColorApp.myColorRed,
+                                          isLabelVisible: IntTest.badgeCount > 0 ? true : false,
+                                          label: IntTest.badgeCount < 1 ? const SizedBox.shrink() : Text(IntTest.badgeCount.toString(),
+                                              style: const TextStyle(
+                                                  fontSize: 12.0,
+                                                  color: ColorApp.myColorWhite,
+                                                  fontWeight: FontWeight.w500)),
+                                          child: IconButton(
+                                            onPressed: () {},
+                                            icon: const Icon(
+                                                Icons.notifications_none_outlined,
+                                                size: 25.0),
                                           ),
                                         ),
-                                      ),
-                                  ],
-                                ),
-                              )),
+                                      SizedBox( width:size.width > 500 ? 40.0 : 10.0),
+                                      ///Аватар Юзера
+                                      if(state is UserGetState)
+                                        CircularPercentIndicator(
+                                          radius: size.width > 350 ? 33.0 : 23.0,
+                                          lineWidth: 5.0,
+                                          percent: 0.7,
+                                          progressColor: ColorApp.myColorGreenAuth,
+                                          backgroundColor: ColorApp.myColorAvatar,
+                                          center: GestureDetector(
+                                            onTap: () async {
+                                              IntTest.indexScreens = 9;
+                                              IntTest.myTitle = 'Мой профиль';
+                                              setState(() {});
+                                            },
+                                            child: CircleAvatar(
+                                              radius: size.width > 350 ? 29.0 : 20.0,
+                                              backgroundColor: Colors.transparent,
+                                              backgroundImage: const AssetImage('assets/user.png'),
+                                              foregroundImage: NetworkImage('http://${state.getUser[0]['photo']}'),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                )),
+                          ),
 
                           /// Body
-                          Expanded(
-                            flex: 9,
-                            child: _screens[IntTest.indexScreens],
+                          StreamBuilder(
+                            stream: pointsMapController.stream,
+                            builder: (context, ind) => Expanded(
+                              flex: 9,
+                              child: _screens[IntTest.indexScreens],
+                            ),
                           ),
                         ],
                       ),

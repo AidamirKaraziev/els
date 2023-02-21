@@ -1,7 +1,33 @@
+import 'dart:convert';
+
 import 'package:els/helper/class_colors.dart';
+import 'package:els/main.dart';
 import 'package:els/screns/object/object_widgets/top_widget.dart';
 import 'package:flutter/material.dart';
-import '../../helper/my_map/my_map.dart';
+import '../home_page/home_page.dart';
+import 'package:http/http.dart' as http;
+
+///http://185.119.58.63/api/v1/divisions/?page=1 получить обьекты
+
+///Тестовая  =======================
+getListTest() async {
+  /// Список для теста
+  Map listSelectedEmployee = {};
+
+  await Future(() async {
+    final res = await http.get(
+        Uri.parse("http://${IntTest.myIp}/api/v1/divisions/?page=1"),
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          'Authorization': 'Bearer ${IntTest.token}',
+        });
+    var vova = jsonDecode(utf8.decode(res.bodyBytes));
+    listSelectedEmployee = vova;
+    print('Получение обьекта ${listSelectedEmployee['data']}');
+  });
+}
+/// ================================
+
 
 ///ОБЬЕКТЫ
 
@@ -56,6 +82,8 @@ class _ObjectScreenState extends State<ObjectScreen> {
                             : Colors.white,
                       ),
                       onPressed: () {
+                        MyApp();
+                        getListTest();
                         test = false;
                         print(test);
                         setState(() {});
@@ -79,7 +107,10 @@ class _ObjectScreenState extends State<ObjectScreen> {
                                 itemCount: 10,
                                 itemBuilder: (context, index) =>
                                     GestureDetector(
-                                      onTap: () {},
+                                      onTap: () {
+                                        pointsMapController.add(IntTest.indexScreens);
+                                        IntTest.indexScreens = 11;
+                                      },
                                       child: Padding(
                                         padding:
                                             const EdgeInsets.only(bottom: 10.0),
@@ -237,7 +268,7 @@ class _ObjectScreenState extends State<ObjectScreen> {
                                                     ),
                                                   ),
                                                 const SizedBox(width: 10.0),
-                                                ///Прораб
+                                                ///Тип
                                                 if (size.width > 500)
                                                   Expanded(
                                                     child: Container(
@@ -248,7 +279,7 @@ class _ObjectScreenState extends State<ObjectScreen> {
                                                             .circular(10),
                                                         color: ColorApp.myColorGreen,
                                                       ),
-                                                      child: Center(child: Text('name',style: TextStyle(fontWeight: FontWeight.w500,color: ColorApp.myColorWhite),)),
+                                                      child: Center(child: Text('Type',style: TextStyle(fontWeight: FontWeight.w500,color: ColorApp.myColorWhite),)),
                                                     ),
                                                   ),
                                               ],
@@ -266,7 +297,8 @@ class _ObjectScreenState extends State<ObjectScreen> {
                       child: SizedBox(
                         width: MediaQuery.of(context).size.width,
                         height: MediaQuery.of(context).size.height * 0.7,
-                        child: MyMap(),
+                        child: Container(),
+                        // MyMap(),
                       ),
                     ),
             ],

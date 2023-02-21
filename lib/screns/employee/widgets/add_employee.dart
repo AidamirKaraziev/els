@@ -1,17 +1,16 @@
+import 'dart:convert';
 import 'dart:typed_data';
-
 import 'package:dotted_border/dotted_border.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker_web/image_picker_web.dart';
+import '../../../helper/button/my_button.dart';
+import '../../../helper/class_colors.dart';
+import 'package:http/http.dart' as http;
 
-import '../../helper/button/my_button.dart';
-import '../../helper/class_colors.dart';
-import '../home_page/home_page.dart';
+import '../../home_page/home_page.dart';
 
 /// Окно добавление сотрудника
-
-
 
 class AddEmployee extends StatefulWidget {
   const AddEmployee({Key? key}) : super(key: key);
@@ -21,6 +20,45 @@ class AddEmployee extends StatefulWidget {
 }
 
 class _AddEmployeeState extends State<AddEmployee> {
+
+  /// Создание юзера ======
+  createUser() async {
+    var response = await http.post(
+      Uri.parse("http://185.119.58.63/api/v1/cp/admin/create-employee/"),
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        'Authorization': 'Bearer ${IntTest.token}',
+      },
+      body: json.encode(
+        {
+          "name": fio.text,
+          "email": email.text,
+          "password": "2",
+          "contact_phone": numberPhone.text,
+          "birthday": 1666349129,
+          "location_id": 1,
+          "role_id": 4,
+          "working_specialty_id": 1,
+          "division_id": 1,
+          "date_of_employment": 1676707997
+        },
+      ),
+    );
+  }
+
+  // "name": fio.text,
+  // "email": email.text,
+  // "password": "string",
+  // "contact_phone": numberPhone.text,
+  // "birthday": dateBirth,
+  // "location_id": 0,
+  // "role_id": 0,
+  // "working_specialty_id": 0,
+  // "division_id": 0,
+  // "date_of_employment": 0
+
+  /// =====================
+
   /// очистка данных
   dataCleaningFunction() {
     fio.clear();
@@ -89,6 +127,7 @@ class _AddEmployeeState extends State<AddEmployee> {
 
   @override
   Widget build(BuildContext context) {
+    // final employeeBloc = EmployeeBloc();
     final keyFio = GlobalKey<FormState>();
     final keyEmail = GlobalKey<FormState>();
     final keyPhoneNumber = GlobalKey<FormState>();
@@ -98,12 +137,6 @@ class _AddEmployeeState extends State<AddEmployee> {
       // padding: const EdgeInsets.all(20.0),
       width: size.width > 570.0 ? 500.0 : 320.0,
       height: MediaQuery.of(context).size.height * 0.98,
-      // decoration: BoxDecoration(
-      //     color: Colors.white,
-      //     borderRadius: const BorderRadius.only(
-      //         topLeft: Radius.circular(20.0),
-      //         bottomLeft: Radius.circular(20.0)),
-      //     border: Border.all(color: ColorApp.myColorGreen, width: 1)),
       child: SingleChildScrollView(
         child: Column(
           children: [
@@ -459,15 +492,15 @@ class _AddEmployeeState extends State<AddEmployee> {
             SizedBox(height: size.width > 570.0 ? 20.0 : 10.0),
             MainButtonApp(
               textButton: 'Сохранить',
-              press: () {
-                keyEmail.currentState!.validate();
-                keyPhoneNumber.currentState!.validate();
-                keyFio.currentState!.validate();
-                setState(() async {
-                  // await dataCleaningFunction();
-                  // addEmployee = false;
-                  // menuController.add('state');
-                });
+              press: () async {
+                await createUser();
+                // employeeBloc.add(EmployeeGetUserEvent());
+                pointsMapController.add(IntTest.indexScreens);
+                Navigator.pop(context);
+                setState(()  {});
+                // keyEmail.currentState!.validate();
+                // keyPhoneNumber.currentState!.validate();
+                // keyFio.currentState!.validate();
               },
             ),
           ],
