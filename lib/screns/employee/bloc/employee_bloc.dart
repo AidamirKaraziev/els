@@ -23,7 +23,7 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
         });
     var getEmployee = jsonDecode(utf8.decode(res.bodyBytes));
     emit(state.copyWith(listGetEmployee: getEmployee['data']));
-    print(getEmployee['data']);
+    print(getEmployee['data'][0]);
   }
 
   _getViewEmployee(EmployeeViewUserEvent event, Emitter<EmployeeState> emit) async {

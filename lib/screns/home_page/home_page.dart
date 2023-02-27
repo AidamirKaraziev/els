@@ -17,7 +17,7 @@ import 'package:els/screns/works/works_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
-import '../ view_user/open_ view_user.dart';
+import '../employee/view/open_ view_user.dart';
 import '../../bloc/user_bloc/user_bloc.dart';
 import '../../helper/button/side_menu_button.dart';
 import '../../helper/class_colors.dart';
@@ -83,6 +83,8 @@ class _HomePageState extends State<HomePage> {
     ///Окно выбранного компании 12
     const OpenViewUser()
   ];
+
+  bool openListSearch = false;
 
   final GlobalKey<ScaffoldState> myOpenDrawer = GlobalKey<ScaffoldState>();
 
@@ -298,35 +300,6 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                     const SizedBox(height: 10.0),
-
-                    ///Окно компании
-                    // MenuButton(
-                    //   myIcons: Icons.store_outlined,
-                    //   title: 'Просмотр компании',
-                    //   press: () async {
-                    //     IntTest.indexScreens = 10;
-                    //     IntTest.myTitle = 'компании';
-                    //     setState(() {});
-                    //   },
-                    //   colorButton: IntTest.indexScreens == 10
-                    //       ? ColorApp.myColorGreenLine
-                    //       : Colors.transparent,
-                    // ),
-                    // const SizedBox(height: 10.0),
-
-                    ///Окно Обьекта
-                    // MenuButton(
-                    //   myIcons: Icons.emoji_objects_outlined,
-                    //   title: 'Просмотр Обьекта',
-                    //   press: () async {
-                    //     IntTest.indexScreens = 11;
-                    //     IntTest.myTitle = 'Просмотр Обьекта';
-                    //     setState(() {});
-                    //   },
-                    //   colorButton: IntTest.indexScreens == 11
-                    //       ? ColorApp.myColorGreenLine
-                    //       : Colors.transparent,
-                    // ),
                   ],
                 ),
               ),
@@ -679,7 +652,9 @@ class _HomePageState extends State<HomePage> {
                                             const SizedBox(width: 10.0),
                                             ///Добавить Сотрудника
                                             IconButton(
-                                                onPressed: () {
+                                                onPressed: () async {
+                                                  // await getEmployeeJobTitle();
+                                                  // await getPlot();
                                                   setState(() {
                                                     showDialog(
                                                         context: context,
@@ -696,7 +671,9 @@ class _HomePageState extends State<HomePage> {
                                             ///Архивировать Сотрудника
                                             if(size.width > 500)
                                               IconButton(
-                                                  onPressed: () {},
+                                                  onPressed: () {
+
+                                                  },
                                                   icon: const Icon(
                                                       Icons.archive_outlined,
                                                       size: 25.0,
@@ -704,12 +681,49 @@ class _HomePageState extends State<HomePage> {
                                                       ColorApp.myColorGray)),
                                             ///Поиск Сотрудника
                                             if(size.width > 500)
-                                              IconButton(
-                                                  onPressed: () {},
-                                                  icon: const Icon(Icons.search,
-                                                      size: 25.0,
-                                                      color:
-                                                      ColorApp.myColorGray)),
+                                              Row(
+                                                children: [
+                                                  if(openListSearch == false)
+                                                  IconButton(
+                                                      onPressed: () {
+                                                        openListSearch = true;
+                                                        pointsMapController.add(IntTest.indexScreens);
+                                                      },
+                                                      icon: const Icon(Icons.search,
+                                                          size: 25.0,
+                                                          color:
+                                                          ColorApp.myColorGray)),
+                                                ],
+                                              ),
+                                            if(openListSearch)
+                                              Row(
+                                                children: [
+                                                  const SizedBox(width: 10),
+                                                  SizedBox(
+                                                    width: 300,
+                                                    height: 35.0,
+                                                    child: Form(
+                                                      child: TextFormField(
+                                                        cursorColor: ColorApp.myColorGray,
+                                                        // controller: email,
+                                                        decoration: InputDecoration(
+                                                          contentPadding: const EdgeInsets.all(0.0),
+                                                          prefixIcon: IconButton(onPressed: (){
+                                                            openListSearch = false;
+                                                            pointsMapController.add(IntTest.indexScreens);
+                                                          }, icon: const Icon(Icons.search)),
+                                                            border: const OutlineInputBorder(),
+                                                            focusedBorder: const OutlineInputBorder(
+                                                              borderSide:
+                                                              BorderSide(color: ColorApp.myColorGreenAuth),
+                                                            ),
+                                                            labelText: 'Поиск',
+                                                            labelStyle: const TextStyle(color: ColorApp.myColorGray)),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                           ],
                                         ),
                                       ///Иконки выбранного юзера

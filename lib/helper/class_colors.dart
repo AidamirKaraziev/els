@@ -16,6 +16,7 @@ class ColorApp{
   static const Color myColorTransparent = Color(0xffF5F6F6);
   static const Color myColorRed = Color(0xffDF726F);
   static const Color myColorYellow = Color(0xffF0BB01);
+  static const Color myColorBlue = Color(0xff8BAEF9);
 }
 
 ///Переменные

@@ -1,15 +1,10 @@
 import 'package:els/helper/class_colors.dart';
 import 'package:flutter/material.dart';
 
-import '../../ view_user/open_ view_user.dart';
+import '../../home_page/home_page.dart';
+import '../view/open_ view_user.dart';
 
-///api/v1/cp/admin/1/archive/ заморозка
-///api/v1/cp/admin/1/unzip/ разморозка
-
-
-/// Заморозка
-
-
+/// Заморозка Юзера
 
 class EmployeeAccountFreeze extends StatelessWidget {
   const EmployeeAccountFreeze({Key? key}) : super(key: key);
@@ -76,6 +71,7 @@ class EmployeeAccountFreeze extends StatelessWidget {
                   ),
                   onPressed: () async {
                     await freezingUser(IntTest.pressHover);
+                    pointsMapController.add(IntTest.indexScreens);
                     Navigator.pop(context);
                   }, child: const Text('Подтвердить', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.w500),)),
             ],

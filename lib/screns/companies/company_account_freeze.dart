@@ -1,6 +1,11 @@
 import 'package:els/helper/class_colors.dart';
 import 'package:flutter/material.dart';
 
+import '../home_page/home_page.dart';
+import 'company_page.dart';
+
+/// Заморозка Компании
+
 class CompanyAccountFreeze extends StatelessWidget {
   const CompanyAccountFreeze({Key? key}) : super(key: key);
 
@@ -62,7 +67,11 @@ class CompanyAccountFreeze extends StatelessWidget {
                       minimumSize: const Size(200.0, 40.0),
                     primary: ColorApp.myColorGreenAuth
                   ),
-                  onPressed: (){}, child: const Text('Подтвердить', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.w500),)),
+                  onPressed: () async {
+                    await freezingCompany(IntTest.pressHover);
+                    pointsMapController.add(IntTest.indexScreens);
+                    Navigator.pop(context);
+                  }, child: const Text('Подтвердить', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.w500),)),
             ],
           ),
         ],

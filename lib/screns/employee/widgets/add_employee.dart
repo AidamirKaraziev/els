@@ -20,7 +20,6 @@ class AddEmployee extends StatefulWidget {
 }
 
 class _AddEmployeeState extends State<AddEmployee> {
-
   /// Создание юзера ======
   createUser() async {
     var response = await http.post(
@@ -45,17 +44,6 @@ class _AddEmployeeState extends State<AddEmployee> {
       ),
     );
   }
-
-  // "name": fio.text,
-  // "email": email.text,
-  // "password": "string",
-  // "contact_phone": numberPhone.text,
-  // "birthday": dateBirth,
-  // "location_id": 0,
-  // "role_id": 0,
-  // "working_specialty_id": 0,
-  // "division_id": 0,
-  // "date_of_employment": 0
 
   /// =====================
 
@@ -87,7 +75,6 @@ class _AddEmployeeState extends State<AddEmployee> {
   /// Документ ЦОК
   TextEditingController classification = TextEditingController();
 
-
   /// Включение камеры
   bool imageAvailable = false;
 
@@ -95,51 +82,74 @@ class _AddEmployeeState extends State<AddEmployee> {
   late Uint8List imageFile;
 
   /// Доступ в систему
-  var accessToSystem = false;
+  var accessToSystem = true;
 
   /// Права суперпользователя
-  var superuserRights = false;
+  var superuserRights = true;
 
-  /// Участок ======
-  String? myPlot;
-  List plot = [
-    'Участок №1',
-    'Участок №2',
-    'Участок №3',
-    'Участок №4',
-    'Участок №5',
-    'Участок №6',
-    'Участок №7',
-  ];
+  /// Участок =========
+  getPlot() async {
+    final url = 'http://${IntTest.myIp}/api/v1/divisions/?page=1';
+    final res = await http.get(Uri.parse(url), headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      'Accept': 'application/json',
+      'Authorization': 'Bearer ${IntTest.token}',
+    });
+    var response = jsonDecode(utf8.decode(res.bodyBytes));
+    setState(() {
+      plotList = response['data'];
+    });
+    print(plotList);
+  }
 
-  /// ============
+  String? myPlotTitle;
+  List plotList = [];
 
-  /// Должность ======
+  /// =================
+
+  /// Должность ===================
+  getEmployeeJobTitle() async {
+    final url = 'http://${IntTest.myIp}/api/v1/roles/?page=1';
+    final res = await http.get(Uri.parse(url), headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      'Accept': 'application/json',
+      'Authorization': 'Bearer ${IntTest.token}',
+    });
+    var response = jsonDecode(utf8.decode(res.bodyBytes));
+    setState(() {
+      jobTitleList = response['data'];
+    });
+    print(jobTitleList);
+  }
+
   String? myJobTitle;
-  List jobTitle = [
-    'Механик',
-    'Прораб',
-    'Оператор',
-    'Просто Вовася',
-  ];
+  List jobTitleList = [];
 
-  /// ================
+  /// =============================
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    getEmployeeJobTitle();
+    getPlot();
+    print('Сработал Инит Стате');
+  }
 
   @override
   Widget build(BuildContext context) {
-    // final employeeBloc = EmployeeBloc();
     final keyFio = GlobalKey<FormState>();
     final keyEmail = GlobalKey<FormState>();
     final keyPhoneNumber = GlobalKey<FormState>();
     final Size size = MediaQuery.of(context).size;
 
-    return Container(
-      // padding: const EdgeInsets.all(20.0),
+    return SizedBox(
       width: size.width > 570.0 ? 500.0 : 320.0,
       height: MediaQuery.of(context).size.height * 0.98,
       child: SingleChildScrollView(
         child: Column(
           children: [
+            /// Текст и Фото
             Row(
               children: [
                 Text(
@@ -149,6 +159,8 @@ class _AddEmployeeState extends State<AddEmployee> {
                       fontSize: size.width > 570.0 ? 25.0 : 18.0),
                 ),
                 const Spacer(),
+
+                /// Добавить Фото
                 Container(
                   width: 50,
                   height: 50,
@@ -156,7 +168,7 @@ class _AddEmployeeState extends State<AddEmployee> {
                       borderRadius: BorderRadius.circular(50),
                       border: Border.all(color: ColorApp.myColorGray)),
                   child: imageAvailable
-                      ? ClipOval(child: Image.memory(imageFile))
+                      ? Image.memory(imageFile)
                       : IconButton(
                           onPressed: () async {
                             final image =
@@ -186,8 +198,7 @@ class _AddEmployeeState extends State<AddEmployee> {
                 decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     focusedBorder: OutlineInputBorder(
-                      borderSide:
-                          BorderSide(color: ColorApp.myColorGreenAuth),
+                      borderSide: BorderSide(color: ColorApp.myColorGreenAuth),
                     ),
                     labelText: 'ФИО',
                     labelStyle: TextStyle(color: ColorApp.myColorGray)),
@@ -217,8 +228,7 @@ class _AddEmployeeState extends State<AddEmployee> {
                     ),
                     border: OutlineInputBorder(),
                     focusedBorder: OutlineInputBorder(
-                      borderSide:
-                          BorderSide(color: ColorApp.myColorGreenAuth),
+                      borderSide: BorderSide(color: ColorApp.myColorGreenAuth),
                     ),
                     labelText: 'Номер телефона',
                     labelStyle: TextStyle(color: ColorApp.myColorGray)),
@@ -245,8 +255,7 @@ class _AddEmployeeState extends State<AddEmployee> {
                 decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     focusedBorder: OutlineInputBorder(
-                      borderSide:
-                          BorderSide(color: ColorApp.myColorGreenAuth),
+                      borderSide: BorderSide(color: ColorApp.myColorGreenAuth),
                     ),
                     labelText: 'Электронная почта',
                     labelStyle: TextStyle(color: ColorApp.myColorGray)),
@@ -257,33 +266,38 @@ class _AddEmployeeState extends State<AddEmployee> {
                         : null,
               ),
             ),
-            if (size.width > 570.0)
-              Column(
-                children: const [
-                  SizedBox(height: 20.0),
-                  Divider(color: ColorApp.myColorGray),
-                  SizedBox(height: 20.0),
-                ],
-              ),
+
+            /// Divider
+            Column(
+              children: const [
+                SizedBox(height: 20.0),
+                Divider(color: ColorApp.myColorGray),
+                SizedBox(height: 20.0),
+              ],
+            ),
             if (size.width < 570.0) const SizedBox(height: 10.0),
             size.width > 570.0
+
+                /// Участок & Должность
                 ? Row(
                     children: [
+                      /// Участок
                       Expanded(
                         child: SizedBox(
                           height: 50.0,
                           child: DropdownButtonFormField(
-                            value: myPlot,
+                            value: myPlotTitle,
                             hint: const Text('Участок'),
                             onChanged: (newValue1) async {
+                              print('нажал');
                               setState(() {
-                                myPlot = newValue1 as String?;
+                                myPlotTitle = newValue1 as String?;
                               });
                             },
-                            items: plot.map((valueItem1) {
+                            items: plotList.map((jobTitleList) {
                               return DropdownMenuItem(
-                                value: valueItem1,
-                                child: Text(valueItem1),
+                                value: jobTitleList['id'],
+                                child: Text(jobTitleList['title']),
                               );
                             }).toList(),
                             decoration: const InputDecoration(
@@ -292,6 +306,8 @@ class _AddEmployeeState extends State<AddEmployee> {
                         ),
                       ),
                       const SizedBox(width: 10.0),
+
+                      /// Должность
                       Expanded(
                         child: SizedBox(
                           height: 50.0,
@@ -299,14 +315,15 @@ class _AddEmployeeState extends State<AddEmployee> {
                             value: myJobTitle,
                             hint: const Text('Должность'),
                             onChanged: (newValue1) async {
+                              print('нажал');
                               setState(() {
                                 myJobTitle = newValue1 as String?;
                               });
                             },
-                            items: jobTitle.map((valueItem1) {
+                            items: jobTitleList.map((jobTitle) {
                               return DropdownMenuItem(
-                                value: valueItem1,
-                                child: Text(valueItem1),
+                                value: jobTitle['id'],
+                                child: Text(jobTitle['name']),
                               );
                             }).toList(),
                             decoration: const InputDecoration(
@@ -316,22 +333,26 @@ class _AddEmployeeState extends State<AddEmployee> {
                       ),
                     ],
                   )
+
+                /// Участок & Должность
                 : Column(
                     children: [
+                      /// Участок
                       SizedBox(
                         height: 50.0,
                         child: DropdownButtonFormField(
-                          value: myPlot,
+                          value: myPlotTitle,
                           hint: const Text('Участок'),
                           onChanged: (newValue1) async {
+                            print('нажал');
                             setState(() {
-                              myPlot = newValue1 as String?;
+                              myPlotTitle = newValue1 as String?;
                             });
                           },
-                          items: plot.map((valueItem1) {
+                          items: plotList.map((jobTitleList) {
                             return DropdownMenuItem(
-                              value: valueItem1,
-                              child: Text(valueItem1),
+                              value: jobTitleList['id'],
+                              child: Text(jobTitleList['title']),
                             );
                           }).toList(),
                           decoration: const InputDecoration(
@@ -339,20 +360,23 @@ class _AddEmployeeState extends State<AddEmployee> {
                         ),
                       ),
                       const SizedBox(height: 10.0),
+
+                      /// Должность
                       SizedBox(
                         height: 50.0,
                         child: DropdownButtonFormField(
                           value: myJobTitle,
                           hint: const Text('Должность'),
                           onChanged: (newValue1) async {
+                            print('нажал');
                             setState(() {
                               myJobTitle = newValue1 as String?;
                             });
                           },
-                          items: jobTitle.map((valueItem1) {
+                          items: jobTitleList.map((jobTitle) {
                             return DropdownMenuItem(
-                              value: valueItem1,
-                              child: Text(valueItem1),
+                              value: jobTitle['id'],
+                              child: Text(jobTitle['name']),
                             );
                           }).toList(),
                           decoration: const InputDecoration(
@@ -362,9 +386,12 @@ class _AddEmployeeState extends State<AddEmployee> {
                     ],
                   ),
             SizedBox(height: size.width > 570.0 ? 20.0 : 10.0),
+
+            /// Checkbox
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                /// Checkbox Доступ в систему
                 Row(
                   children: [
                     Checkbox(
@@ -385,6 +412,8 @@ class _AddEmployeeState extends State<AddEmployee> {
                     ),
                   ],
                 ),
+
+                /// Checkbox Права суперпользователя
                 Row(
                   children: [
                     Checkbox(
@@ -406,6 +435,8 @@ class _AddEmployeeState extends State<AddEmployee> {
               ],
             ),
             if (size.width > 570.0)
+
+              /// Divider
               Column(
                 children: const [
                   SizedBox(height: 20.0),
@@ -490,6 +521,8 @@ class _AddEmployeeState extends State<AddEmployee> {
               ],
             ),
             SizedBox(height: size.width > 570.0 ? 20.0 : 10.0),
+
+            /// Кнопка Сохранить
             MainButtonApp(
               textButton: 'Сохранить',
               press: () async {
@@ -497,7 +530,7 @@ class _AddEmployeeState extends State<AddEmployee> {
                 // employeeBloc.add(EmployeeGetUserEvent());
                 pointsMapController.add(IntTest.indexScreens);
                 Navigator.pop(context);
-                setState(()  {});
+                setState(() {});
                 // keyEmail.currentState!.validate();
                 // keyPhoneNumber.currentState!.validate();
                 // keyFio.currentState!.validate();
