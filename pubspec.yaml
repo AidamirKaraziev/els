@@ -51,6 +51,10 @@ dependencies:
   email_validator: ^2.1.17
   equatable: any
   flutter_bloc: ^8.1.1
+  webfeed: any
+  convert: any
+  html: any
+
 
   flutter_localizations:
     sdk: flutter

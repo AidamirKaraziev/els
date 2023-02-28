@@ -109,8 +109,7 @@ class _OpenViewUserState extends State<OpenViewUser> {
                                       radius: 70.0,
                                       backgroundImage:
                                       const AssetImage('assets/user.png'),
-                                      foregroundImage: NetworkImage(
-                                          'http://${listSelectedEmployee['data']['photo']}'),
+                                      foregroundImage: NetworkImage('http://${listSelectedEmployee['data']['photo']}'),
                                     )),
                                 const SizedBox(height: 10.0),
                                   Center(

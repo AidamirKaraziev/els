@@ -139,9 +139,10 @@ class _CompanyPageState extends State<CompanyPage> {
                             child: Padding(
                               padding: EdgeInsets.all(50.0),
                               child: CircleAvatar(
+                                backgroundImage: const AssetImage('assets/user.png'),
                                 foregroundImage: NetworkImage(
                                     'http://${listSelectedCompany['data']['photo']}'),
-                                backgroundImage: NetworkImage('assets/cat.jpeg'),
+
                               ),
                             ),
                           )
