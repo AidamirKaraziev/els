@@ -22,6 +22,7 @@ import '../../bloc/user_bloc/user_bloc.dart';
 import '../../helper/button/side_menu_button.dart';
 import '../../helper/class_colors.dart';
 import '../employee/bloc/employee_bloc.dart';
+import '../employee/widgets/editing_employee.dart';
 import '../object/object_page.dart';
 import '../object/object_widgets/add_object.dart';
 
@@ -29,6 +30,8 @@ import '../object/object_widgets/add_object.dart';
 
 ///Это временно ===================================================
 StreamController pointsMapController = StreamController.broadcast();
+
+// StreamController companyStreamController = StreamController.broadcast();
 /// ===============================================================
 
 class HomePage extends StatefulWidget {
@@ -516,36 +519,6 @@ class _HomePageState extends State<HomePage> {
                                           )),
                                   ],
                                 ),
-                                const SizedBox(height: 10.0),
-
-                                ///Окно компании
-                                // MenuButton(
-                                //   myIcons: Icons.store_outlined,
-                                //   title: 'Просмотр компании',
-                                //   press: () async {
-                                //     IntTest.indexScreens = 10;
-                                //     IntTest.myTitle = 'компании';
-                                //     setState(() {});
-                                //   },
-                                //   colorButton: IntTest.indexScreens == 10
-                                //       ? ColorApp.myColorGreenLine
-                                //       : Colors.transparent,
-                                // ),
-                                const SizedBox(height: 10.0),
-
-                                ///Окно Обьекта
-                                // MenuButton(
-                                //   myIcons: Icons.emoji_objects_outlined,
-                                //   title: 'Просмотр Обьекта',
-                                //   press: () async {
-                                //     IntTest.indexScreens = 11;
-                                //     IntTest.myTitle = 'Просмотр Обьекта';
-                                //     setState(() {});
-                                //   },
-                                //   colorButton: IntTest.indexScreens == 11
-                                //       ? ColorApp.myColorGreenLine
-                                //       : Colors.transparent,
-                                // ),
                               ],
                             ),
                           ),
@@ -671,9 +644,7 @@ class _HomePageState extends State<HomePage> {
                                             ///Архивировать Сотрудника
                                             if(size.width > 500)
                                               IconButton(
-                                                  onPressed: () {
-
-                                                  },
+                                                  onPressed: () {},
                                                   icon: const Icon(
                                                       Icons.archive_outlined,
                                                       size: 25.0,
@@ -700,18 +671,19 @@ class _HomePageState extends State<HomePage> {
                                                 children: [
                                                   const SizedBox(width: 10),
                                                   SizedBox(
-                                                    width: 300,
-                                                    height: 35.0,
+                                                    width: MediaQuery.of(context).size.width*0.3,
+                                                    height: 40.0,
                                                     child: Form(
                                                       child: TextFormField(
                                                         cursorColor: ColorApp.myColorGray,
                                                         // controller: email,
                                                         decoration: InputDecoration(
                                                           contentPadding: const EdgeInsets.all(0.0),
-                                                          prefixIcon: IconButton(onPressed: (){
+                                                          prefixIcon: IconButton(onPressed: (){},icon: const Icon(Icons.search),),
+                                                          suffixIcon: IconButton(onPressed: (){
                                                             openListSearch = false;
                                                             pointsMapController.add(IntTest.indexScreens);
-                                                          }, icon: const Icon(Icons.search)),
+                                                          }, icon: const Icon(Icons.close)),
                                                             border: const OutlineInputBorder(),
                                                             focusedBorder: const OutlineInputBorder(
                                                               borderSide:
@@ -739,7 +711,7 @@ class _HomePageState extends State<HomePage> {
                                                         context: context,
                                                         builder: (context) =>
                                                         const AlertDialog(
-                                                          // content: EditingCompany(),
+                                                          content: EditingEmployee(),
                                                         ));
                                                   });
                                                 },

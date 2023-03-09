@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:toggle_switch/toggle_switch.dart';
 import '../../../helper/class_colors.dart';
 import '../../home_page/home_page.dart';
 import 'package:http/http.dart' as http;
@@ -43,8 +44,6 @@ class _CartInfoPeopleState extends State<CartInfoPeople> {
   }
 
   /// ========================================
-
-
 
   @override
   Widget build(BuildContext context) {

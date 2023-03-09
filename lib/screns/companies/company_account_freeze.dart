@@ -1,5 +1,7 @@
+import 'package:els/bloc/company_bloc/company_bloc.dart';
 import 'package:els/helper/class_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../home_page/home_page.dart';
 import 'company_page.dart';
@@ -71,6 +73,7 @@ class CompanyAccountFreeze extends StatelessWidget {
                     await freezingCompany(IntTest.pressHover);
                     pointsMapController.add(IntTest.indexScreens);
                     Navigator.pop(context);
+                    // IntTest.indexScreens = 4;
                   }, child: const Text('Подтвердить', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.w500),)),
             ],
           ),

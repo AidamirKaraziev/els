@@ -99,7 +99,8 @@ class _CartInfoCompaniesState extends State<CartInfoCompanies> {
                                 children: [
                                   Padding(padding: const EdgeInsets.symmetric(horizontal: 10.0),
                                     child: CircleAvatar(
-                                      backgroundImage: const AssetImage('assets/user.png'),
+                                      backgroundColor: Colors.grey.shade200,
+                                      backgroundImage: const AssetImage('assets/office.png'),
                                       foregroundImage: NetworkImage('http://${state.listGetCompany[index]['photo']}'),
                                     ),
                                   ),

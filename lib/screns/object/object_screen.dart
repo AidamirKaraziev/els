@@ -4,6 +4,7 @@ import 'package:els/helper/class_colors.dart';
 import 'package:els/main.dart';
 import 'package:els/screns/object/object_widgets/top_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:toggle_switch/toggle_switch.dart';
 import '../home_page/home_page.dart';
 import 'package:http/http.dart' as http;
 
@@ -55,6 +56,20 @@ class _ObjectScreenState extends State<ObjectScreen> {
                 padding: const EdgeInsets.only(top: 20.0, right: 20.0),
                 child: Row(
                   children: [
+                    ToggleSwitch(
+                      minWidth: 90.0,
+                      initialLabelIndex: 1,
+                      cornerRadius: 5.0,
+                      activeFgColor: Colors.white,
+                      inactiveBgColor: Colors.white,
+                      inactiveFgColor: Colors.black,
+                      totalSwitches: 2,
+                      labels: const ['Список', 'Карта'],
+                      activeBgColors: const [[Colors.green],[Colors.green]],
+                      onToggle: (index) {
+                        print('switched to: $index');
+                      },
+                    ),
                     const Spacer(),
 
                     ///Кнопка Список

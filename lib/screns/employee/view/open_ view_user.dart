@@ -7,7 +7,14 @@ import '../widgets/add_employee_class.dart';
 import '../widgets/employee_acount_freeze.dart';
 import 'package:http/http.dart' as http;
 
+/// Окно выбранного сотрудника
 
+class OpenViewUser extends StatefulWidget {
+  const OpenViewUser({Key? key}) : super(key: key);
+
+  @override
+  State<OpenViewUser> createState() => _OpenViewUserState();
+}
 
 /// Замозморозка юзера =============
 freezingUser(int userId) async {
@@ -41,15 +48,6 @@ defrostingUser(int userId) async {
 }
 /// ==================================
 
-/// Окно выбранного сотрудника
-
-class OpenViewUser extends StatefulWidget {
-  const OpenViewUser({Key? key}) : super(key: key);
-
-  @override
-  State<OpenViewUser> createState() => _OpenViewUserState();
-}
-
 class _OpenViewUserState extends State<OpenViewUser> {
   @override
   Widget build(BuildContext context) {
@@ -62,7 +60,29 @@ class _OpenViewUserState extends State<OpenViewUser> {
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  /// Назад
+                  Container(
+                    width: 30.0,
+                    height: 30.0,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(25.0),
+                      color: ColorApp.myColorGreen,
+                    ),
+                    child: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            IntTest.indexScreens = 6;
+                            pointsMapController.add(IntTest.indexScreens);
+                          });
+                        },
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: ColorApp.myColorWhite,size: 14.0,
+                        )),
+                  ),
+                  const SizedBox(height: 20.0),
                   /// Photo & Info
                   Row(
                     children: [
@@ -285,7 +305,7 @@ class _OpenViewUserState extends State<OpenViewUser> {
                                 color: ColorApp.myColorWhite,
                                 boxShadow: const [
                                   BoxShadow(
-                                    color: Colors.grey,
+                                    color: ColorApp.myColorAvatar,
                                     blurRadius: 5,
                                   ),
                                 ],
@@ -478,7 +498,7 @@ class _OpenViewUserState extends State<OpenViewUser> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(5.0),
                                 color: ColorApp.myColorWhite,
-                                boxShadow: const [
+                                boxShadow:  [
                                   BoxShadow(
                                     color: Colors.grey,
                                     blurRadius: 5,
@@ -487,13 +507,15 @@ class _OpenViewUserState extends State<OpenViewUser> {
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
+                                  /// Удостоверение
                                   Row(
                                     mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
+                                        flex:2,
                                         child: Column(
                                           crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -509,6 +531,7 @@ class _OpenViewUserState extends State<OpenViewUser> {
                                         ),
                                       ),
                                       Expanded(
+                                        flex: 4,
                                         child: Container(
                                           constraints:
                                           const BoxConstraints(maxWidth: 300),
@@ -518,12 +541,18 @@ class _OpenViewUserState extends State<OpenViewUser> {
                                               // await ImagePickerWeb.getImageAsBytes();
                                             },
                                             child: DottedBorder(
+                                              radius: const Radius.circular(20.0),
                                               color: ColorApp.myColorGray,
-                                              child: const SizedBox(
-                                                height: 44.0,
-                                                child: Center(
-                                                  child: Icon(Icons.backup_outlined,
-                                                      color: ColorApp.myColorGray),
+                                              child: Center(
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(8.0),
+                                                  child: Column(
+                                                    children: const [
+                                                      Icon(Icons.backup,
+                                                          color: ColorApp.myColorGrayText),
+                                                      Text('Нажмите и выберите файл на диске или перетащите его сюда',style: TextStyle(fontSize: 10, color: ColorApp.myColorGrayText),),
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -533,11 +562,13 @@ class _OpenViewUserState extends State<OpenViewUser> {
                                     ],
                                   ),
                                   const SizedBox(height: 20.0),
+                                  /// ЦОК
                                   Row(
                                     mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
+                                        flex: 2,
                                         child: Column(
                                           crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -553,6 +584,7 @@ class _OpenViewUserState extends State<OpenViewUser> {
                                         ),
                                       ),
                                       Expanded(
+                                        flex: 4,
                                         child: GestureDetector(
                                           onTap: () async {
                                             // final imageClassification =
@@ -560,11 +592,16 @@ class _OpenViewUserState extends State<OpenViewUser> {
                                           },
                                           child: DottedBorder(
                                             color: ColorApp.myColorGray,
-                                            child: const SizedBox(
-                                              height: 44.0,
-                                              child: Center(
-                                                child: Icon(Icons.backup_outlined,
-                                                    color: ColorApp.myColorGray),
+                                            child: Center(
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(8.0),
+                                                child: Column(
+                                                  children: const [
+                                                    Icon(Icons.backup,
+                                                        color: ColorApp.myColorGrayText),
+                                                    Text('Нажмите и выберите файл на диске или перетащите его сюда',style: TextStyle(fontSize: 10, color: ColorApp.myColorGrayText),),
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           ),
