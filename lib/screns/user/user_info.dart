@@ -33,9 +33,9 @@ class UserInfo extends StatelessWidget {
                 ],
               ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   ///Участок
+                  if (state is UserGetState && state.getUser[0]['company_id'] != null)
                   Row(
                     children: [
                       const Icon(Icons.location_on_outlined),
@@ -45,11 +45,7 @@ class UserInfo extends StatelessWidget {
                         children: [
                           const Text('Участок'),
                           const SizedBox(height: 10.0),
-                          if (state is UserGetState)
-                            Text(
-                                state.getUser[0]['company_id'] != null
-                                    ? 'Участок № ${state.getUser[0]['company_id']}'
-                                    : 'Не заполнено',
+                            Text('Участок № ${state.getUser[0]['company_id']}',
                                 style: const TextStyle(
                                     fontSize: 16.0,
                                     fontWeight: FontWeight.w600)),
@@ -59,6 +55,7 @@ class UserInfo extends StatelessWidget {
                   ),
 
                   ///Должность
+                  if (state is UserGetState && state.getUser[0]['role_id']['name'] != null)
                   Row(
                     children: [
                       const Icon(Icons.person_outline_outlined),
@@ -68,10 +65,7 @@ class UserInfo extends StatelessWidget {
                         children: [
                           const Text('Должность'),
                           const SizedBox(height: 10.0),
-                          if (state is UserGetState)
-                            Text(
-                                state.getUser[0]['role_id']['name'] ??
-                                    'Не заполнено',
+                            Text(state.getUser[0]['role_id']['name'],
                                 style: const TextStyle(
                                     fontSize: 16.0,
                                     fontWeight: FontWeight.w600)),
@@ -81,6 +75,7 @@ class UserInfo extends StatelessWidget {
                   ),
 
                   ///Компания
+                  if (state is UserGetState && state.getUser[0]['company_id'] != null)
                   Row(
                     children: [
                       const Icon(Icons.domain),
@@ -90,10 +85,7 @@ class UserInfo extends StatelessWidget {
                         children: [
                           const Text('Компания'),
                           const SizedBox(height: 10.0),
-                          if (state is UserGetState)
-                            Text(
-                                state.getUser[0]['company_id'] ??
-                                    'Не заполнено',
+                            Text(state.getUser[0]['company_id'],
                                 style: const TextStyle(
                                     fontSize: 16.0,
                                     fontWeight: FontWeight.w600)),

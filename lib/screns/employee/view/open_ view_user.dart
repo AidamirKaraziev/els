@@ -62,27 +62,6 @@ class _OpenViewUserState extends State<OpenViewUser> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// Назад
-                  Container(
-                    width: 30.0,
-                    height: 30.0,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25.0),
-                      color: ColorApp.myColorGreen,
-                    ),
-                    child: IconButton(
-                        onPressed: () {
-                          setState(() {
-                            IntTest.indexScreens = 6;
-                            pointsMapController.add(IntTest.indexScreens);
-                          });
-                        },
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: ColorApp.myColorWhite,size: 14.0,
-                        )),
-                  ),
-                  const SizedBox(height: 20.0),
                   /// Photo & Info
                   Row(
                     children: [

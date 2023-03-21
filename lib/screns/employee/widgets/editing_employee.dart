@@ -1,17 +1,15 @@
 import 'dart:convert';
-
 import 'package:dotted_border/dotted_border.dart';
 import 'package:els/helper/button/my_button.dart';
 import 'package:els/helper/class_colors.dart';
-import 'package:els/screns/employee/models/employee.dart';
-import 'package:els/screns/employee/models/employee.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
-
 import '../../home_page/home_page.dart';
 import '../bloc/employee_bloc.dart';
+import 'add_employee_class.dart';
 
+/// Изменение сотрудника
 
 class EditingEmployee extends StatefulWidget {
   const EditingEmployee({
@@ -75,22 +73,22 @@ class _EditingEmployeeState extends State<EditingEmployee> {
   /// =======================================
 
   /// Наимнование компании
-  TextEditingController editingEmployeeName = TextEditingController();
+  TextEditingController editingEmployeeName = TextEditingController(text: listSelectedEmployee['data']['name']);
 
   /// Дата приема на работу
   TextEditingController dateOfEmployment = TextEditingController();
 
   /// Номер телефона
-  TextEditingController phoneNumber = TextEditingController();
+  TextEditingController phoneNumber = TextEditingController(text: listSelectedEmployee['data']['contact_phone']);
 
   /// день рождения
   TextEditingController birthday = TextEditingController();
 
+
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      // width: 890.0,
-      // height: 750.0,
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,13 +185,8 @@ class _EditingEmployeeState extends State<EditingEmployee> {
                   controller: editingEmployeeName,
                   decoration: const InputDecoration(
                       border: OutlineInputBorder(),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide:
-                        BorderSide(color: ColorApp.myColorGreenAuth),
-                      ),
-                      // labelText: 'Документ',
-                      labelStyle: TextStyle(color: ColorApp.myColorGray)),
-                ),
+                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorApp.myColorGreenAuth)),
+                      labelStyle: TextStyle(color: ColorApp.myColorGray))),
               ],
             ),
             const SizedBox(height: 10.0),
@@ -269,7 +262,6 @@ class _EditingEmployeeState extends State<EditingEmployee> {
             /// Дата приема на работу и день рождения
             Row(
               children: [
-
                 /// Дата приема на работу
                 Expanded(
                   child: Column(
@@ -338,13 +330,18 @@ class _EditingEmployeeState extends State<EditingEmployee> {
               children: [
                 BlocBuilder<EmployeeBloc, EmployeeState>(
                   builder: (context, state) {
-                    final getEmployee = state.listGetEmployee;
                     return MainButtonApp(
                       textButton: 'Сохранить', press: () async {
                       await editingEmployeeUser(IntTest.pressHover);
-                      Navigator.pop(context);
-                      getEmployee[IntTest.indexScreens]['name'] = editingEmployeeName.text;
+                      /// Измененния имя
+                      listSelectedEmployee['data']['name'] = editingEmployeeName.text;
+                      getEmployee[IntTest.indexUserList]['name'] = editingEmployeeName.text;
+                      /// Измененния телефона
+                      listSelectedEmployee['data']['contact_phone'] = phoneNumber.text;
+                      getEmployee[IntTest.indexUserList]['contact_phone'] = phoneNumber.text;
+                      /// Измененния должности
                       pointsMapController.add(IntTest.indexScreens);
+                      Navigator.pop(context);
                     },);
                   },
                 ),

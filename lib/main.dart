@@ -1,5 +1,7 @@
+import 'package:els/bloc/object_bloc/object_bloc.dart';
 import 'package:els/screns/auth/auth.dart';
 import 'package:els/screns/employee/bloc/employee_bloc.dart';
+import 'package:els/screns/object/bloc/object_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -21,11 +23,13 @@ class MyApp extends StatelessWidget {
     final employeeBloc = EmployeeBloc();
     final companyBloc = CompanyBloc();
     final userBloc = UserBloc();
+    final myObjectBloc = MyObjectBloc();
     return MultiBlocProvider(
       providers: [
         BlocProvider<EmployeeBloc>(create: (context) => employeeBloc..add(EmployeeGetUserEvent())),
         BlocProvider<CompanyBloc>(create: (context) => companyBloc..add(CompanyGetUserEvent())),
         BlocProvider<UserBloc>(create: (context) => userBloc..add(UserGetEvent())),
+        BlocProvider<MyObjectBloc>(create: (context) => myObjectBloc..add(ObjectGetEvent())),
       ],
       child: MaterialApp(
         localizationsDelegates: const [
@@ -41,7 +45,6 @@ class MyApp extends StatelessWidget {
           textTheme: GoogleFonts.ubuntuTextTheme(),
         ),
         home:
-        // MyMap(),
         const Auth(),
       ),
     );

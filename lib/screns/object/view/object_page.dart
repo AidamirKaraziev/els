@@ -1,9 +1,12 @@
+import 'package:els/screns/object/widgets/editing_object.dart';
+import 'package:els/screns/object/widgets/object_accountFreeze.dart';
 import 'package:flutter/material.dart';
-import '../../helper/class_colors.dart';
-import '../home_page/home_page.dart';
-import 'object_widgets/editing_object.dart';
-import 'object_widgets/object_accountFreeze.dart';
+import '../../../helper/class_colors.dart';
+import '../../../helper/my_map/my_map.dart';
+import '../../home_page/home_page.dart';
+import 'object_screen.dart';
 
+/// Окно выбранной компании
 
 class ObjectPage extends StatefulWidget {
   const ObjectPage({Key? key}) : super(key: key);
@@ -38,17 +41,6 @@ class _ObjectPageState extends State<ObjectPage> {
                           ///кнопки
                           Row(
                             children: [
-                              /// Назад
-                              IconButton(
-                                  onPressed: () {
-                                    IntTest.indexScreens = 3;
-                                    pointsMapController.add(IntTest.indexScreens);
-                                  },
-                                  icon: const Icon(
-                                    Icons.arrow_circle_left_rounded,
-                                    color: ColorApp.myColorGreenAuth,
-                                  )),
-                              const SizedBox(width: 10.0),
                               const Text(
                                 'Информация',
                                 style: TextStyle(
@@ -102,45 +94,45 @@ class _ObjectPageState extends State<ObjectPage> {
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: const [
+                              children: [
                                 IconAndText(
                                     icon: Icons.domain,
                                     title: 'Организация',
-                                    subtitle: 'ООО «КПЭК»'),
-                                IconAndText(
+                                    subtitle: listSelectedObject['organization_id'] ?? 'Пусто'),
+                                const IconAndText(
                                     icon: Icons.signpost_outlined,
                                     title: 'Участок',
                                     subtitle: 'Северная/Тургенева'),
-                                IconAndText(
+                                const IconAndText(
                                     icon: Icons.location_on_outlined,
                                     title: 'Адрес',
                                     subtitle:
                                         'г. Краснодар, ул. Северная, 356'),
-                                IconAndText(
+                                const IconAndText(
                                     icon: Icons.looks_one_outlined,
                                     title: 'Тип',
                                     subtitle: 'Лифт'),
-                                IconAndText(
+                                const IconAndText(
                                     icon: Icons.elevator_outlined,
                                     title: 'Модель',
                                     subtitle: 'LIFT A388509'),
-                                IconAndText(
+                                const IconAndText(
                                     icon: Icons.filter_1_outlined,
                                     title: 'Регистрационный номер',
                                     subtitle: '23834939003928282'),
-                                IconAndText(
+                                const IconAndText(
                                     icon: Icons.filter_1_outlined,
                                     title: 'Заводской номер',
                                     subtitle: '23834939003928282'),
-                                IconAndText(
+                                const IconAndText(
                                     icon: Icons.domain,
                                     title: 'Компания',
                                     subtitle: 'ООО “Гармония”'),
-                                IconAndText(
+                                const IconAndText(
                                     icon: Icons.person_outline,
                                     title: 'Контактное лицо',
                                     subtitle: 'П.С. Василенко'),
-                                IconAndText(
+                                const IconAndText(
                                     icon: Icons.insert_drive_file_outlined,
                                     title: 'Договор',
                                     subtitle: 'Договор №2123 от 24.04.2022'),
@@ -182,7 +174,7 @@ class _ObjectPageState extends State<ObjectPage> {
                                     ),
                                   ],
                                 ),
-                                // child: MyMap(),
+                                child: const MyMap(),
                               ),
                             ],
                           ),

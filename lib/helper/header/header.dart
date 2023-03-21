@@ -1,8 +1,3 @@
-
-
-
-
-import 'package:badges/badges.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
@@ -10,8 +5,8 @@ import 'package:percent_indicator/circular_percent_indicator.dart';
 import '../../bloc/user_bloc/user_bloc.dart';
 import '../../screns/companies/add_companies.dart';
 import '../../screns/employee/widgets/add_employee.dart';
-import '../../screns/object/object_widgets/add_object.dart';
-import '../../screns/object/object_widgets/editing_object.dart';
+import '../../screns/object/widgets/add_object.dart';
+import '../../screns/object/widgets/editing_object.dart';
 import '../class_colors.dart';
 
 ///Header

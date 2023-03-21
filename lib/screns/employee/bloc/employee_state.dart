@@ -24,22 +24,3 @@ part of 'employee_bloc.dart';
   }
 }
 
-// class EmployeeInitialState extends EmployeeState {
-//   final List listGetEmployee;
-//   final List listGetEmployeeView;
-//   final bool isLoading;
-//
-//   EmployeeInitialState({
-//     this.listGetEmployee = const [],
-//     this.listGetEmployeeView = const [],
-//     this.isLoading = false,
-//   });
-//
-//   E
-// }
-
-// class EmployeeGetUserState extends EmployeeState {
-//   final List listGetEmployee;
-//
-//   EmployeeGetUserState({required this.listGetEmployee});
-// }

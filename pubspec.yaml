@@ -42,8 +42,6 @@ dependencies:
   gradient_borders: ^0.2.0
   percent_indicator: ^4.2.2
   provider: any
-  flutter_osm_plugin: ^0.42.0
-  latlong: any
   location: any
   syncfusion_flutter_datepicker: ^20.2.50
   shared_preferences: ^2.0.15
@@ -57,6 +55,10 @@ dependencies:
   convert: any
   html: any
   toggle_switch: ^2.0.1
+  url_launcher: any
+  flutter_map: ^3.1.0
+  latlong2: ^0.8.1
+  flutter_svg: ^2.0.4
 
 
   flutter_localizations:

@@ -12,6 +12,7 @@ class ColorApp{
   static const Color myColorGray = Color(0xff6B6F73);
   static const Color myColorGrayText = Color(0xff9B9A9A);
   static const Color myColorAvatar = Color(0xffD0D0D0);
+  static const Color myColorGrayBorder = Color(0xffE4E4E4);
   static const Color myColorGrayShadow = Color(0xffF5F5F5);
   static const Color myColorTransparent = Color(0xffF5F6F6);
   static const Color myColorRed = Color(0xffDF726F);
@@ -23,6 +24,7 @@ class ColorApp{
 
 class IntTest {
   static int indexScreens = 0;
+  static int indexUserList = 0;
   static int pressHover = 0;
   static int badgeCount = 2;
   static String myTitle = 'Главная';
