@@ -124,7 +124,7 @@ class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
         ]
         for to_id in list_planned_to:
             if to_id is not None:
-                obj, code, indexes = crud_acts_fact.get_act_fact_by_id(db=db, act_fact_id=to_id)
+                obj, code, indexes = crud_acts_fact.get_act_fact_by_id(db=db, id=to_id)
                 if code != 0:
                     code["detail"] = code["detail"] + f". Нет фактического акта с id {to_id}"
                     return obj, code, indexes
