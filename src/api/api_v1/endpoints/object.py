@@ -29,25 +29,6 @@ ROLES_ELIGIBLE = [ADMIN, FOREMAN]
 router = APIRouter()
 
 
-@router.get(
-    path="/objects-for-search/",
-    response_model=ListOfEntityResponse,
-    name="Список объектов",
-    summary="Получение всех объектов для поиска на фронте",
-    description="Получение всех объектов для поиска на фронте, без пагинации",
-    tags=["Админ панель / Объекты"],
-)
-def get_data(
-    request: Request,
-    session=Depends(deps.get_db),
-):
-
-    data, paginator = crud_objects.get_all_objects(db=session)
-    return ListOfEntityResponse(
-        data=[get_object(obj=datum, request=request) for datum in data]
-    )
-
-
 # GET-MULTY
 @router.get(
     path="/all-objects/",
@@ -59,7 +40,7 @@ def get_data(
 def get_data(
     request: Request,
     session=Depends(deps.get_db),
-    page: int = Query(1, title="Номер страницы"),
+    page: int = Query(None, title="Номер страницы"),
 ):
     logging.info(crud_objects.get_multi(db=session, page=None))
 
