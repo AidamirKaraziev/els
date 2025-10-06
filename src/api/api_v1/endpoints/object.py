@@ -41,7 +41,6 @@ def get_data(
     request: Request,
     session=Depends(deps.get_db),
 ):
-    logging.info(crud_objects.get_all_objects(db=session, page=None))
 
     data, paginator = crud_objects.get_all_objects(db=session)
     return ListOfEntityResponse(
