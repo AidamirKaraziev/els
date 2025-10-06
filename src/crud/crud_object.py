@@ -320,7 +320,9 @@ class CrudObject(CRUDBase[Object, ObjectCreate, ObjectUpdate]):
         *,
         db: Session,
     ):
-        return db.query(self.model)
+        objs = db.query(self.model)
+
+        return pagination.get_page(objs, None)
 
 
 crud_objects = CrudObject(Object)
