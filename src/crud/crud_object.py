@@ -80,7 +80,7 @@ class CrudObject(CRUDBase[Object, ObjectCreate, ObjectUpdate]):
             mech = db.query(UniversalUser).filter(UniversalUser.id == new_data.mechanic_id).first()
             if mech is None:
                 return None, -105, None  # нет пользователя
-        #     проверка на роль механика
+            #     проверка на роль механика
             if mech.role_id not in ROLE_MECHANIC:
                 return None, -120, None
 
@@ -217,5 +217,10 @@ class CrudObject(CRUDBase[Object, ObjectCreate, ObjectUpdate]):
             .filter(UniversalUser.company_id == client_id))
         return pagination.get_page(objs, page)
 
+    def get_all_objects(
+        self,*,
+        db: Session,
+    ):
+        return db.query(self.model)
 
 crud_objects = CrudObject(Object)
