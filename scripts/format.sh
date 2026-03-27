@@ -2,5 +2,5 @@
 set -euo pipefail
 set -x
 
-python3 -m ruff check src --fix
-python3 -m ruff format src
+uv run ruff check src --fix
+uv run ruff format src

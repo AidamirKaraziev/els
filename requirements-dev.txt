@@ -1,0 +1,2 @@
+# Зависимости перенесены в pyproject.toml ([dependency-groups].dev).
+# Установка: uv sync --all-groups

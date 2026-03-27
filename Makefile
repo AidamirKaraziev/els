@@ -1,12 +1,13 @@
-.PHONY: up lint format
+.PHONY: up lint format sync
+
+sync:
+	uv sync --all-groups
 
 up:
-	uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+	uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
 lint:
-	python3 -m ruff check src
-	python3 -m ruff format --check src
+	./scripts/lint.sh
 
 format:
-	python3 -m ruff check src --fix
-	python3 -m ruff format src
+	./scripts/format.sh

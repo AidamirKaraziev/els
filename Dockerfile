@@ -1,25 +1,17 @@
-FROM python:3.8
+FROM python:3.8-slim-bookworm
 
-# Установите рабочий каталог
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 WORKDIR /app
 
-# Скопируйте зависимости
-COPY req.txt .
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
-# Установите зависимости
-# Обновляем pip и устанавливаем зависимости
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r req.txt
-
-# Копируем остальной код приложения
 COPY . /app
 
-# Устанавливаем рабочую директорию
-WORKDIR /app
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Добавляем скрипт для выполнения миграций и запуска приложения
 COPY prestart.sh /prestart.sh
 RUN chmod +x /prestart.sh
 
-# Запустите скрипт prestart.sh и затем приложение
 CMD ["sh", "-c", "/prestart.sh && uvicorn src.main:app --host 0.0.0.0 --port 8000 ${UVICORN_RELOAD}"]
