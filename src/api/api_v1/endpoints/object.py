@@ -1,23 +1,19 @@
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request, UploadFile, File, Query
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.params import Path
 
-from src.crud.users.crud_client import crud_client
 from src.api import deps
-
-from src.core.response import ListOfEntityResponse, SingleEntityResponse, Meta
-from src.templates_raise import get_raise
-
-from src.crud.crud_object import crud_objects
-from src.crud.users.crud_universal_user import crud_universal_users
-from src.crud.crud_company import crud_company
-from src.getters.object import get_object
-from src.schemas.object import ObjectCreate, ObjectUpdate, ObjectGet
-
+from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, FOREMAN
-
+from src.crud.crud_company import crud_company
+from src.crud.crud_object import crud_objects
+from src.crud.users.crud_client import crud_client
+from src.crud.users.crud_universal_user import crud_universal_users
+from src.getters.object import get_object
+from src.schemas.object import ObjectCreate, ObjectGet, ObjectUpdate
+from src.templates_raise import get_raise
 
 PATH_MODEL = "objects"
 PATH_TYPE_LETTER_OF_APPOINTMENT = "letter_of_appointment"

@@ -1,10 +1,11 @@
 import uuid
-from jose import jwt
 from datetime import datetime, timedelta
-from typing import Any, Union, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+
+from jose import jwt
 from passlib.context import CryptContext
 
-from src.config import settings, Settings
+from src.config import Settings, settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -13,14 +14,14 @@ ALGORITHM = "HS256"
 
 
 def create_token(
-        subject: Union[str, Any],
-        expires_delta: Optional[timedelta] = None,
-        token_type: Optional[str] = None,
-        nbf: Optional[datetime] = None,
-        jti: Optional[str] = None,
-        settings: Settings = settings,
-        algorithm: str = ALGORITHM,
-        **extra_args
+    subject: Union[str, Any],
+    expires_delta: Optional[timedelta] = None,
+    token_type: Optional[str] = None,
+    nbf: Optional[datetime] = None,
+    jti: Optional[str] = None,
+    settings: Settings = settings,
+    algorithm: str = ALGORITHM,
+    **extra_args,
 ) -> str:
 
     now = datetime.utcnow()
@@ -28,11 +29,9 @@ def create_token(
     if expires_delta:
         expire = now + expires_delta
     else:
-        expire = now + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+        expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    claim_extra_fields: List[str] = getattr(settings, 'TOKEN_CLAIMS_EXTRA_FIELDS', [])
+    claim_extra_fields: List[str] = getattr(settings, "TOKEN_CLAIMS_EXTRA_FIELDS", [])
 
     checkable_fields: List[str] = ["exp", "nbf"]
 
@@ -40,10 +39,7 @@ def create_token(
         if field in settings.TOKEN_CHECKS and field not in claim_extra_fields:
             claim_extra_fields.append(field)
 
-    to_encode: Dict[str, Any] = {
-        "sub": str(subject),
-        **extra_args
-    }
+    to_encode: Dict[str, Any] = {"sub": str(subject), **extra_args}
 
     if "exp" in claim_extra_fields:
         to_encode["exp"] = expire
@@ -61,14 +57,14 @@ def create_token(
 
 
 def create_token_moderator(
-        subject: Union[str, Any],
-        expires_delta: Optional[timedelta] = None,
-        token_type: Optional[str] = None,
-        nbf: Optional[datetime] = None,
-        jti: Optional[str] = None,
-        settings: Settings = settings,
-        algorithm: str = ALGORITHM,
-        **extra_args
+    subject: Union[str, Any],
+    expires_delta: Optional[timedelta] = None,
+    token_type: Optional[str] = None,
+    nbf: Optional[datetime] = None,
+    jti: Optional[str] = None,
+    settings: Settings = settings,
+    algorithm: str = ALGORITHM,
+    **extra_args,
 ) -> str:
 
     now = datetime.utcnow()
@@ -76,11 +72,9 @@ def create_token_moderator(
     if expires_delta:
         expire = now + expires_delta
     else:
-        expire = now + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+        expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    claim_extra_fields: List[str] = getattr(settings, 'TOKEN_CLAIMS_EXTRA_FIELDS', [])
+    claim_extra_fields: List[str] = getattr(settings, "TOKEN_CLAIMS_EXTRA_FIELDS", [])
 
     checkable_fields: List[str] = ["exp", "nbf"]
 
@@ -88,10 +82,7 @@ def create_token_moderator(
         if field in settings.TOKEN_CHECKS and field not in claim_extra_fields:
             claim_extra_fields.append(field)
 
-    to_encode: Dict[str, Any] = {
-        "sub": str(subject),
-        **extra_args
-    }
+    to_encode: Dict[str, Any] = {"sub": str(subject), **extra_args}
 
     if "exp" in claim_extra_fields:
         to_encode["exp"] = expire
@@ -104,7 +95,9 @@ def create_token_moderator(
 
     if token_type is not None:
         to_encode["type"] = token_type
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY_MODERATOR, algorithm=algorithm)
+    encoded_jwt = jwt.encode(
+        to_encode, settings.SECRET_KEY_MODERATOR, algorithm=algorithm
+    )
     return encoded_jwt
 
 
@@ -114,4 +107,3 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
-

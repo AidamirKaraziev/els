@@ -1,27 +1,25 @@
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, Request, UploadFile, File, Query
+
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.params import Path
 from sqlalchemy.orm import Session
 
 from src.api import deps
-
-from src.core.response import ListOfEntityResponse, SingleEntityResponse, Meta
-from src.templates_raise import get_raise
+from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.security import create_token_universal_user
-from src.exceptions import UnfoundEntity
-
-from src.crud.users.crud_universal_user import crud_universal_users
 from src.crud.crud_company import crud_company
 from src.crud.crud_role import crud_role
+from src.crud.users.crud_universal_user import crud_universal_users
+from src.exceptions import UnfoundEntity
 from src.getters.universal_user import get_universal_user
+from src.schemas.token import TokenBase
 from src.schemas.universal_user import (
     UniversalUserEntrance,
     UniversalUserGet,
     UniversalUserUpdate,
 )
-from src.schemas.token import TokenBase
-
+from src.templates_raise import get_raise
 
 PATH_MODEL = "universal_user"
 PATH_TYPE_PHOTO = "photo"
@@ -51,7 +49,6 @@ def entrance(
     return SingleEntityResponse(data=TokenBase(token=token))
 
 
-# GET-MULTY
 @router.get(
     "/cp/all-users/",
     response_model=ListOfEntityResponse,
@@ -74,7 +71,6 @@ def get_data(
     )
 
 
-# GET user by role_id
 @router.get(
     "/universal-user/sort-by-role/{role_id}/",
     response_model=ListOfEntityResponse,
@@ -101,7 +97,6 @@ def get_users_by_role_id(
     )
 
 
-# GET-MULTY EMPLOYEE
 @router.get(
     "/cp/all-employee/",
     response_model=ListOfEntityResponse,
@@ -124,7 +119,6 @@ def get_data(
     )
 
 
-# GET CLIENT OF COMPANY
 @router.get(
     "/cp/client/{company_id}/",
     response_model=ListOfEntityResponse,
@@ -161,7 +155,6 @@ def get_data(
     )
 
 
-# GET CLIENT
 @router.get(
     "/cp/all-client/",
     response_model=ListOfEntityResponse,
@@ -187,7 +180,6 @@ def get_data(
     )
 
 
-# GET
 @router.get(
     "/cp/universal-user/me/",
     response_model=SingleEntityResponse[UniversalUserGet],
@@ -204,7 +196,6 @@ def get_data(
     )
 
 
-# GET BY ID
 @router.get(
     "/cp/universal-user/{user_id}/",
     response_model=SingleEntityResponse[UniversalUserGet],
@@ -229,7 +220,6 @@ def get_data(
     return SingleEntityResponse(data=get_universal_user(user, request=request))
 
 
-# UPDATE SELF
 @router.put(
     "/cp/universal-user/me/",
     response_model=SingleEntityResponse[UniversalUserGet],
@@ -258,7 +248,6 @@ def update_user(
     return SingleEntityResponse(data=get_universal_user(obj, request=request))
 
 
-# UPDATE photo
 @router.put(
     "/cp/universal-user/me/photo/",
     response_model=SingleEntityResponse,
@@ -289,7 +278,6 @@ def create_upload_file(
     return SingleEntityResponse(data=get_universal_user(current_user, request=request))
 
 
-# UPDATE identity-card
 @router.put(
     "/cp/universal-user/me/identity-card/",
     response_model=SingleEntityResponse,
@@ -320,12 +308,11 @@ def create_upload_file(
     return SingleEntityResponse(data=get_universal_user(current_user, request=request))
 
 
-# UPDATE qualification_file
 @router.put(
     "/cp/universal-user/me/qualification-file/",
     response_model=SingleEntityResponse,
     name="Изменить ЦОК",
-    description="Изменить ЦОК для пользователя, если отправить пусто поле информация сбросится",
+    description="Изменить ЦОК для пользователя, если отправить пустое поле - информация сбросится",
     tags=["Админ панель / Пользователь"],
 )
 def create_upload_file(

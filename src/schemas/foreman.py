@@ -1,13 +1,12 @@
 from sqlite3 import Date
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
+from src.schemas.divisions import DivisionGet
 from src.schemas.location import LocationGet
 from src.schemas.role import RoleGet
 from src.schemas.working_specialty import WorkingSpecialtyGet
-
-from src.schemas.divisions import DivisionGet
 
 
 class ForemanBase(BaseModel):
@@ -90,5 +89,3 @@ class ForemanIdentyCard(BaseModel):
 # Загрузить ЦОК
 class ForemanQualificationFile(BaseModel):
     qualification_file: Optional[str]
-
-

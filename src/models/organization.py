@@ -1,8 +1,8 @@
-from sqlalchemy import Boolean, Column, Integer, String, ForeignKey
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from src.session import Base
 from src.models import UniversalUser
+from src.session import Base
 
 
 class Organization(Base):

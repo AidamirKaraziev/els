@@ -1,14 +1,14 @@
 from datetime import timedelta
 from typing import Any
 
+from app import crud, models, schemas
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app import crud, models, schemas
+from config import settings
 from src.api import deps
 from src.core import security
-from config import settings
 from src.core.security import get_password_hash
 from src.utils import (
     generate_password_reset_token,

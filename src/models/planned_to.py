@@ -1,8 +1,8 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from src.session import Base
 from src.models import Object
+from src.session import Base
 
 
 class PlannedTO(Base):
@@ -37,5 +37,4 @@ class PlannedTO(Base):
     november_to = relationship("ActFact", foreign_keys=[november_to_id])
     december_to = relationship("ActFact", foreign_keys=[december_to_id])
 
-    __table_args__ = (UniqueConstraint('year', 'object_id', name='_year_object_uc'),
-                      )
+    __table_args__ = (UniqueConstraint("year", "object_id", name="_year_object_uc"),)

@@ -1,25 +1,16 @@
 import logging
 
-from fastapi import APIRouter, Depends, Request, Query
-
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.params import Path
+
 from src.api import deps
-
-from src.crud.users.crud_universal_user import crud_universal_users
-from src.core.response import ListOfEntityResponse, SingleEntityResponse, Meta
-
-
-from src.templates_raise import get_raise
-
-
+from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, FOREMAN, MECHANIC
-
 from src.crud.crud_act_fact import crud_acts_fact
+from src.crud.users.crud_universal_user import crud_universal_users
 from src.getters.act_fact import get_acts_facts
-
-from src.schemas.act_fact import ActFactGet
-
-from src.schemas.act_fact import ActFactCreate, ActFactUpdate
+from src.schemas.act_fact import ActFactCreate, ActFactGet, ActFactUpdate
+from src.templates_raise import get_raise
 
 ROLES_ELIGIBLE = [ADMIN, FOREMAN]
 PATH_MODEL = "act_fact"
@@ -133,7 +124,7 @@ def create_act_fact(
 - `status_id` (Optional[StatusGet]): Идентификатор статуса.
 
 ### Возвращает:
-- **SingleEntityResponse**: Объект с обновленными данными фактического акта.        
+- **SingleEntityResponse**: Объект с обновленными данными фактического акта.
             """,
     tags=["Админ панель / Фактические Акты"],
 )

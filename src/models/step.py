@@ -4,6 +4,6 @@ from src.session import Base
 
 
 class Step(Base):
-    __tablename__ = 'steps'
+    __tablename__ = "steps"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)

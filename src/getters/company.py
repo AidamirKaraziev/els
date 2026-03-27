@@ -1,17 +1,24 @@
-from fastapi import Request
 from typing import Optional
 
-from src.config import Settings, settings
+from fastapi import Request
 
+from src.config import Settings, settings
 from src.getters.location import get_location
 from src.models.company import Company
 from src.schemas.company import CompanyGet
 
 
-def getting_company(company: Company, request: Optional[Request],
-                    config: Settings = settings) -> Optional[CompanyGet]:
+def getting_company(
+    company: Company, request: Optional[Request], config: Settings = settings
+) -> Optional[CompanyGet]:
     if request is not None:
-        url = request.url.hostname + ":" + str(settings.APP_PORT) + config.API_V1_STR + "/static/"
+        url = (
+            request.url.hostname
+            + ":"
+            + str(settings.APP_PORT)
+            + config.API_V1_STR
+            + "/static/"
+        )
         if company.photo is not None:
             company.photo = url + str(company.photo)
         else:
@@ -25,6 +32,8 @@ def getting_company(company: Company, request: Optional[Request],
         photo=company.photo,
         email=company.email,
         site=company.site,
-        location_id=get_location(company.location) if company.location is not None else None,
-        is_actual=company.is_actual
+        location_id=get_location(company.location)
+        if company.location is not None
+        else None,
+        is_actual=company.is_actual,
     )

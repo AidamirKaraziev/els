@@ -3,9 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from src.schemas.location import LocationGet
-
 from src.schemas.area_of_responsibility import AreaOfResponsibilityGet
+from src.schemas.location import LocationGet
 
 
 class ModeratorBase(BaseModel):

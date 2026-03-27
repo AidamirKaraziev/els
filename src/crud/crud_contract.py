@@ -1,30 +1,35 @@
-from typing import Optional, Any, List, Tuple
+from typing import Any, List, Optional, Tuple
+
 from sqlalchemy.orm import Session
 
 from src.core.response import Paginator
-from src.utils.time_stamp import date_from_timestamp
-from src.utils import pagination
-
-from src.models import UniversalUser
-from src.models.contract import Contract
-
 from src.crud.base import CRUDBase
 from src.crud.base_user import ModelType
 from src.crud.crud_company import crud_company
 from src.crud.crud_cost_type import crud_cost_types
 from src.crud.crud_type_contract import crud_type_contract
 from src.crud.users.crud_universal_user import crud_universal_users
+from src.models import UniversalUser
+from src.models.contract import Contract
 from src.schemas.contract import ContractCreate, ContractUpdate
+from src.utils import pagination
+from src.utils.time_stamp import date_from_timestamp
 
 
 class CrudContract(CRUDBase[Contract, ContractCreate, ContractUpdate]):
-    def create_contract(self, db: Session, *,
-                        current_user: UniversalUser,
-                        new_data: ContractCreate,
-                        having_rights: list):
+    def create_contract(
+        self,
+        db: Session,
+        *,
+        current_user: UniversalUser,
+        new_data: ContractCreate,
+        having_rights: list,
+    ):
 
         # проверить права админа
-        code = crud_universal_users.check_role_list(current_user=current_user, role_list=having_rights)
+        code = crud_universal_users.check_role_list(
+            current_user=current_user, role_list=having_rights
+        )
         if code != 0:
             return None, code, None
         # проверить есть ли такая компания
@@ -57,17 +62,22 @@ class CrudContract(CRUDBase[Contract, ContractCreate, ContractUpdate]):
             return None, -1121, None
         return obj, 0, None
 
-    def update_contract(self, db: Session, *, new_data: Optional[ContractUpdate], contract_id: int):
+    def update_contract(
+        self, db: Session, *, new_data: Optional[ContractUpdate], contract_id: int
+    ):
         #
         # проверить есть ли компания с таким id
-        this_contract = (db.query(Contract).filter(Contract.id == contract_id).first())
+        this_contract = db.query(Contract).filter(Contract.id == contract_id).first()
         if this_contract is None:
             return None, -1121, None
 
         # Check title
         if new_data.title is not None:
             if this_contract.title != Contract.title:
-                if db.query(Contract).filter(Contract.title == new_data.title).first() is not None:
+                if (
+                    db.query(Contract).filter(Contract.title == new_data.title).first()
+                    is not None
+                ):
                     return None, -112, None
 
         # Проверить города
@@ -86,9 +96,18 @@ class CrudContract(CRUDBase[Contract, ContractCreate, ContractUpdate]):
         db_obj = super().update(db=db, db_obj=this_contract, obj_in=new_data)
         return db_obj, 0, None
 
-    def archiving_contract(self, db: Session, *, current_user: UniversalUser, contract_id: int, role_list: list):
+    def archiving_contract(
+        self,
+        db: Session,
+        *,
+        current_user: UniversalUser,
+        contract_id: int,
+        role_list: list,
+    ):
         # проверить роль
-        code = crud_universal_users.check_role_list(current_user=current_user, role_list=role_list)
+        code = crud_universal_users.check_role_list(
+            current_user=current_user, role_list=role_list
+        )
         if code != 0:
             return None, code, None
         # проверить есть ли такая компания
@@ -99,9 +118,18 @@ class CrudContract(CRUDBase[Contract, ContractCreate, ContractUpdate]):
         obj, code, indexes = super().archiving(db=db, db_obj=obj)
         return obj, code, None
 
-    def unzipping_contract(self, db: Session, *, current_user: UniversalUser, contract_id: int, role_list: list):
+    def unzipping_contract(
+        self,
+        db: Session,
+        *,
+        current_user: UniversalUser,
+        contract_id: int,
+        role_list: list,
+    ):
         # проверить роль
-        code = crud_universal_users.check_role_list(current_user=current_user, role_list=role_list)
+        code = crud_universal_users.check_role_list(
+            current_user=current_user, role_list=role_list
+        )
         if code != 0:
             return None, code, None
         # проверить есть ли такая компания
@@ -112,8 +140,9 @@ class CrudContract(CRUDBase[Contract, ContractCreate, ContractUpdate]):
         obj, code, indexes = super().unzipping(db=db, db_obj=obj)
         return obj, code, None
 
-    def get_contract_by_company_id(self, *, db: Session, company_id: int, page: Optional[int] = None
-                                   ) -> Tuple[List[ModelType], Paginator]:
+    def get_contract_by_company_id(
+        self, *, db: Session, company_id: int, page: Optional[int] = None
+    ) -> Tuple[List[ModelType], Paginator]:
         objs = db.query(Contract).filter(Contract.company_id == company_id)
         return pagination.get_page(objs, page)
 

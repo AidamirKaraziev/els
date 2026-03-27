@@ -1,6 +1,7 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+
 from src.schemas.act_fact import ActFactGet
 from src.schemas.object import ObjectGet
 

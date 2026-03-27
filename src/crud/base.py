@@ -2,20 +2,17 @@ import glob
 import os
 import shutil
 import uuid
-from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union, Tuple
+from typing import Any, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
 
 from fastapi import UploadFile
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from src.session import Base
-
 from src.core.response import Paginator
-from src.utils import pagination
-
 from src.exceptions import UnfoundEntity, UnprocessableEntity
-
+from src.session import Base
+from src.utils import pagination
 
 ModelType = TypeVar("ModelType", bound=Base)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
@@ -43,7 +40,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     #     return db.query(self.model).offset(skip).limit(limit).all()
 
     def get_multi(
-            self, db: Session, *, page: Optional[int] = None
+        self, db: Session, *, page: Optional[int] = None
     ) -> Tuple[List[ModelType], Paginator]:
 
         query = db.query(self.model)
@@ -58,11 +55,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db_obj
 
     def create_for_user(
-            self,
-            db: Session,
-            obj_in: CreateSchemaType,
-            user_field_value: Any,
-            user_field_name: str = "user"
+        self,
+        db: Session,
+        obj_in: CreateSchemaType,
+        user_field_value: Any,
+        user_field_name: str = "user",
     ) -> ModelType:
         obj_in_data = jsonable_encoder(obj_in)
         db_obj = self.model({**obj_in_data, user_field_name: user_field_value})  # type: ignore
@@ -76,7 +73,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db: Session,
         *,
         db_obj: ModelType,
-        obj_in: Union[UpdateSchemaType, Dict[str, Any]]
+        obj_in: Union[UpdateSchemaType, Dict[str, Any]],
     ) -> ModelType:
         obj_data = jsonable_encoder(db_obj)
         if isinstance(obj_in, dict):
@@ -112,23 +109,32 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return None, not_found, None
         return obj, 0, None
 
-    def adding_file(self, db: Session, *, file: Optional[UploadFile], path_model: str, path_type: str,
-                    db_obj: ModelType):
-        BASE_PATH = './static/'
+    def adding_file(
+        self,
+        db: Session,
+        *,
+        file: Optional[UploadFile],
+        path_model: str,
+        path_type: str,
+        db_obj: ModelType,
+    ):
+        BASE_PATH = "./static/"
         all_path = BASE_PATH + path_model + "/" + str(db_obj.id) + "/" + path_type + "/"
         if path_type not in db_obj.__dict__.keys():
             raise UnprocessableEntity(
                 message="Модель в базе данных не имеет такого атрибута для файла!",
                 num=108,
                 description="Модель в базе данных не имеет такого атрибута для файла!",
-                path="$.body"
+                path="$.body",
             )
         if file is None:
             # Удаляем все содержимое папки
             path_to_clear = all_path + "*"
             for file_to_clear in glob.glob(path_to_clear):
                 os.remove(file_to_clear)
-            db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update({path_type: None})
+            db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update(
+                {path_type: None}
+            )
             db.commit()
             return {path_type: None}
         filename = uuid.uuid4().hex + os.path.splitext(file.filename)[1]
@@ -148,7 +154,9 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             shutil.copyfileobj(file.file, wf)
             file.file.close()  # удаляет временный
 
-        db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update({path_type: path_for_db})
+        db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update(
+            {path_type: path_for_db}
+        )
         db.commit()
         if not file:
             raise UnfoundEntity(
@@ -160,13 +168,17 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         else:
             return {path_type: path_for_db}
 
-    def archiving(self,  db: Session, *, db_obj: ModelType):
-        db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update({"is_actual": False})
+    def archiving(self, db: Session, *, db_obj: ModelType):
+        db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update(
+            {"is_actual": False}
+        )
         db.commit()
         return db_obj, 0, None
 
-    def unzipping(self,  db: Session, *, db_obj: ModelType):
-        db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update({"is_actual": True})
+    def unzipping(self, db: Session, *, db_obj: ModelType):
+        db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update(
+            {"is_actual": True}
+        )
         db.commit()
         return db_obj, 0, None
 

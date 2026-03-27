@@ -1,10 +1,12 @@
+import logging
+
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
+
 from src.api.api_v1.api import api_router
 from src.config import settings
-from src.session import SessionLocal
 from src.core.db.init_db import create_initial_data
-import logging
+from src.session import SessionLocal
 
 app = FastAPI(
     title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json"
@@ -43,6 +45,7 @@ async def startup_event() -> None:
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)
 
 # Это очень важно, не удалять!

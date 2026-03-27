@@ -2,16 +2,28 @@ from sqlalchemy.orm import Session
 
 from src.core.security import get_password_hash
 from src.crud.users import crud_universal_user
+from src.models import (
+    CostType,
+    FaultCategory,
+    Location,
+    ReasonFault,
+    Role,
+    Status,
+    TypeAct,
+    TypeContract,
+    TypeObject,
+)
 from src.schemas.universal_user import UniversalUserCreate
 from src.session import get_session
-from src.models import Role, Status, TypeObject, TypeContract, Location, FaultCategory, ReasonFault, TypeAct, CostType
 
 
 def create_super_admin() -> None:
     for db in get_session():
-        user, code, indexes = crud_universal_user.crud_universal_users.get_user_by_id(db=db, user_id=1)
+        user, code, indexes = crud_universal_user.crud_universal_users.get_user_by_id(
+            db=db, user_id=1
+        )
         if not user:
-            hashed_password = get_password_hash('1')
+            hashed_password = get_password_hash("1")
             user_in = UniversalUserCreate(
                 id=1,
                 name="Супер Админ",
@@ -26,12 +38,12 @@ def create_super_admin() -> None:
 
 def check_roles(db: Session):
     check_list = [
-        Role(id=1, name='Админ'),
-        Role(id=2, name='Прораб'),
-        Role(id=3, name='Механик'),
-        Role(id=4, name='Инженер наладчик'),
-        Role(id=5, name='Диспетчер'),
-        Role(id=6, name='Клиент')
+        Role(id=1, name="Админ"),
+        Role(id=2, name="Прораб"),
+        Role(id=3, name="Механик"),
+        Role(id=4, name="Инженер наладчик"),
+        Role(id=5, name="Диспетчер"),
+        Role(id=6, name="Клиент"),
     ]
     creation_list = []
     for obj in check_list:
@@ -51,15 +63,19 @@ def create_roles():
 
 def check_statuses(db: Session):
     check_list = [
-        Status(id=1, name='Создано'),
-        Status(id=2, name='Принято'),
-        Status(id=3, name='В процессе'),
-        Status(id=4, name='Выполнено'),
-        Status(id=5, name='Проблема')
+        Status(id=1, name="Создано"),
+        Status(id=2, name="Принято"),
+        Status(id=3, name="В процессе"),
+        Status(id=4, name="Выполнено"),
+        Status(id=5, name="Проблема"),
     ]
     creation_list = []
     for obj in check_list:
-        query = db.query(Status).filter(Status.id == obj.id, Status.name == obj.name).first()
+        query = (
+            db.query(Status)
+            .filter(Status.id == obj.id, Status.name == obj.name)
+            .first()
+        )
         if query is None:
             creation_list.append(obj)
     return creation_list
@@ -75,16 +91,20 @@ def create_statuses():
 
 def check_type_objects(db: Session):
     check_list = [
-        TypeObject(id=1, name='Лифт без МП'),
-        TypeObject(id=2, name='Лифт с МП'),
-        TypeObject(id=3, name='Траволатор'),
-        TypeObject(id=4, name='Эскалатор'),
-        TypeObject(id=5, name='Грузовой лифт'),
-        TypeObject(id=6, name='Инвалидный подъемник'),
+        TypeObject(id=1, name="Лифт без МП"),
+        TypeObject(id=2, name="Лифт с МП"),
+        TypeObject(id=3, name="Траволатор"),
+        TypeObject(id=4, name="Эскалатор"),
+        TypeObject(id=5, name="Грузовой лифт"),
+        TypeObject(id=6, name="Инвалидный подъемник"),
     ]
     creation_list = []
     for obj in check_list:
-        query = db.query(TypeObject).filter(TypeObject.id == obj.id, TypeObject.name == obj.name).first()
+        query = (
+            db.query(TypeObject)
+            .filter(TypeObject.id == obj.id, TypeObject.name == obj.name)
+            .first()
+        )
         if query is None:
             creation_list.append(obj)
     return creation_list
@@ -100,12 +120,16 @@ def create_type_objects():
 
 def check_type_contracts(db: Session):
     check_list = [
-        TypeContract(id=1, name='Государственный'),
-        TypeContract(id=2, name='Коммерческий')
+        TypeContract(id=1, name="Государственный"),
+        TypeContract(id=2, name="Коммерческий"),
     ]
     creation_list = []
     for obj in check_list:
-        query = db.query(TypeContract).filter(TypeContract.id == obj.id, TypeContract.name == obj.name).first()
+        query = (
+            db.query(TypeContract)
+            .filter(TypeContract.id == obj.id, TypeContract.name == obj.name)
+            .first()
+        )
         if query is None:
             creation_list.append(obj)
     return creation_list
@@ -121,13 +145,17 @@ def create_type_contracts():
 
 def check_locations(db: Session):
     check_list = [
-        Location(id=1, name='Краснодар'),
-        Location(id=2, name='Москва'),
-        Location(id=3, name='Ростов на Дону'),
+        Location(id=1, name="Краснодар"),
+        Location(id=2, name="Москва"),
+        Location(id=3, name="Ростов на Дону"),
     ]
     creation_list = []
     for obj in check_list:
-        query = db.query(Location).filter(Location.id == obj.id, Location.name == obj.name).first()
+        query = (
+            db.query(Location)
+            .filter(Location.id == obj.id, Location.name == obj.name)
+            .first()
+        )
         if query is None:
             creation_list.append(obj)
     return creation_list
@@ -143,20 +171,28 @@ def create_locations():
 
 def check_fault_category(db: Session):
     check_list = [
-        FaultCategory(id=1, name='AA (Застревание пассажира. Опасность)'),
-        FaultCategory(id=2, name='А (Остановка лифта, подъемника, эскалатора, траволатора)'),
-        FaultCategory(id=3, name='В (Ухудшение рабочих характеристик, требуется наладка)'),
-        FaultCategory(id=4, name='Н (Незначительные проблемы)'),
-        FaultCategory(id=5, name='Д (Заказчик или другие)'),
-        FaultCategory(id=6, name='ТО (Плановые работы)'),
-        FaultCategory(id=7, name='ПТО (Периодическое техническое освидетельствование)'),
-        FaultCategory(id=8, name='КР (Капитальный ремонт, Ремонт)'),
-        FaultCategory(id=9, name='С (Проблемы по связи)'),
-        FaultCategory(id=10, name='Л (Ложный вызов)'),
+        FaultCategory(id=1, name="AA (Застревание пассажира. Опасность)"),
+        FaultCategory(
+            id=2, name="А (Остановка лифта, подъемника, эскалатора, траволатора)"
+        ),
+        FaultCategory(
+            id=3, name="В (Ухудшение рабочих характеристик, требуется наладка)"
+        ),
+        FaultCategory(id=4, name="Н (Незначительные проблемы)"),
+        FaultCategory(id=5, name="Д (Заказчик или другие)"),
+        FaultCategory(id=6, name="ТО (Плановые работы)"),
+        FaultCategory(id=7, name="ПТО (Периодическое техническое освидетельствование)"),
+        FaultCategory(id=8, name="КР (Капитальный ремонт, Ремонт)"),
+        FaultCategory(id=9, name="С (Проблемы по связи)"),
+        FaultCategory(id=10, name="Л (Ложный вызов)"),
     ]
     creation_list = []
     for obj in check_list:
-        query = db.query(FaultCategory).filter(FaultCategory.id == obj.id, FaultCategory.name == obj.name).first()
+        query = (
+            db.query(FaultCategory)
+            .filter(FaultCategory.id == obj.id, FaultCategory.name == obj.name)
+            .first()
+        )
         if query is None:
             creation_list.append(obj)
     return creation_list
@@ -172,30 +208,36 @@ def create_fault_category():
 
 def check_reason_fault(db: Session):
     check_list = [
-        ReasonFault(id=1, name='Авария главного привода по УКСЛ.'),
-        ReasonFault(id=2, name='АБЛ'),
-        ReasonFault(id=3, name='Не сработал датчик УБ'),
-        ReasonFault(id=4, name='NAV - не готов, очень серьезная ошибка'),
-        ReasonFault(id=5, name='43 - не исправна цепь блокировки.'),
-        ReasonFault(id=6, name='160 - проникновение в шахту.'),
-        ReasonFault(id=7, name='28 - залипание верхних и нижних концевых выключателей.'),
-        ReasonFault(id=8, name='17 - отсутствует сигнал от инвертора.'),
-        ReasonFault(id=9, name='47 - многократный реверс.'),
-        ReasonFault(id=10, name='41 - разрыв цепи безопасности.'),
-        ReasonFault(id=11, name='72 - разомкнута KV-15 или выключателей ДК.'),
-        ReasonFault(id=12, name='ТО'),
-        ReasonFault(id=13, name='21 - время перемещения превышает заданное время.'),
-        ReasonFault(id=14, name='10 - разрыв цепи аварийной опасности.'),
-        ReasonFault(id=15, name='Нет Связи.'),
-        ReasonFault(id=16, name='44 - Охрана шахты.'),
-        ReasonFault(id=17, name='Сгорел блок обь.'),
-        ReasonFault(id=18, name='Пожарная опасность.'),
-        ReasonFault(id=19, name='5 - ошибка тормоза.'),
-        ReasonFault(id=20, name='Перезапуск в присутствии механика.'),
+        ReasonFault(id=1, name="Авария главного привода по УКСЛ."),
+        ReasonFault(id=2, name="АБЛ"),
+        ReasonFault(id=3, name="Не сработал датчик УБ"),
+        ReasonFault(id=4, name="NAV - не готов, очень серьезная ошибка"),
+        ReasonFault(id=5, name="43 - не исправна цепь блокировки."),
+        ReasonFault(id=6, name="160 - проникновение в шахту."),
+        ReasonFault(
+            id=7, name="28 - залипание верхних и нижних концевых выключателей."
+        ),
+        ReasonFault(id=8, name="17 - отсутствует сигнал от инвертора."),
+        ReasonFault(id=9, name="47 - многократный реверс."),
+        ReasonFault(id=10, name="41 - разрыв цепи безопасности."),
+        ReasonFault(id=11, name="72 - разомкнута KV-15 или выключателей ДК."),
+        ReasonFault(id=12, name="ТО"),
+        ReasonFault(id=13, name="21 - время перемещения превышает заданное время."),
+        ReasonFault(id=14, name="10 - разрыв цепи аварийной опасности."),
+        ReasonFault(id=15, name="Нет Связи."),
+        ReasonFault(id=16, name="44 - Охрана шахты."),
+        ReasonFault(id=17, name="Сгорел блок обь."),
+        ReasonFault(id=18, name="Пожарная опасность."),
+        ReasonFault(id=19, name="5 - ошибка тормоза."),
+        ReasonFault(id=20, name="Перезапуск в присутствии механика."),
     ]
     creation_list = []
     for obj in check_list:
-        query = db.query(ReasonFault).filter(ReasonFault.id == obj.id, ReasonFault.name == obj.name).first()
+        query = (
+            db.query(ReasonFault)
+            .filter(ReasonFault.id == obj.id, ReasonFault.name == obj.name)
+            .first()
+        )
         if query is None:
             creation_list.append(obj)
     return creation_list
@@ -210,12 +252,14 @@ def create_reason_fault():
 
 
 def check_cost_type(db: Session):
-    check_list = [
-        CostType(id=1, name='С НДС'),
-        CostType(id=2, name='Без НДС')]
+    check_list = [CostType(id=1, name="С НДС"), CostType(id=2, name="Без НДС")]
     creation_list = []
     for obj in check_list:
-        query = db.query(CostType).filter(CostType.id == obj.id, CostType.name == obj.name).first()
+        query = (
+            db.query(CostType)
+            .filter(CostType.id == obj.id, CostType.name == obj.name)
+            .first()
+        )
         if query is None:
             creation_list.append(obj)
     return creation_list
@@ -231,14 +275,18 @@ def create_cost_type():
 
 def check_type_acts(db: Session):
     check_list = [
-        TypeAct(id=1, name='ТО 1'),
-        TypeAct(id=3, name='ТО 3'),
-        TypeAct(id=6, name='ТО 6'),
-        TypeAct(id=12, name='ТО 12'),
+        TypeAct(id=1, name="ТО 1"),
+        TypeAct(id=3, name="ТО 3"),
+        TypeAct(id=6, name="ТО 6"),
+        TypeAct(id=12, name="ТО 12"),
     ]
     creation_list = []
     for obj in check_list:
-        query = db.query(TypeAct).filter(TypeAct.id == obj.id, TypeAct.name == obj.name).first()
+        query = (
+            db.query(TypeAct)
+            .filter(TypeAct.id == obj.id, TypeAct.name == obj.name)
+            .first()
+        )
         if query is None:
             creation_list.append(obj)
     return creation_list

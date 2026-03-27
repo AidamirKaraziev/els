@@ -1,17 +1,15 @@
 import logging
-from fastapi import APIRouter, Depends, Query, Path, Request
+
+from fastapi import APIRouter, Depends, Path, Query, Request
 
 from src.api import deps
-from src.core.response import ListOfEntityResponse, SingleEntityResponse, Meta
-from src.templates_raise import get_raise
+from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, FOREMAN
-
 from src.crud.crud_act_base import crud_acts_bases
-from src.getters.act_base import get_acts_bases
-
 from src.crud.users.crud_universal_user import crud_universal_users
-from src.schemas.act_base import ActBaseUpdate, ActBaseCreate
-
+from src.getters.act_base import get_acts_bases
+from src.schemas.act_base import ActBaseCreate, ActBaseUpdate
+from src.templates_raise import get_raise
 
 ROLES_ELIGIBLE = [ADMIN, FOREMAN]
 

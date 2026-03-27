@@ -1,5 +1,6 @@
 from sqlite3 import Date
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
 from src.schemas.location import LocationGet
@@ -50,7 +51,6 @@ class DataToCreateUser(BaseModel):
 
 
 class UserBasicUpdate(BaseModel):
-
     first_name: Optional[str] = Field(None, title="Имя ")
     last_name: Optional[str] = Field(None, title="Фамилия ")
     birthday: Optional[int] = Field(None, title="Дата рождения")

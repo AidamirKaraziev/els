@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-
+set -euo pipefail
 set -x
 
-mypy app
-black app --check
-isort --recursive --check-only app
-flake8
+python3 -m ruff check src
+python3 -m ruff format --check src

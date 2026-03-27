@@ -3,8 +3,14 @@ import secrets
 from typing import Any, Dict, List, Optional, Union
 
 from dotenv import load_dotenv
-from pydantic import AnyHttpUrl, BaseSettings, EmailStr, HttpUrl, PostgresDsn, root_validator, validator
-
+from pydantic import (
+    AnyHttpUrl,
+    BaseSettings,
+    EmailStr,
+    HttpUrl,
+    root_validator,
+    validator,
+)
 
 load_dotenv(".env")
 
@@ -58,8 +64,8 @@ class Settings(BaseSettings):
 
     @root_validator(pre=True)
     def set_email_from_name(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if 'EMAILS_FROM_NAME' not in values or values['EMAILS_FROM_NAME'] is None:
-            values['EMAILS_FROM_NAME'] = values.get('PROJECT_NAME', 'ELS')
+        if "EMAILS_FROM_NAME" not in values or values["EMAILS_FROM_NAME"] is None:
+            values["EMAILS_FROM_NAME"] = values.get("PROJECT_NAME", "ELS")
         return values
 
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48

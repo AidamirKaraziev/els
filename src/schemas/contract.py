@@ -1,11 +1,11 @@
-from typing import Optional
 from sqlite3 import Date
-
+from typing import Optional
 
 from pydantic import BaseModel, Field
+
 from src.schemas.company import CompanyGet
-from src.schemas.type_contract import TypeContractGet
 from src.schemas.cost_type import CostTypeGet
+from src.schemas.type_contract import TypeContractGet
 
 
 class ContractBase(BaseModel):

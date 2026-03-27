@@ -3,11 +3,11 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from src.schemas.company import CompanyGet
+from src.schemas.divisions import DivisionGet
 from src.schemas.location import LocationGet
 from src.schemas.role import RoleGet
 from src.schemas.working_specialty import WorkingSpecialtyGet
-from src.schemas.company import CompanyGet
-from src.schemas.divisions import DivisionGet
 
 
 class UniversalUserBase(BaseModel):

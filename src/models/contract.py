@@ -1,19 +1,21 @@
-from sqlalchemy import Boolean, Column, Integer, String, Date, ForeignKey
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from src.session import Base
 from src.models.company import Company
-from src.models.type_contract import TypeContract
 from src.models.cost_type import CostType
+from src.models.type_contract import TypeContract
+from src.session import Base
 
 
 class Contract(Base):
-    __tablename__ = 'contracts'
+    __tablename__ = "contracts"
     id = Column(Integer, primary_key=True)
     company_id = Column(Integer, ForeignKey("company.id", ondelete="SET NULL"))
     title = Column(String, unique=True)
     validity_period = Column(Date)  # срок действия дата / бс
-    type_contract_id = Column(Integer, ForeignKey("types_contracts.id", ondelete="SET NULL"))
+    type_contract_id = Column(
+        Integer, ForeignKey("types_contracts.id", ondelete="SET NULL")
+    )
     cost_type_id = Column(Integer, ForeignKey("cost_types.id", ondelete="SET NULL"))
     file = Column(String)
 

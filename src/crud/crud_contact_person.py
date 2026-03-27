@@ -1,28 +1,40 @@
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
-from src.core.roles import ADMIN, FOREMAN, CLIENT_ID
+
 from src.core.response import Paginator
+from src.core.roles import ADMIN, CLIENT_ID, FOREMAN
 from src.crud.base import CRUDBase, ModelType
-from src.utils import pagination
-
 from src.crud.users.crud_universal_user import crud_universal_users
-from src.models import UniversalUser, Company, ContactPerson
+from src.models import Company, ContactPerson, UniversalUser
 from src.schemas.contact_person import ContactPersonCreate, ContactPersonUpdate
-
+from src.utils import pagination
 
 DATA_FOLDER_CONTACT_PERSON = "./static/photo_contact_person/"
 ADMIN_FOREMAN_LIST = [ADMIN, FOREMAN, CLIENT_ID]
 
 
-class CrudContactPerson(CRUDBase[ContactPerson, ContactPersonCreate, ContactPersonUpdate]):
-    def create_contact_person(self, db: Session, *, new_data: Optional[ContactPersonCreate], user: UniversalUser):
+class CrudContactPerson(
+    CRUDBase[ContactPerson, ContactPersonCreate, ContactPersonUpdate]
+):
+    def create_contact_person(
+        self,
+        db: Session,
+        *,
+        new_data: Optional[ContactPersonCreate],
+        user: UniversalUser,
+    ):
         # проверка ролей юзера
         if user.role_id not in ADMIN_FOREMAN_LIST:
             return None, -1, None
 
         # проверить есть ли такой персонаж
-        if db.query(ContactPerson).filter(ContactPerson.phone == new_data.phone).first() is not None:
+        if (
+            db.query(ContactPerson)
+            .filter(ContactPerson.phone == new_data.phone)
+            .first()
+            is not None
+        ):
             return None, -2, None
         # проверить уникальность телефона
         # не надо скорее всего
@@ -34,18 +46,33 @@ class CrudContactPerson(CRUDBase[ContactPerson, ContactPersonCreate, ContactPers
         db_obj = super().create(db=db, obj_in=new_data)
         return db_obj, 0, None
 
-    def update_contact_person(self, db: Session, *, new_data: Optional[ContactPersonUpdate],
-                              contact_person_id: int, user: UniversalUser):
+    def update_contact_person(
+        self,
+        db: Session,
+        *,
+        new_data: Optional[ContactPersonUpdate],
+        contact_person_id: int,
+        user: UniversalUser,
+    ):
         # проверка ролей юзера
         if user.role_id not in ADMIN_FOREMAN_LIST:
             return None, -1, None
         # проверить есть ли контактного лица с таким id
-        this_contact_person = (db.query(ContactPerson).filter(ContactPerson.id == contact_person_id).first())
+        this_contact_person = (
+            db.query(ContactPerson)
+            .filter(ContactPerson.id == contact_person_id)
+            .first()
+        )
         if this_contact_person is None:
             return None, -2, None
         # Check phone
         if this_contact_person.phone != new_data.phone:
-            if db.query(ContactPerson).filter(ContactPerson.phone == new_data.phone).first() is not None:
+            if (
+                db.query(ContactPerson)
+                .filter(ContactPerson.phone == new_data.phone)
+                .first()
+                is not None
+            ):
                 return None, -3, None
         # проверка компаний
 
@@ -61,10 +88,18 @@ class CrudContactPerson(CRUDBase[ContactPerson, ContactPersonCreate, ContactPers
     def updating_photo(self):
         pass
 
-    def archiving_contact_person(self, db: Session, *, current_user: UniversalUser, contact_person_id: int,
-                                 role_list: list):
+    def archiving_contact_person(
+        self,
+        db: Session,
+        *,
+        current_user: UniversalUser,
+        contact_person_id: int,
+        role_list: list,
+    ):
         # проверить роль
-        code = crud_universal_users.check_role_list(current_user=current_user, role_list=role_list)
+        code = crud_universal_users.check_role_list(
+            current_user=current_user, role_list=role_list
+        )
         if code != 0:
             return None, code, None
         # проверить есть ли такая компания
@@ -75,10 +110,18 @@ class CrudContactPerson(CRUDBase[ContactPerson, ContactPersonCreate, ContactPers
         obj, code, indexes = super().archiving(db=db, db_obj=obj)
         return obj, code, None
 
-    def unzipping_contact_person(self, db: Session, *, current_user: UniversalUser, contact_person_id: int,
-                                 role_list: list):
+    def unzipping_contact_person(
+        self,
+        db: Session,
+        *,
+        current_user: UniversalUser,
+        contact_person_id: int,
+        role_list: list,
+    ):
         # проверить роль
-        code = crud_universal_users.check_role_list(current_user=current_user, role_list=role_list)
+        code = crud_universal_users.check_role_list(
+            current_user=current_user, role_list=role_list
+        )
         if code != 0:
             return None, code, None
         # проверить есть ли такая компания
@@ -89,8 +132,9 @@ class CrudContactPerson(CRUDBase[ContactPerson, ContactPersonCreate, ContactPers
         obj, code, indexes = super().unzipping(db=db, db_obj=obj)
         return obj, code, None
 
-    def get_contact_person_by_company_id(self, *, db: Session, company_id: int, page: Optional[int] = None
-                                         ) -> Tuple[List[ModelType], Paginator]:
+    def get_contact_person_by_company_id(
+        self, *, db: Session, company_id: int, page: Optional[int] = None
+    ) -> Tuple[List[ModelType], Paginator]:
         objs = db.query(ContactPerson).filter(ContactPerson.company_id == company_id)
         return pagination.get_page(objs, page)
 

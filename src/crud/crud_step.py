@@ -1,25 +1,25 @@
-from src.crud.base import CRUDBase
+from typing import Optional
+
 from sqlalchemy.orm import Session
 
+from src.crud.base import CRUDBase
 from src.models import Step
 from src.schemas.step import StepCreate, StepUpdate
-from typing import Optional
 
 
 class CrudStep(CRUDBase[Step, StepCreate, StepUpdate]):
     def create_steps(self, db: Session, *, new_data: Optional[StepCreate]):
         # проверка уникальности трех полей
-        if db.query(Step).filter(
-                Step.name == new_data.name).first() is not None:
+        if db.query(Step).filter(Step.name == new_data.name).first() is not None:
             return None, -1251, None
         db_obj = super().create(db=db, obj_in=new_data)
         return db_obj, 0, None
 
     def update_steps(
-            self, db: Session, *, new_data: Optional[StepUpdate],
-            step_id: int):
+        self, db: Session, *, new_data: Optional[StepUpdate], step_id: int
+    ):
         # проверить есть ли model с таким id
-        this_obj = (db.query(Step).filter(Step.id == step_id).first())
+        this_obj = db.query(Step).filter(Step.id == step_id).first()
         if this_obj is None:
             return None, -125, None
 

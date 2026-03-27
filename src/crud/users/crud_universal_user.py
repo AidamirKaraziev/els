@@ -2,23 +2,19 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from src.core.security import verify_password, get_password_hash
 from src.core.roles import ADMIN, CLIENT_ID
-from src.exceptions import UnprocessableEntity
-
-from src.utils import pagination
-from src.utils.time_stamp import date_from_timestamp
-
+from src.core.security import get_password_hash, verify_password
 from src.crud.base_user import CRUDBaseUser
-
-from src.models import UniversalUser, Location, Division, WorkingSpecialty
-
+from src.exceptions import UnprocessableEntity
+from src.models import Division, Location, UniversalUser, WorkingSpecialty
 from src.schemas.foreman import ForemanCreate
 from src.schemas.universal_user import (
     UniversalUserCreate,
-    UniversalUserUpdate,
     UniversalUserEntrance,
+    UniversalUserUpdate,
 )
+from src.utils import pagination
+from src.utils.time_stamp import date_from_timestamp
 
 ADMIN_LIST = [ADMIN]
 
@@ -26,7 +22,6 @@ ADMIN_LIST = [ADMIN]
 class CrudUniversalUser(
     CRUDBaseUser[UniversalUser, UniversalUserCreate, UniversalUserUpdate]
 ):
-
     def create_foreman(
         self, db: Session, *, current_user: UniversalUser, new_data: ForemanCreate
     ):

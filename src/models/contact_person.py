@@ -1,12 +1,12 @@
-from sqlalchemy import Boolean, Column, Integer, String, ForeignKey
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from src.session import Base
 from src.models.company import Company
+from src.session import Base
 
 
 class ContactPerson(Base):
-    __tablename__ = 'contact_persons'
+    __tablename__ = "contact_persons"
     id = Column(Integer, primary_key=True)
     name = Column(String)
     company_id = Column(Integer, ForeignKey("company.id", ondelete="SET NULL"))

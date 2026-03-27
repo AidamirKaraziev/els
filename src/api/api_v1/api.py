@@ -1,36 +1,35 @@
 from fastapi import APIRouter
 
 from src.api.api_v1.endpoints import (
-     location,
-     working_specialty,
-     role,
-     universal_user,
-     client,
-     contact_person,
-     division,
-     foreman,
-     admin,
-     company,
-     type_contract,
-     cost_type,
-     contract,
-     organization,
-     type_object,
-     factory_model,
-     object,
-     type_act,
-     act_base,
-     status,
-     act_fact,
-     step,
-     sub_step,
-     fault_category,
-     reason_fault,
-     order,
-     order_photo,
-     planned_to
+    act_base,
+    act_fact,
+    admin,
+    client,
+    company,
+    contact_person,
+    contract,
+    cost_type,
+    division,
+    factory_model,
+    fault_category,
+    foreman,
+    location,
+    object,
+    order,
+    order_photo,
+    organization,
+    planned_to,
+    reason_fault,
+    role,
+    status,
+    step,
+    sub_step,
+    type_act,
+    type_contract,
+    type_object,
+    universal_user,
+    working_specialty,
 )
-
 
 api_router = APIRouter()
 
@@ -42,7 +41,7 @@ api_router.include_router(foreman.router)
 api_router.include_router(client.router)
 api_router.include_router(division.router)
 api_router.include_router(company.router)
-api_router.include_router(location.router, tags=['Админ панель / Города'])
+api_router.include_router(location.router, tags=["Админ панель / Города"])
 api_router.include_router(contact_person.router)
 api_router.include_router(type_contract.router)
 api_router.include_router(type_act.router)

@@ -1,10 +1,8 @@
-from datetime import date, datetime
+from datetime import date
 from sqlite3 import Date
-
-from pydantic import BaseModel, Field
 from typing import Optional
 
-from sqlalchemy import DATETIME
+from pydantic import BaseModel, Field
 
 
 class GettingVerifCode(BaseModel):
@@ -36,12 +34,14 @@ class VerifCodeSaveOnBase(BaseModel):
 class CheckCode(BaseModel):
     tel: str
     value: str
+
+
 # Field(...,title='Код телефона без +',regex=r'\d{11,12}')
 
 
 # для создания
 class VerifCodeCreate(BaseModel):
-    tel: str = Field(..., title='Код телефона без +', regex=r'^\d{11,12}$')
+    tel: str = Field(..., title="Код телефона без +", regex=r"^\d{11,12}$")
 
 
 class VerifCodesUpdate(BaseModel):
@@ -49,7 +49,7 @@ class VerifCodesUpdate(BaseModel):
 
 
 class VerifCodeGet(BaseModel):
-    code: str = Field(..., title='Сгенерированный код подтверждения')
+    code: str = Field(..., title="Сгенерированный код подтверждения")
 
 
 class UsedVerifCode(BaseModel):

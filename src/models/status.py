@@ -4,6 +4,6 @@ from src.session import Base
 
 
 class Status(Base):
-    __tablename__ = 'statuses'
+    __tablename__ = "statuses"
     id = Column(Integer, primary_key=True, autoincrement=False)
     name = Column(String, unique=True)

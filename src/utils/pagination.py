@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 from paginate_sqlalchemy import SqlalchemyOrmPage
 
@@ -14,10 +14,6 @@ def get_page(query, page: Optional[int]) -> Tuple[List, Optional[Paginator]]:
     total = page_obj.page_count
 
     paginator = Paginator(
-        page=page,
-        total=total,
-        has_prev=page > 1,
-        has_next=page < total
+        page=page, total=total, has_prev=page > 1, has_next=page < total
     )
     return page_obj.items, paginator
-

@@ -1,24 +1,39 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
+from src.models import ActBase, Object, Status
 from src.session import Base
-from src.models import Object, ActBase, Status
 
 
 class ActFact(Base):
     __tablename__ = "acts_fact"
     id = Column(Integer, primary_key=True)
-    object_id = Column(Integer, ForeignKey('objects.id', ondelete="SET NULL", onupdate="CASCADE"))
-    act_base_id = Column(Integer, ForeignKey('acts_bases.id', ondelete="SET NULL", onupdate="CASCADE"))
+    object_id = Column(
+        Integer, ForeignKey("objects.id", ondelete="SET NULL", onupdate="CASCADE")
+    )
+    act_base_id = Column(
+        Integer, ForeignKey("acts_bases.id", ondelete="SET NULL", onupdate="CASCADE")
+    )
     step_list_fact = Column(String)
     created_at = Column(DateTime, default=datetime.now)
     started_at = Column(DateTime)
     finished_at = Column(DateTime)
-    foreman_id = Column(Integer, ForeignKey("universal_users.id", ondelete="SET NULL", onupdate="CASCADE"))
-    main_mechanic_id = Column(Integer, ForeignKey("universal_users.id", ondelete="SET NULL", onupdate="CASCADE"))
+    foreman_id = Column(
+        Integer,
+        ForeignKey("universal_users.id", ondelete="SET NULL", onupdate="CASCADE"),
+    )
+    main_mechanic_id = Column(
+        Integer,
+        ForeignKey("universal_users.id", ondelete="SET NULL", onupdate="CASCADE"),
+    )
     file = Column(String)
-    status_id = Column(Integer, ForeignKey('statuses.id', ondelete="CASCADE", onupdate="CASCADE"), default=1)
+    status_id = Column(
+        Integer,
+        ForeignKey("statuses.id", ondelete="CASCADE", onupdate="CASCADE"),
+        default=1,
+    )
 
     object = relationship(Object)
     act_base = relationship(ActBase)

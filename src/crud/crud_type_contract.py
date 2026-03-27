@@ -3,8 +3,7 @@ from src.models import TypeContract
 from src.schemas.type_contract import TypeContractCreate, TypeContractUpdate
 
 
-class CrudTypeContract(
-    CRUDBase[TypeContract, TypeContractCreate, TypeContractUpdate]):
+class CrudTypeContract(CRUDBase[TypeContract, TypeContractCreate, TypeContractUpdate]):
     pass
 
 

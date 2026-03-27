@@ -1,11 +1,9 @@
-from src.models import Object
-from src.crud.base import CRUDBase
 from sqlalchemy.orm import Session
 
+from src.crud.base import CRUDBase
+from src.models import FactoryModel, Object, TypeAct
 from src.models.act_base import ActBase
 from src.schemas.act_base import ActBaseCreate, ActBaseUpdate
-
-from src.models import FactoryModel, TypeAct
 
 
 class CrudActBase(CRUDBase[ActBase, ActBaseCreate, ActBaseUpdate]):

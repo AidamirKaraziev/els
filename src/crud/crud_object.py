@@ -1,24 +1,23 @@
 from typing import Optional
+
 from sqlalchemy.orm import Session
 
 from src.core.roles import ADMIN, FOREMAN, MECHANIC
 from src.crud.base import CRUDBase
-from src.utils.time_stamp import date_from_timestamp
-from src.utils import pagination
-
 from src.crud.users.crud_universal_user import crud_universal_users
-from src.schemas.object import ObjectCreate, ObjectUpdate
 from src.models import (
-    Object,
-    Organization,
-    FactoryModel,
     Company,
     ContactPerson,
-    Division,
-    UniversalUser,
     Contract,
+    Division,
+    FactoryModel,
+    Object,
+    Organization,
+    UniversalUser,
 )
-
+from src.schemas.object import ObjectCreate, ObjectUpdate
+from src.utils import pagination
+from src.utils.time_stamp import date_from_timestamp
 
 ROLE_RIGHTS = [ADMIN, FOREMAN]
 ROLE_MECHANIC = [MECHANIC]

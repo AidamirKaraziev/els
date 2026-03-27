@@ -1,15 +1,13 @@
 from sqlite3 import Date
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from src.schemas.company import CompanyGet
-from src.schemas.divisions import DivisionGet
-
 from src.schemas.contact_person import ContactPersonGet
 from src.schemas.contract import ContractGet
+from src.schemas.divisions import DivisionGet
 from src.schemas.factory_model import FactoryModelGet
-from src.schemas.organization import OrganizationGet
 from src.schemas.universal_user import UniversalUserGet
 
 

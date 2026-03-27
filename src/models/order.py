@@ -1,11 +1,10 @@
-from sqlalchemy import Boolean, Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from src.session import Base
-from src.models import Object, UniversalUser
+from src.models import Object, Status, UniversalUser
 from src.models.fault_category import FaultCategory
 from src.models.reason_fault import ReasonFault
-from src.models import Status
+from src.session import Base
 
 
 class Order(Base):
@@ -13,7 +12,9 @@ class Order(Base):
     id = Column(Integer, primary_key=True)
     object_id = Column(Integer, ForeignKey(Object.id, ondelete="SET NULL"))
     creator_id = Column(Integer, ForeignKey(UniversalUser.id, ondelete="SET NULL"))
-    fault_category_id = Column(Integer, ForeignKey(FaultCategory.id, ondelete="SET NULL"))
+    fault_category_id = Column(
+        Integer, ForeignKey(FaultCategory.id, ondelete="SET NULL")
+    )
     task_text = Column(String)
 
     executor_id = Column(Integer, ForeignKey(UniversalUser.id, ondelete="SET NULL"))
@@ -35,4 +36,6 @@ class Order(Base):
     reason_fault = relationship(ReasonFault)
     status = relationship(Status)
 
-    order_photo = relationship("OrderPhoto", back_populates="order", uselist=False, lazy="joined")
+    order_photo = relationship(
+        "OrderPhoto", back_populates="order", uselist=False, lazy="joined"
+    )

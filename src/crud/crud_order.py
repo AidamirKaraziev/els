@@ -1,15 +1,15 @@
 import datetime
+
 from sqlalchemy.orm import Session
 
 from src.crud.base import CRUDBase
-
-from src.crud.crud_object import crud_objects
 from src.crud.crud_fault_category import crud_fault_category
+from src.crud.crud_object import crud_objects
 from src.crud.crud_reason_fault import crud_reason_fault
 from src.crud.crud_status import crud_status
 from src.crud.users.crud_universal_user import crud_universal_users
-from src.schemas.order import OrderUpdate, OrderCreate
 from src.models import Order, UniversalUser
+from src.schemas.order import OrderCreate, OrderUpdate
 
 
 class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
@@ -22,19 +22,27 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
             return None, self.not_found, None
         return obj, 0, None
 
-    def create_order(self, db: Session, *, new_data: OrderCreate, current_user: UniversalUser):
+    def create_order(
+        self, db: Session, *, new_data: OrderCreate, current_user: UniversalUser
+    ):
         # проверка object_id
-        obj, code, indexes = crud_objects.get_object_by_id(db=db, object_id=new_data.object_id)
+        obj, code, indexes = crud_objects.get_object_by_id(
+            db=db, object_id=new_data.object_id
+        )
         if code != 0:
             return None, code, None
         # проверка creator_id
         new_data.creator_id = current_user.id
         # проверка fault_category_id
-        obj, code, indexes = crud_fault_category.get_fault_by_id(db=db, fault_id=new_data.fault_category_id)
+        obj, code, indexes = crud_fault_category.get_fault_by_id(
+            db=db, fault_id=new_data.fault_category_id
+        )
         if code != 0:
             return None, code, None
         # проверка executor_id
-        executor = db.query(UniversalUser).filter(UniversalUser.id == new_data.executor_id)
+        executor = db.query(UniversalUser).filter(
+            UniversalUser.id == new_data.executor_id
+        )
         if executor is None:
             return None, -130, None
         new_data.created_at = datetime.datetime.utcnow()
@@ -47,26 +55,36 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         if code != 0:
             return None, code, None
         # проверить есть ли объект с таким id
-        obj, code, indexes = crud_objects.get_object_by_id(db=db, object_id=new_data.object_id)
+        obj, code, indexes = crud_objects.get_object_by_id(
+            db=db, object_id=new_data.object_id
+        )
         if code != 0:
             return None, code, None
         if new_data.fault_category_id is not None:
-            obj, code, indexes = crud_fault_category.get_fault_by_id(db=db, fault_id=new_data.fault_category_id)
+            obj, code, indexes = crud_fault_category.get_fault_by_id(
+                db=db, fault_id=new_data.fault_category_id
+            )
             if code != 0:
                 return None, code, None
         # проверка executor_id
         if new_data.executor_id == 0:
             new_data.executor_id = None
         if new_data.executor_id is not None:
-            fact_executor, code, indexes = crud_universal_users.get_user_by_id(db=db, user_id=new_data.executor_id)
+            fact_executor, code, indexes = crud_universal_users.get_user_by_id(
+                db=db, user_id=new_data.executor_id
+            )
             if code != 0:
                 return None, code, None
         if new_data.reason_fault_id is not None:
-            obj, code, indexes = crud_reason_fault.get_fault_by_id(db=db, fault_id=new_data.reason_fault_id)
+            obj, code, indexes = crud_reason_fault.get_fault_by_id(
+                db=db, fault_id=new_data.reason_fault_id
+            )
             if code != 0:
                 return None, code, None
         if new_data.status_id is not None:
-            obj, code, indexes = crud_status.getting_status(db=db, status_id=new_data.status_id)
+            obj, code, indexes = crud_status.getting_status(
+                db=db, status_id=new_data.status_id
+            )
             if code != 0:
                 return None, code, None
         if new_data.status_id == 2:
@@ -81,13 +99,11 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         return db_obj, 0, None
 
     def get_my_orders(self, *, db: Session, creator_id: int):
-        my_orders = db.query(self.model).filter(
-            self.model.creator_id == creator_id)
+        my_orders = db.query(self.model).filter(self.model.creator_id == creator_id)
         return my_orders, 0, None
 
     def get_orders_for_me(self, *, db: Session, executor_id: int):
-        orders = db.query(self.model).filter(
-            self.model.executor_id == executor_id)
+        orders = db.query(self.model).filter(self.model.executor_id == executor_id)
         return orders, 0, None
 
 

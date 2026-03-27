@@ -1,11 +1,8 @@
 from datetime import datetime
-from sqlite3 import Date
 from typing import Optional
+
 from pydantic import BaseModel
 
-from src.schemas.universal_user import UniversalUserGet
-from src.schemas.act_base import ActBaseGet
-from src.schemas.object import ObjectGet
 from src.schemas.status import StatusGet
 
 

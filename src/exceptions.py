@@ -2,7 +2,6 @@ from typing import List
 
 
 class EntityError(ValueError):
-
     http_status = 400
 
     def __init__(self, message=None, description=None, num=0, path=None):

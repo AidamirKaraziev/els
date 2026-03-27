@@ -1,12 +1,12 @@
-from sqlalchemy import Boolean, Column, Integer, String, ForeignKey
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from src.session import Base
 from src.models import Location
+from src.session import Base
 
 
 class Company(Base):
-    __tablename__ = 'company'
+    __tablename__ = "company"
     id = Column(Integer, primary_key=True)
     name = Column(String)
 

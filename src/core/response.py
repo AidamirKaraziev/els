@@ -1,4 +1,4 @@
-from typing import TypeVar, Generic, Optional, Any, List
+from typing import Any, Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel, Field
 from pydantic.generics import GenericModel
@@ -29,7 +29,7 @@ class BaseResponse(BaseModel):
     description: str = Field(default="Выполнено")
 
 
-Entity = TypeVar('Entity')
+Entity = TypeVar("Entity")
 
 
 class OkResponse(BaseResponse):
@@ -45,4 +45,4 @@ class ListOfEntityResponse(GenericModel, Generic[Entity], BaseResponse):
 
 
 class TokenResponse(BaseResponse):
-    token: str = Field(..., title='Сгенерированный токен!')
+    token: str = Field(..., title="Сгенерированный токен!")
