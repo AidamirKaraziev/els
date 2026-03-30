@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.schemas.act_fact import ActFactGet
 from src.schemas.object import ObjectGet
@@ -75,3 +75,18 @@ class PlannedTOGet(BaseModel):
     october_to_id: Optional[ActFactGet]
     november_to_id: Optional[ActFactGet]
     december_to_id: Optional[ActFactGet]
+
+
+class ScheduleExecutionDivisionStats(BaseModel):
+    division_id: int
+    division_title: Optional[str] = None
+    responsible_name: Optional[str] = None
+    completion_percent: float = Field(..., description="Доля завершённых ТО в отчётном месяце, %")
+    planned_works_count: int = Field(..., ge=0, description="Количество запланированных ТО на месяц по участку")
+    completed_works_count: int = Field(..., ge=0, description="Завершённые в этом календарном месяце по дате finished_at")
+
+
+class ScheduleExecutionStatsGet(BaseModel):
+    year: int
+    month: int = Field(..., ge=1, le=12)
+    divisions: List[ScheduleExecutionDivisionStats]

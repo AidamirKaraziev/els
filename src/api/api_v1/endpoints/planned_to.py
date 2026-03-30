@@ -10,11 +10,39 @@ from src.crud.crud_object import crud_objects
 from src.crud.crud_planned_to import crud_planned_to
 from src.crud.users.crud_universal_user import crud_universal_users
 from src.getters.planned_to import get_planned_to
-from src.schemas.planned_to import PlannedTOCreate, PlannedTOGet, PlannedTOUpdate
+from src.schemas.planned_to import (
+    PlannedTOCreate,
+    PlannedTOGet,
+    PlannedTOUpdate,
+    ScheduleExecutionStatsGet,
+)
 from src.templates_raise import get_raise
 
 ROLES_ELIGIBLE = [ADMIN, FOREMAN]
 router = APIRouter()
+
+
+@router.get(
+    path="/planned-to/schedule-execution-stats/",
+    response_model=SingleEntityResponse[ScheduleExecutionStatsGet],
+    name="schedule_execution_stats",
+    description=(
+        "Статистика выполнения графика ТО за отчётный месяц: по каждому участку (division) — "
+        "ответственный прораб, доля завершённых работ (%). "
+        "План — записи планового ТО на указанный год с заполненной ячейкой месяца; "
+        "факт — связанный акт с датой окончания (finished_at) в этом календарном месяце."
+    ),
+    tags=["Админ панель / Плановые ТО"],
+)
+def get_schedule_execution_stats(
+    session=Depends(deps.get_db),
+    year: int = Query(..., ge=2000, le=2100, title="Отчётный год"),
+    month: int = Query(..., ge=1, le=12, title="Отчётный месяц (1–12)"),
+):
+    data = crud_planned_to.get_schedule_execution_stats(
+        db=session, year=year, month=month
+    )
+    return SingleEntityResponse(data=data)
 
 
 @router.get(

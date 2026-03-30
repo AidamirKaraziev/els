@@ -1,14 +1,69 @@
+from datetime import datetime
 from typing import List, Optional, Tuple
 
+from sqlalchemy import and_, case, func
 from sqlalchemy.orm import Session
 
 from src.core.response import Paginator
+from src.core.roles import FOREMAN
 from src.crud.base import CRUDBase
 from src.crud.base_user import ModelType
 from src.crud.crud_act_fact import crud_acts_fact
-from src.models import Object, PlannedTO
-from src.schemas.planned_to import PlannedTOCreate, PlannedTOUpdate
+from src.models import ActFact, Division, Object, PlannedTO, UniversalUser
+from src.schemas.planned_to import (
+    PlannedTOCreate,
+    PlannedTOUpdate,
+    ScheduleExecutionDivisionStats,
+    ScheduleExecutionStatsGet,
+)
 from src.utils import pagination
+
+_MONTH_PLANNED_COLUMN = {
+    1: PlannedTO.january_to_id,
+    2: PlannedTO.february_to_id,
+    3: PlannedTO.march_to_id,
+    4: PlannedTO.april_to_id,
+    5: PlannedTO.may_to_id,
+    6: PlannedTO.june_to_id,
+    7: PlannedTO.july_to_id,
+    8: PlannedTO.august_to_id,
+    9: PlannedTO.september_to_id,
+    10: PlannedTO.october_to_id,
+    11: PlannedTO.november_to_id,
+    12: PlannedTO.december_to_id,
+}
+
+
+def _reporting_month_bounds(year: int, month: int) -> Tuple[datetime, datetime]:
+    start = datetime(year, month, 1)
+    if month == 12:
+        end = datetime(year + 1, 1, 1)
+    else:
+        end = datetime(year, month + 1, 1)
+    return start, end
+
+
+def _responsible_name_for_division(db: Session, division_id: int) -> Optional[str]:
+    row = (
+        db.query(UniversalUser.name)
+        .filter(
+            UniversalUser.division_id == division_id,
+            UniversalUser.role_id == FOREMAN,
+            UniversalUser.is_actual.is_(True),
+        )
+        .order_by(UniversalUser.id)
+        .first()
+    )
+    if row and row[0]:
+        return row[0]
+    row = (
+        db.query(UniversalUser.name)
+        .join(Object, Object.foreman_id == UniversalUser.id)
+        .filter(Object.division_id == division_id)
+        .order_by(UniversalUser.id)
+        .first()
+    )
+    return row[0] if row and row[0] else None
 
 
 class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
@@ -171,6 +226,59 @@ class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
     ) -> Tuple[List[ModelType], Paginator]:
         query = db.query(self.model).filter(self.model.object_id == object_id)
         return pagination.get_page(query, page)
+
+    def get_schedule_execution_stats(
+        self, *, db: Session, year: int, month: int
+    ) -> ScheduleExecutionStatsGet:
+        month_col = _MONTH_PLANNED_COLUMN[month]
+        period_start, period_end = _reporting_month_bounds(year, month)
+        year_str = str(year)
+
+        finished_in_period = and_(
+            ActFact.finished_at.isnot(None),
+            ActFact.finished_at >= period_start,
+            ActFact.finished_at < period_end,
+        )
+
+        rows = (
+            db.query(
+                Object.division_id,
+                Division.title,
+                func.count(PlannedTO.id).label("planned"),
+                func.coalesce(
+                    func.sum(case((finished_in_period, 1), else_=0)),
+                    0,
+                ).label("completed"),
+            )
+            .select_from(PlannedTO)
+            .join(Object, PlannedTO.object_id == Object.id)
+            .join(Division, Division.id == Object.division_id)
+            .join(ActFact, ActFact.id == month_col)
+            .filter(PlannedTO.year == year_str)
+            .group_by(Object.division_id, Division.title)
+            .order_by(Object.division_id)
+            .all()
+        )
+
+        divisions: List[ScheduleExecutionDivisionStats] = []
+        for division_id, division_title, planned, completed in rows:
+            completed_i = int(completed)
+            planned_i = int(planned)
+            pct = (
+                round(100.0 * completed_i / planned_i, 2) if planned_i > 0 else 0.0
+            )
+            divisions.append(
+                ScheduleExecutionDivisionStats(
+                    division_id=division_id,
+                    division_title=division_title,
+                    responsible_name=_responsible_name_for_division(db, division_id),
+                    completion_percent=pct,
+                    planned_works_count=planned_i,
+                    completed_works_count=completed_i,
+                )
+            )
+
+        return ScheduleExecutionStatsGet(year=year, month=month, divisions=divisions)
 
 
 crud_planned_to = CrudPlannedTO(PlannedTO)
