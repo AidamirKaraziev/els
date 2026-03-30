@@ -1,5 +1,7 @@
 import datetime
+from typing import Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from src.crud.base import CRUDBase
@@ -8,8 +10,14 @@ from src.crud.crud_object import crud_objects
 from src.crud.crud_reason_fault import crud_reason_fault
 from src.crud.crud_status import crud_status
 from src.crud.users.crud_universal_user import crud_universal_users
-from src.models import Order, UniversalUser
+from src.models import Company, Object, Order, Organization, UniversalUser
 from src.schemas.order import OrderCreate, OrderUpdate
+
+
+def _object_display_label(name: Optional[str], object_id: int) -> str:
+    if name and str(name).strip():
+        return str(name).strip()
+    return f"Объект №{object_id}"
 
 
 class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
@@ -105,6 +113,52 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
     def get_orders_for_me(self, *, db: Session, executor_id: int):
         orders = db.query(self.model).filter(self.model.executor_id == executor_id)
         return orders, 0, None
+
+    def get_top_breakdowns_by_month(
+        self, *, db: Session, year: int, month: int
+    ) -> list:
+        """
+        Задачи (поломки) с object_id за календарный месяц [year-month],
+        сгруппированные по объекту, по убыванию числа заявок.
+        """
+        start = datetime.datetime(year, month, 1)
+        if month == 12:
+            end = datetime.datetime(year + 1, 1, 1)
+        else:
+            end = datetime.datetime(year, month + 1, 1)
+
+        return (
+            db.query(
+                Object.id,
+                Object.name,
+                func.coalesce(Organization.title, Company.name).label("client_name"),
+                UniversalUser.name.label("mechanic_name"),
+                func.count(Order.id).label("breakdown_count"),
+            )
+            .select_from(Order)
+            .join(Object, Order.object_id == Object.id)
+            .outerjoin(Organization, Object.organization_id == Organization.id)
+            .outerjoin(Company, Object.company_id == Company.id)
+            .outerjoin(UniversalUser, Object.mechanic_id == UniversalUser.id)
+            .filter(
+                Order.object_id.isnot(None),
+                Order.created_at.isnot(None),
+                Order.created_at >= start,
+                Order.created_at < end,
+            )
+            .group_by(
+                Object.id,
+                Object.name,
+                Organization.id,
+                Organization.title,
+                Company.id,
+                Company.name,
+                UniversalUser.id,
+                UniversalUser.name,
+            )
+            .order_by(func.count(Order.id).desc())
+            .all()
+        )
 
 
 crud_orders = CrudOrder(Order)

@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.params import Path
@@ -6,16 +7,54 @@ from fastapi.params import Path
 from src.api import deps
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
-from src.crud.crud_order import crud_orders
+from src.crud.crud_order import crud_orders, _object_display_label
 from src.crud.users.crud_universal_user import crud_universal_users
 from src.getters.order import getting_order
 from src.schemas.order import OrderCreate, OrderGet, OrderUpdate
+from src.schemas.statistics import TopBreakdownItem
 from src.templates_raise import get_raise
 
 ROLES_ELIGIBLE = [ADMIN, FOREMAN, DISPATCHER]
 ALL_EMPLOYER = [ADMIN, FOREMAN, MECHANIC, ENGINEER, DISPATCHER]
 
 router = APIRouter()
+
+
+@router.get(
+    "/order/statistics/top-breakdowns",
+    response_model=ListOfEntityResponse[TopBreakdownItem],
+    name="top_breakdowns_statistics",
+    description=(
+        "Топ поломок по объектам за выбранный месяц и год: число заявок (order) "
+        "по дате создания, группировка по объекту, сортировка по убыванию счётчика."
+    ),
+    tags=["Админ панель / Задачи"],
+)
+def get_top_breakdowns_statistics(
+    session=Depends(deps.get_db),
+    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    year: int = Query(..., ge=1990, le=2100, title="Год отчёта"),
+    month: int = Query(..., ge=1, le=12, title="Месяц отчёта (1–12)"),
+):
+    code = crud_universal_users.check_role_list(
+        current_user=current_user, role_list=ALL_EMPLOYER
+    )
+    get_raise(code=code)
+
+    rows = crud_orders.get_top_breakdowns_by_month(
+        db=session, year=year, month=month
+    )
+    data = [
+        TopBreakdownItem(
+            object_id=row.id,
+            object_number=_object_display_label(row.name, row.id),
+            client=row.client_name,
+            responsible_mechanic=row.mechanic_name,
+            breakdown_count=int(row.breakdown_count),
+        )
+        for row in rows
+    ]
+    return ListOfEntityResponse(data=data)
 
 
 # GET-MULTY
