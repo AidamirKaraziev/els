@@ -1,7 +1,6 @@
-#! /usr/bin/env bash
+#! /usr/bin/env sh
 
 # Установите рабочий каталог для alembic и выполнения миграций
-# shellcheck disable=SC2164
 cd /app
 
 # Run migrations

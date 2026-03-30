@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   postgres:
     image: postgres:13
@@ -14,6 +12,11 @@ services:
       - "5432:5432"
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   backend:
     build:
@@ -28,11 +31,12 @@ services:
       DB_NAME: ${DB_NAME}
       UVICORN_RELOAD: ${UVICORN_RELOAD}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
+      - static_data:/app/static
     env_file:
       - .env
 
@@ -54,3 +58,4 @@ services:
 volumes:
   postgres_data:
   pgadmin_data:
+  static_data:
