@@ -264,9 +264,7 @@ class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
         for division_id, division_title, planned, completed in rows:
             completed_i = int(completed)
             planned_i = int(planned)
-            pct = (
-                round(100.0 * completed_i / planned_i, 2) if planned_i > 0 else 0.0
-            )
+            pct = round(100.0 * completed_i / planned_i, 2) if planned_i > 0 else 0.0
             divisions.append(
                 ScheduleExecutionDivisionStats(
                     division_id=division_id,

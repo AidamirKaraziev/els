@@ -9,6 +9,8 @@ from src.api.api_v1.endpoints import (
     contact_person,
     contract,
     cost_type,
+    defective_act,
+    defective_act_photo,
     division,
     factory_model,
     fault_category,
@@ -43,6 +45,8 @@ api_router.include_router(division.router)
 api_router.include_router(company.router)
 api_router.include_router(location.router, tags=["Админ панель / Города"])
 api_router.include_router(contact_person.router)
+api_router.include_router(defective_act.router)
+api_router.include_router(defective_act_photo.router)
 api_router.include_router(type_contract.router)
 api_router.include_router(type_act.router)
 api_router.include_router(cost_type.router)

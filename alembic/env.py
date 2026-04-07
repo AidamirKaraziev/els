@@ -38,6 +38,8 @@ from src.models.planned_to import PlannedTO
 from src.models.contract import Contract
 from src.models.working_specialty import WorkingSpecialty
 from src.models.area_of_responsibility import AreaOfResponsibility
+from src.models.defective_acts import DefectiveAct
+from src.models.defective_act_photo import DefectiveActPhoto
 
 
 target_metadata = Base.metadata

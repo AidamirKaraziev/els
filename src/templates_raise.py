@@ -91,6 +91,11 @@ type_object_not_found = -132
 planned_to_not_found = -133
 year_object_uc_is_exist = -1331
 
+defective_act_not_found = -1340
+defective_act_photo_not_found = -1341
+defective_act_photo_file_is_none = -1342
+defective_act_invalid_month = -1343
+
 
 def get_raise(code: Any):
     if type(code) is not int:
@@ -472,6 +477,34 @@ def get_raise(code: Any):
             message="Плановые ТО для этого объекта на этот год уже есть!",
             num=1331,
             description="Плановые ТО для этого объекта на этот год уже есть!",
+            path="$.body",
+        )
+    if code == -1340:
+        raise UnfoundEntity(
+            message="Такого дефектного акта не существует!",
+            num=1340,
+            description="Выберете существующий дефектный акт!",
+            path="$.body",
+        )
+    if code == -1341:
+        raise UnfoundEntity(
+            message="Такого фото дефектного акта не существует!",
+            num=1341,
+            description="Выберете существующее фото дефектного акта!",
+            path="$.body",
+        )
+    if code == -1342:
+        raise UnprocessableEntity(
+            message="Не отправлен загружаемый файл",
+            num=1342,
+            description="Попробуйте загрузить файл еще раз",
+            path="$.body",
+        )
+    if code == -1343:
+        raise UnprocessableEntity(
+            message="Некорректный месяц (1–12)",
+            num=1343,
+            description="Укажите месяц в диапазоне 1–12",
             path="$.body",
         )
     if code != 0:

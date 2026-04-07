@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.params import Path
@@ -7,7 +6,7 @@ from fastapi.params import Path
 from src.api import deps
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
-from src.crud.crud_order import crud_orders, _object_display_label
+from src.crud.crud_order import _object_display_label, crud_orders
 from src.crud.users.crud_universal_user import crud_universal_users
 from src.getters.order import getting_order
 from src.schemas.order import OrderCreate, OrderGet, OrderUpdate
@@ -41,9 +40,7 @@ def get_top_breakdowns_statistics(
     )
     get_raise(code=code)
 
-    rows = crud_orders.get_top_breakdowns_by_month(
-        db=session, year=year, month=month
-    )
+    rows = crud_orders.get_top_breakdowns_by_month(db=session, year=year, month=month)
     data = [
         TopBreakdownItem(
             object_id=row.id,

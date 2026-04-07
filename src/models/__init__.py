@@ -29,6 +29,8 @@ from .order_photo import OrderPhoto
 from .planned_to import PlannedTO
 from .contract import Contract
 from .working_specialty import WorkingSpecialty
+from .defective_acts import DefectiveAct
+from .defective_act_photo import DefectiveActPhoto
 
 # удалил модель базы данных, потому что не понимаю зачем она
 # from .act_fact_of_mechanic import ActFactOfMechanic

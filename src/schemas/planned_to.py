@@ -81,9 +81,17 @@ class ScheduleExecutionDivisionStats(BaseModel):
     division_id: int
     division_title: Optional[str] = None
     responsible_name: Optional[str] = None
-    completion_percent: float = Field(..., description="Доля завершённых ТО в отчётном месяце, %")
-    planned_works_count: int = Field(..., ge=0, description="Количество запланированных ТО на месяц по участку")
-    completed_works_count: int = Field(..., ge=0, description="Завершённые в этом календарном месяце по дате finished_at")
+    completion_percent: float = Field(
+        ..., description="Доля завершённых ТО в отчётном месяце, %"
+    )
+    planned_works_count: int = Field(
+        ..., ge=0, description="Количество запланированных ТО на месяц по участку"
+    )
+    completed_works_count: int = Field(
+        ...,
+        ge=0,
+        description="Завершённые в этом календарном месяце по дате finished_at",
+    )
 
 
 class ScheduleExecutionStatsGet(BaseModel):
