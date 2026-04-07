@@ -2,18 +2,19 @@ import os
 import uuid
 from datetime import datetime
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from src.crud.base import CRUDBase
 from src.crud.crud_planned_to import crud_planned_to
 from src.crud.crud_status import crud_status
 from src.crud.users.crud_universal_user import crud_universal_users
-from src.models import DefectiveAct, UniversalUser
+from src.models import DefectiveAct, PlannedTO, UniversalUser
 from src.schemas.defective_act import (
     DefectiveActCreate,
     DefectiveActStatusUpdate,
     DefectiveActUpdate,
 )
+from src.services.defective_act_pdf import DefectiveActPdfData, build_defective_act_pdf
 
 
 class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUpdate]):
@@ -146,15 +147,20 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         return obj, 0, None
 
     def generate_pdf(self, *, db: Session, defective_act_id: int) -> tuple:
-        """
-        Минимальная генерация PDF без внешних зависимостей.
-        Дальше можно заменить на нормальный рендер (HTML->PDF, reportlab и т.п.).
-        """
-        obj, code, _ = self.get_defective_act_by_id(
-            db=db, defective_act_id=defective_act_id
+        obj = (
+            db.query(DefectiveAct)
+            .options(
+                joinedload(DefectiveAct.planned_to).joinedload(PlannedTO.object),
+                joinedload(DefectiveAct.photos),
+                joinedload(DefectiveAct.status),
+                joinedload(DefectiveAct.responsible_user),
+                joinedload(DefectiveAct.created_by_user),
+            )
+            .filter(DefectiveAct.id == defective_act_id)
+            .first()
         )
-        if code != 0:
-            return None, code, None
+        if obj is None:
+            return None, self.not_found, None
 
         base_path = "./static/"
         folder = os.path.join(base_path, "defective_act", str(obj.id), "pdf")
@@ -164,12 +170,48 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         abs_path = os.path.join(folder, filename)
         rel_path = "/".join(["defective_act", str(obj.id), "pdf", filename])
 
-        pdf_bytes = _minimal_pdf_bytes(
-            title=obj.title or f"Defective act #{obj.id}",
-            body=obj.description or "",
+        planned = obj.planned_to
+        equipment = "—"
+        year_str = "—"
+        if planned is not None:
+            year_str = str(planned.year) if planned.year else "—"
+            if planned.object is not None and planned.object.name:
+                equipment = planned.object.name.strip()
+
+        status_name = obj.status.name if obj.status and obj.status.name else "—"
+        responsible = (
+            obj.responsible_user.name
+            if obj.responsible_user and obj.responsible_user.name
+            else "—"
         )
-        with open(abs_path, "wb") as f:
-            f.write(pdf_bytes)
+        creator = (
+            obj.created_by_user.name
+            if obj.created_by_user and obj.created_by_user.name
+            else "—"
+        )
+
+        static_root = os.path.abspath(base_path)
+        photo_paths = []
+        for ph in sorted(obj.photos or [], key=lambda p: p.id or 0):
+            if not ph.photo:
+                continue
+            rel = ph.photo.replace("\\", "/")
+            fp = os.path.join(static_root, rel)
+            if os.path.isfile(fp):
+                photo_paths.append(fp)
+
+        pdf_data = DefectiveActPdfData(
+            equipment_name=equipment,
+            planned_year=year_str,
+            month=obj.month,
+            title=obj.title or "",
+            description=obj.description or "",
+            status_name=status_name,
+            responsible_name=responsible,
+            creator_name=creator,
+            photo_paths=photo_paths,
+        )
+        build_defective_act_pdf(abs_path, pdf_data)
 
         obj.pdf_file = rel_path
         obj.updated_at = datetime.utcnow()
@@ -177,83 +219,6 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         db.commit()
         db.refresh(obj)
         return obj, 0, None
-
-
-def _pdf_escape(text: str) -> str:
-    return (
-        (text or "")
-        .replace("\\", "\\\\")
-        .replace("(", "\\(")
-        .replace(")", "\\)")
-        .replace("\n", " ")
-        .strip()
-    )
-
-
-def _minimal_pdf_bytes(*, title: str, body: str) -> bytes:
-    """
-    Очень простой PDF: 1 страница, Helvetica, 2 строки текста.
-    """
-    title = _pdf_escape(title)[:120]
-    body = _pdf_escape(body)[:500]
-
-    content = (
-        "BT\n"
-        "/F1 16 Tf\n"
-        "50 780 Td\n"
-        f"({title}) Tj\n"
-        "/F1 12 Tf\n"
-        "0 -24 Td\n"
-        f"({body}) Tj\n"
-        "ET\n"
-    ).encode("latin-1", errors="replace")
-
-    parts = []
-
-    def add(b: bytes) -> int:
-        parts.append(b)
-        return sum(len(x) for x in parts) - len(b)
-
-    add(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
-    xref = []
-
-    xref.append(add(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"))
-    xref.append(add(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n"))
-    xref.append(
-        add(
-            b"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
-            b"/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n"
-        )
-    )
-    xref.append(
-        add(
-            b"4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n"
-        )
-    )
-    xref.append(
-        add(
-            b"5 0 obj\n<< /Length "
-            + str(len(content)).encode()
-            + b" >>\nstream\n"
-            + content
-            + b"endstream\nendobj\n"
-        )
-    )
-
-    xref_start = sum(len(x) for x in parts)
-    out = b"".join(parts)
-
-    # xref table
-    xref_lines = [b"xref\n0 6\n", b"0000000000 65535 f \n"]
-    # objects 1..5
-    for off in xref:
-        xref_lines.append(f"{off:010d} 00000 n \n".encode())
-    trailer = (
-        b"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n"
-        + str(xref_start).encode()
-        + b"\n%%EOF\n"
-    )
-    return out + b"".join(xref_lines) + trailer
 
 
 crud_defective_act = CrudDefectiveAct(DefectiveAct)
