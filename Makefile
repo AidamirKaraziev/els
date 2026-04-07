@@ -1,4 +1,4 @@
-.PHONY: up lint format sync
+.PHONY: up lint format sync vault-check
 
 sync:
 	uv sync --all-groups
@@ -11,3 +11,6 @@ lint:
 
 format:
 	./scripts/format.sh
+
+vault-check:
+	python ./scripts/check_windows_safe_filenames.py knowledge-vault
