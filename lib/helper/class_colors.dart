@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+
 ///Цвета приложения
 
-class ColorApp{
+class ColorApp {
   static const Color myColorWhite = Color(0xffFFFFFF);
   static const Color myColorBlack = Color(0xff000000);
   static const Color myColorGreenAuth = Color(0xff85B544);
@@ -18,18 +19,29 @@ class ColorApp{
   static const Color myColorRed = Color(0xffDF726F);
   static const Color myColorYellow = Color(0xffF0BB01);
   static const Color myColorBlue = Color(0xff8BAEF9);
+
+  ///Мой Падинг
+  static const double kPadding = 20.0;
 }
 
 ///Переменные
-
 class IntTest {
   static int indexScreens = 0;
+  static int indexScreensForeman = 0;
+  static int indexScreensDispatcher = 0;
+  static int indexScreensOwner = 0;
+  static int indexScreensTest = 0;
   static int indexUserList = 0;
+  static int indexTaskList = 0;
+  static int indexCompanyList = 0;
+  static int indexObjectList = 0;
   static int pressHover = 0;
+  static int pressHoverCompany = 0;
   static int badgeCount = 2;
   static String myTitle = 'Главная';
   static String token = '';
-  static String myIp = '185.119.58.63';
+  static String myIp = '185.154.193.42:8000';
 }
 
-
+/// http://37.77.104.2:8000/api/v1/order-photo/1?page=1
+/// http://37.77.104.2:8000/api/v1/cp/sign-in/

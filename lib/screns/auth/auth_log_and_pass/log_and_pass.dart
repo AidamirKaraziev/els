@@ -1,21 +1,22 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:convert';
+import 'package:els/helper/splash_screen.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../bloc/user_bloc/user_bloc.dart';
 import '../../../helper/button/my_button.dart';
-import '../../../helper/class_colors.dart';
 import 'package:http/http.dart' as http;
-import '../../home_page/home_page.dart';
+import '../../../helper/class_colors.dart';
 import 'auth_widget.dart';
 
 ///Окно Логин и Пароль
 
-
-
 var singleCheckBox = false;
 
 bool openPassword = true;
+
 
 class LogAndPass extends StatefulWidget {
   const LogAndPass({Key? key}) : super(key: key);
@@ -34,27 +35,62 @@ class _LogAndPassState extends State<LogAndPass> {
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
 
+
+    bool progressTest = true;
+    funTest(){
+      print('worksssss');
+    }
+
+    // Future<void> sendOptionsRequest() async {
+    //   var client = HttpClient();
+    //   var url = Uri.parse('http://${IntTest.myIp}/api/v1/cp/sign-in/');
+    //
+    //   var request = await client.openUrl('OPTIONS', url);
+    //   request.headers.set('Content-Type', 'application/json');
+    //   request.headers.set('Authorization', 'Bearer ${IntTest.token}');
+    //
+    //   var response = await request.close();
+    //   var responseBody = await response.transform(utf8.decoder).join();
+    //
+    //   print(response.statusCode);
+    //   print(responseBody);
+    //   print('отработала');
+    // }
+
     /// Проверка Логин и Пароль получение токен ===========
     auth() async {
+
       SharedPreferences preferences = await SharedPreferences.getInstance();
       var response = await http.post(Uri.parse('http://${IntTest.myIp}/api/v1/cp/sign-in/'),
           headers: {
             "Content-Type": "application/json; charset=utf-8",
           },
           body: json.encode({
-            'email': log.text,
-            'password': pass.text,
+            'email': '1',//log.text,
+            'password': '1',//pass.text,
           }));
       var ress = jsonDecode(response.body);
+      /// pr@mail.ru 1111 прораб
+      /// d@mail.ru 1111 Дипетчер
+      /// tex@plk-krd.ru 0000 Виталик прораб
+      /// owner@mail.ru 1111 собственик
+      // print(ress);
       IntTest.token = ress['data']['token'];
       await preferences.setString('token', ress['data']['token']);
       // print(IntTest.token);
       if (IntTest.token != null) {
         UserBloc().add(UserGetEvent());
+        Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const SplashScreen()));
+        // if(idUserTest == 1) {
+        //   Navigator.of(context).push(
+        //     MaterialPageRoute(builder: (context) => const HomePage()));
+        // }
       }
     }
     /// ===================================================
-    
+
+
     return Container(
       padding: EdgeInsets.all(size.width > 550 ? 70.0 : 20.0),
       child: SizedBox(
@@ -149,13 +185,15 @@ class _LogAndPassState extends State<LogAndPass> {
               textButton: 'ВОЙТИ',
               press: () async {
                 await auth();
-                // ignore: use_build_context_synchronously
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (context) => const HomePage(
-                          // stream: menuController.stream
-                          )),
-                );
+                // if(userProfile[0]['role_id']['id'] == 5){
+                //   getListApplication();
+                //   Navigator.of(context).push(
+                //       MaterialPageRoute(builder: (context) => const HomePageDispatcher()));
+                // }
+                // else if (userProfile[0]['role_id']['id'] == 1){
+                //   Navigator.of(context).push(
+                //       MaterialPageRoute(builder: (context) => const HomePage()));
+                // }
               },
             ),
             const SizedBox(height: 10.0),
@@ -178,3 +216,5 @@ class _LogAndPassState extends State<LogAndPass> {
     );
   }
 }
+
+

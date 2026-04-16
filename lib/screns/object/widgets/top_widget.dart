@@ -2,6 +2,9 @@ import 'package:els/screns/employee/widgets/topButton.dart';
 import 'package:flutter/material.dart';
 
 import '../../../helper/class_colors.dart';
+import '../../home_page/home_page.dart';
+
+int myColorButtonObject = 1;
 
 class TopWidgetObject extends StatefulWidget {
   const TopWidgetObject({Key? key}) : super(key: key);
@@ -11,8 +14,6 @@ class TopWidgetObject extends StatefulWidget {
 }
 
 class _TopWidgetObjectState extends State<TopWidgetObject> {
-
-  int myColorButtonObject = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -33,72 +34,173 @@ class _TopWidgetObjectState extends State<TopWidgetObject> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          ///Компания
-          if (size.width >= 1150) Expanded(
-              child: TopButtonWidget(
-                text: 'Компания',
-                press: () {
-                  myColorButtonObject = 5;
-                  setState(() {});
-                },
-                pressIcon: () {},
-                colorButton: myColorButtonObject == 5 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
-                colorText: myColorButtonObject == 5 ? ColorApp.myColorWhite : ColorApp.myColorBlack,
+          ///Название
+          Expanded(
+              flex: 3,
+              child: Row(
+                children: [
+                  TopButtonWidget(
+                    text: 'Название',
+                    press: () {
+                      myColorButtonObject = 1;
+                      myStream.add(IntTest.indexScreens);
+                      setState(() {});
+                    },
+                    pressIcon: () {},
+                    colorButton: myColorButtonObject == 1 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
+                    colorText: myColorButtonObject == 1 ? Colors.white :  ColorApp.myColorBlack,
+                  ),
+                  // const SizedBox(width: 5.0),
+                  // Container(
+                  //     width: 27.5,
+                  //     height: 27.5,
+                  //     decoration: BoxDecoration(
+                  //       border:
+                  //       Border.all(color: ColorApp.myColorGreen, width: 1.0),
+                  //       borderRadius: BorderRadius.circular(3.0),
+                  //     ),
+                  //     child: const Icon(Icons.arrow_drop_down_sharp)),
+                ],
               )),
-          ///Организация
-          if (size.width > 900)  Expanded(
-              child: TopButtonWidget(
-                text: 'Организация',
-                press: () {
-                  myColorButtonObject = 3;
-                  setState(() {});
-                },
-                pressIcon: () {},
-                colorButton: myColorButtonObject == 3 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
-                colorText: myColorButtonObject == 3 ? ColorApp.myColorWhite : ColorApp.myColorBlack,
+          ///Заводской номер
+          if (size.width > 1150)  Expanded(
+              flex: 3,
+              child: Row(
+                children: [
+                  TopButtonWidget(
+                    text: 'Заводской номер',
+                    press: () {
+                      myColorButtonObject = 2;
+                      myStream.add(IntTest.indexScreens);
+                      setState(() {});
+                    },
+                    pressIcon: () {},
+                    colorButton: myColorButtonObject == 2 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
+                    colorText: myColorButtonObject == 2 ? Colors.white :  ColorApp.myColorBlack,
+                  ),
+                  // const SizedBox(width: 5.0),
+                  // Container(
+                  //     width: 27.5,
+                  //     height: 27.5,
+                  //     decoration: BoxDecoration(
+                  //       border:
+                  //       Border.all(color: ColorApp.myColorGreen, width: 1.0),
+                  //       borderRadius: BorderRadius.circular(3.0),
+                  //     ),
+                  //     child: const Icon(Icons.arrow_drop_down_sharp)),
+                ],
+              )),
+          ///Компания
+          if (size.width >= 990) Expanded(
+              flex: 3,
+              child: Row(
+                children: [
+                  TopButtonWidget(
+                    text: 'Компания',
+                    press: () {
+                      myColorButtonObject = 3;
+                      myStream.add(IntTest.indexScreens);
+                      setState(() {});
+                    },
+                    pressIcon: () {},
+                    colorButton: myColorButtonObject == 3 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
+                    colorText: myColorButtonObject == 3 ? Colors.white :  ColorApp.myColorBlack,
+                  ),
+                  // const SizedBox(width: 5.0),
+                  // Container(
+                  //     width: 27.5,
+                  //     height: 27.5,
+                  //     decoration: BoxDecoration(
+                  //       border:
+                  //       Border.all(color: ColorApp.myColorGreen, width: 1.0),
+                  //       borderRadius: BorderRadius.circular(3.0),
+                  //     ),
+                  //     child: const Icon(Icons.arrow_drop_down_sharp)),
+                ],
               )),
           ///Адресс
+          if (size.width > 650)
           Expanded(
-              child: TopButtonWidget(
-                text: 'Адресс',
+              flex: 3,
+              child: Row(
+                children: [
+                  TopButtonWidget(
+                    text: 'Адресс',
+                    press: () {
+                      myColorButtonObject = 4;
+                      myStream.add(IntTest.indexScreens);
+                      setState(() {});
+                    },
+                    pressIcon: () {},
+                    colorButton: myColorButtonObject == 4 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
+                    colorText: myColorButtonObject == 4 ? Colors.white :  ColorApp.myColorBlack,
+                  ),
+                  // const SizedBox(width: 5.0),
+                  // Container(
+                  //     width: 27.5,
+                  //     height: 27.5,
+                  //     decoration: BoxDecoration(
+                  //       border:
+                  //       Border.all(color: ColorApp.myColorGreen, width: 1.0),
+                  //       borderRadius: BorderRadius.circular(3.0),
+                  //     ),
+                  //     child: const Icon(Icons.arrow_drop_down_sharp)),
+                ],
+              )),
+          ///Участок
+          if (size.width > 850) Expanded(
+              flex: 3,
+              child: Row(
+            children: [
+              TopButtonWidget(
+                  text: 'Участок',
+                  press: () {
+                    myColorButtonObject = 5;
+                    myStream.add(IntTest.indexScreens);
+                    setState(() {});
+                  },
+                  pressIcon: () {},
+                colorButton: myColorButtonObject == 5 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
+                colorText: myColorButtonObject == 5 ? Colors.white :  ColorApp.myColorBlack,
+                ),
+              // const SizedBox(width: 5.0),
+              // Container(
+              //     width: 27.5,
+              //     height: 27.5,
+              //     decoration: BoxDecoration(
+              //       border:
+              //       Border.all(color: ColorApp.myColorGreen, width: 1.0),
+              //       borderRadius: BorderRadius.circular(3.0),
+              //     ),
+              //     child: const Icon(Icons.arrow_drop_down_sharp)),
+            ],
+          )),
+          ///Тип
+          if (size.width > 450)  Expanded(
+            flex: 2,
+              child: Row(
+            children: [
+              TopButtonWidget(text: 'Тип',
                 press: () {
-                  myColorButtonObject = 1;
+                  myColorButtonObject = 6;
+                  myStream.add(IntTest.indexScreens);
                   setState(() {});
                 },
                 pressIcon: () {},
-                colorButton: myColorButtonObject == 1 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
-                colorText: myColorButtonObject == 1 ? ColorApp.myColorWhite : ColorApp.myColorBlack,
-              )),
-          ///Участок
-          if (size.width > 750) Expanded(child: TopButtonWidget(
-              text: 'Участок',
-              press: () {
-                myColorButtonObject = 2;
-                setState(() {});
-              },
-              pressIcon: () {},
-              colorButton: myColorButtonObject == 2 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
-              colorText: myColorButtonObject == 2 ? ColorApp.myColorWhite : ColorApp.myColorBlack,
-            )),
-          ///Прораб
-          if (size.width > 500) Expanded(child: TopButtonWidget(text: 'Прораб',
-              press: () {
-                myColorButtonObject = 4;
-                setState(() {});
-              },
-              pressIcon: () {},
-              colorButton: myColorButtonObject == 4 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
-              colorText: myColorButtonObject == 4 ? ColorApp.myColorWhite : ColorApp.myColorBlack,
-            )),
-          ///Тип
-          if (size.width > 500)  Expanded(child: TopButtonWidget(text: 'Тип',
-            press: () {
-              myColorButtonObject = 4;
-              setState(() {});
-            },
-            pressIcon: () {},
-            colorButton: myColorButtonObject == 4 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
-            colorText: myColorButtonObject == 4 ? ColorApp.myColorWhite : ColorApp.myColorBlack,
+                colorButton: myColorButtonObject == 6 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
+                colorText: myColorButtonObject == 6 ? Colors.white :  ColorApp.myColorBlack,
+              ),
+              // const SizedBox(width: 5.0),
+              // Container(
+              //     width: 27.5,
+              //     height: 27.5,
+              //     decoration: BoxDecoration(
+              //       border:
+              //       Border.all(color: ColorApp.myColorGreen, width: 1.0),
+              //       borderRadius: BorderRadius.circular(3.0),
+              //     ),
+              //     child: const Icon(Icons.arrow_drop_down_sharp)),
+            ],
           )),
         ],
       ),

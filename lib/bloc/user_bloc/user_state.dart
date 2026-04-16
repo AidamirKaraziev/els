@@ -6,7 +6,7 @@ abstract class UserState {}
 class UserInitial extends UserState {}
 
 class UserGetState extends UserState {
-  final List getUser;
+  final Map getUser;
   UserGetState({required this.getUser});
 }
 

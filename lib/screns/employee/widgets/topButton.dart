@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-
 import '../../../helper/class_colors.dart';
+import '../view/employees_screen.dart';
 
 ///Вверхние кнопки в Сотрудники
 
-
 class TopButton extends StatefulWidget {
   const TopButton({Key? key}) : super(key: key);
-
   @override
   State<TopButton> createState() => _TopButtonState();
 }
@@ -15,6 +13,14 @@ class TopButton extends StatefulWidget {
 var myColorButton = 2;
 
 class _TopButtonState extends State<TopButton> {
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    // dataEmployee = getEmployee;
+  }
+
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
@@ -36,50 +42,106 @@ class _TopButtonState extends State<TopButton> {
         children: [
           ///ФИО
           Expanded(
-            child: TopButtonWidget(
-              text: 'ФИО',
-              press: () {
-                myColorButton = 1;
-                setState(() {});
-              },
-              pressIcon: () {},
-              colorButton: myColorButton == 1 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
-              colorText: myColorButton == 1 ? ColorApp.myColorWhite : ColorApp.myColorBlack,
-            )),
+              child: Row(
+            children: [
+              TopButtonWidget(
+                text: 'ФИО',
+                press: () {
+                  myColorButton = 1;
+                  setState(() {});
+                },
+                pressIcon: () {},
+                colorButton: myColorButton == 1
+                    ? ColorApp.myColorGreen
+                    : ColorApp.myColorWhite,
+                colorText: myColorButton == 1
+                    ? ColorApp.myColorWhite
+                    : ColorApp.myColorBlack,
+              ),
+              const SizedBox(width: 5.0),
+              Container(
+                  width: 27,
+                  height: 27,
+                  decoration: BoxDecoration(
+                    border:
+                        Border.all(color: ColorApp.myColorGreen, width: 1.0),
+                    borderRadius: BorderRadius.circular(4.0),
+                  ),
+                  child: const Icon(Icons.arrow_drop_down_sharp)),
+            ],
+          )),
+
           ///Участок
           if (size.width > 550) Expanded(
-            child: TopButtonWidget(
-              text: 'Участок',
-              press: () {
-                myColorButton = 2;
-                setState(() {});
-              },
-              pressIcon: () {},
-              colorButton: myColorButton == 2 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
-              colorText: myColorButton == 2 ? ColorApp.myColorWhite : ColorApp.myColorBlack,
+              child: Row(
+                children: [
+                  TopButtonWidget(
+                    text: 'Участок',
+                    press: () {
+                      myColorButton = 2;
+                      setState(() {});
+                    },
+                    pressIcon: () {},
+                    colorButton: myColorButton == 2
+                        ? ColorApp.myColorGreen
+                        : ColorApp.myColorWhite,
+                    colorText: myColorButton == 2
+                        ? ColorApp.myColorWhite
+                        : ColorApp.myColorBlack,
+                  ),
+                  const SizedBox(width: 5.0),
+                  Container(
+                      width: 27,
+                      height: 27,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: ColorApp.myColorGreen, width: 1.0),
+                        borderRadius: BorderRadius.circular(4.0),
+                      ),
+                      child: const Icon(Icons.arrow_drop_down_sharp)),
+                ],
+              ),
             ),
-          ),
+
           ///Номер телефона
           if (size.width > 1050) const Expanded(child: Text('Номер телефона')),
+
           ///Должность
-          if (size.width > 600) Expanded(
-            child: TopButtonWidget(
-              text: 'Должность',
-              press: () {
-                myColorButton = 3;
-                setState(() {});
-              },
-              pressIcon: () {},
-              colorButton: myColorButton == 3 ? ColorApp.myColorGreen : ColorApp.myColorWhite,
-              colorText: myColorButton == 3 ? ColorApp.myColorWhite : ColorApp.myColorBlack,
+          if (size.width > 600)Expanded(
+              child: Row(
+                children: [
+                  TopButtonWidget(
+                    text: 'Должность',
+                    press: () {
+                      myColorButton = 3;
+                      setState(() {});
+                    },
+                    pressIcon: () {},
+                    colorButton: myColorButton == 3
+                        ? ColorApp.myColorGreen
+                        : ColorApp.myColorWhite,
+                    colorText: myColorButton == 3
+                        ? ColorApp.myColorWhite
+                        : ColorApp.myColorBlack,
+                  ),
+                  const SizedBox(width: 5.0),
+                  Container(
+                      width: 27,
+                      height: 27,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: ColorApp.myColorGreen, width: 1.0),
+                        borderRadius: BorderRadius.circular(4.0),
+                      ),
+                      child: const Icon(Icons.arrow_drop_down_sharp)),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 }
-
 
 ///Кнопка
 class TopButtonWidget extends StatelessWidget {
@@ -94,7 +156,8 @@ class TopButtonWidget extends StatelessWidget {
     required this.text,
     required this.press,
     required this.pressIcon,
-    required this.colorButton, required this.colorText,
+    required this.colorButton,
+    required this.colorText,
   }) : super(key: key);
 
   @override
@@ -103,26 +166,17 @@ class TopButtonWidget extends StatelessWidget {
       children: [
         OutlinedButton(
           style: OutlinedButton.styleFrom(
-            primary: ColorApp.myColorGreenLine,
-              backgroundColor: colorButton,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5.0)),
+              foregroundColor: ColorApp.myColorGreenLine, backgroundColor: colorButton,
               side: const BorderSide(color: ColorApp.myColorGreen)),
           onPressed: press,
           child: Text(
             text,
-            style: TextStyle(color: colorText, ),
+            style: TextStyle(
+              color: colorText,
+            ),
           ),
-        ),
-        const SizedBox(width: 5.0),
-        InkWell(
-          onTap: pressIcon,
-          child: Container(
-              width: 27,
-              height: 27,
-              decoration: BoxDecoration(
-                border: Border.all(color: ColorApp.myColorGreen, width: 1.0),
-                borderRadius: BorderRadius.circular(4.0),
-              ),
-              child: const Icon(Icons.arrow_drop_down_sharp)),
         ),
       ],
     );

@@ -1,8 +1,9 @@
-import 'package:els/helper/class_colors.dart';
 import 'package:flutter/material.dart';
-
+import '../../../helper/class_colors.dart';
 import '../../home_page/home_page.dart';
-import '../view/open_ view_user.dart';
+import '../../object/bloc/object_bloc.dart';
+import '../view/employee_page.dart';
+import '../view/employees_screen.dart';
 
 /// Заморозка Юзера
 
@@ -11,9 +12,12 @@ class EmployeeAccountFreeze extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 300.0,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20.0),
+      ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -54,24 +58,26 @@ class EmployeeAccountFreeze extends StatelessWidget {
           const SizedBox(height: 20.0),
           Row(
             children: [
+              /// Отмена
               ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(100.0, 40.0),
-                    primary: ColorApp.myColorGrayText,
-                    onPrimary: ColorApp.myColorBlack,
+                    foregroundColor: ColorApp.myColorBlack, backgroundColor: ColorApp.myColorGrayText, minimumSize: const Size(100.0, 40.0),
                   ),
                   onPressed: () {
                     Navigator.pop(context);
                   }, child: const Text('Отмена', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.w500),)),
               const SizedBox(width: 10.0),
+              /// Подтвердить
               ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(200.0, 40.0),
-                      primary: ColorApp.myColorGreenAuth
+                      minimumSize: const Size(200.0, 40.0), backgroundColor: ColorApp.myColorGreenAuth
                   ),
                   onPressed: () async {
-                    await freezingUser(IntTest.pressHover);
-                    pointsMapController.add(IntTest.indexScreens);
+                    await freezingEmployee(IntTest.pressHover);
+                    MyObjectBloc().add(ObjectGetEvent());
+                    myStream.add(IntTest.indexScreens);
+
+                    // ignore: use_build_context_synchronously
                     Navigator.pop(context);
                   }, child: const Text('Подтвердить', style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.w500),)),
             ],

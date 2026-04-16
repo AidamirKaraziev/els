@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-
 import '../class_colors.dart';
-
-
 
 /// Главная кнопка ==============================
 class MainButtonApp extends StatelessWidget {
@@ -18,12 +15,14 @@ class MainButtonApp extends StatelessWidget {
       children: [
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-              primary: ColorApp.myColorGreenAuth,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5.0)),
+              backgroundColor: ColorApp.myColorGreenAuth,
               padding: const EdgeInsets.symmetric(vertical: 20.0)),
           onPressed: press,
           child: Text(
             textButton,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
       ],

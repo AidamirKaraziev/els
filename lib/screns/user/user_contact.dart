@@ -3,6 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../bloc/user_bloc/user_bloc.dart';
 import '../../helper/class_colors.dart';
+import '../auth/auth_log_and_pass/log_and_pass.dart';
+import '../home_page/home_page.dart';
+
+
+List userProfile = [];
+List newUserProfile = [];
 
 ///Блок User Contact
 
@@ -13,8 +19,10 @@ class UserContact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<UserBloc, UserState>(
-      builder: (context, state) {
+    // print(userProfile);
+    return StreamBuilder(
+      stream: myStream.stream,
+      builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -41,21 +49,21 @@ class UserContact extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ///ФИО
-                  if (state is UserGetState && state.getUser[0]['name'] != null)
+                  if(userProfile[0]['name'] != null)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('ФИО'),
                         const SizedBox(height: 10.0),
                         Text(
-                          '${state.getUser[0]['name']}',
+                          '${userProfile[0]['name']}',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
 
                   ///Номер телефона
-                  if (state is UserGetState && state.getUser[0]['contact_phone'] != null)
+                  if(userProfile[0]['contact_phone'] != null)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -63,14 +71,14 @@ class UserContact extends StatelessWidget {
                         const Text('Номер телефона'),
                         const SizedBox(height: 10.0),
                         Text(
-                          '${state.getUser[0]['contact_phone']}',
+                          '+7${userProfile[0]['contact_phone']}',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
 
                   ///Эл. почта
-                  if (state is UserGetState && state.getUser[0]['email'] != null)
+                  if(userProfile[0]['email'] != null)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -78,7 +86,7 @@ class UserContact extends StatelessWidget {
                         const Text('Эл. почта'),
                         const SizedBox(height: 10.0),
                         Text(
-                          '${state.getUser[0]['email']}',
+                          '${userProfile[0]['email']}',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ],

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_datepicker/datepicker.dart';
+
 import '../class_colors.dart';
 
 ///Календарь
 
 DateRangePickerController myCalendar = DateRangePickerController();
 
-class MyCalendar extends StatelessWidget {
+class
+MyCalendar extends StatelessWidget {
   const MyCalendar({Key? key}) : super(key: key);
 
   @override
@@ -95,9 +97,9 @@ class MyCalendar extends StatelessWidget {
   }
 }
 
-/// ============================================================
+/// ==============================================================
 var myDataCalendar = DateFormat.MMMM('ru').format(DateTime.now());
-/// ============================================================
+/// ==============================================================
 
 class MyDataCalendar extends StatelessWidget {
   const MyDataCalendar({

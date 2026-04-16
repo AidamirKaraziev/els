@@ -1,13 +1,16 @@
-import 'package:els/bloc/object_bloc/object_bloc.dart';
 import 'package:els/screns/auth/auth.dart';
 import 'package:els/screns/employee/bloc/employee_bloc.dart';
 import 'package:els/screns/object/bloc/object_bloc.dart';
+import 'package:els/screns/task/bloc_task/task_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'bloc/company_bloc/company_bloc.dart';
 import 'bloc/user_bloc/user_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+
+
 
 
 
@@ -20,16 +23,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final employeeBloc = EmployeeBloc();
-    final companyBloc = CompanyBloc();
-    final userBloc = UserBloc();
-    final myObjectBloc = MyObjectBloc();
     return MultiBlocProvider(
       providers: [
-        BlocProvider<EmployeeBloc>(create: (context) => employeeBloc..add(EmployeeGetUserEvent())),
-        BlocProvider<CompanyBloc>(create: (context) => companyBloc..add(CompanyGetUserEvent())),
-        BlocProvider<UserBloc>(create: (context) => userBloc..add(UserGetEvent())),
-        BlocProvider<MyObjectBloc>(create: (context) => myObjectBloc..add(ObjectGetEvent())),
+        BlocProvider<EmployeeBloc>(create: (context) => EmployeeBloc()..add(EmployeeGetUserEvent())),
+        BlocProvider<CompanyBloc>(create: (context) => CompanyBloc()..add(CompanyGetUserEvent())),
+        BlocProvider<UserBloc>(create: (context) => UserBloc()..add(UserGetEvent())),
+        BlocProvider<MyObjectBloc>(create: (context) => MyObjectBloc()..add(ObjectGetEvent())),
+        BlocProvider<TaskBloc>(create: (context) => TaskBloc()..add(TaskGetEvent())),
       ],
       child: MaterialApp(
         localizationsDelegates: const [
@@ -44,8 +44,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           textTheme: GoogleFonts.ubuntuTextTheme(),
         ),
-        home:
-        const Auth(),
+        home: const Auth(),
       ),
     );
   }

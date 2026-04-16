@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
 import '../class_colors.dart';
 
 ///Кнопка SideBar ===================================
@@ -27,34 +26,39 @@ class _MenuButtonState extends State<MenuButton> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 5.0),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        hoverColor: ColorApp.myColorTransparent,
-        onTap: widget.press,
-        child: Container(
-          height: 40,
-          decoration: BoxDecoration(
-            color: widget.colorButton,
-            borderRadius: BorderRadius.circular(10.0),
-            // color: Colors.red
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(width: 10.0),
-              Icon(
-                widget.myIcons,
-                color: ColorApp.myColorGreenAuth,
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            hoverColor: ColorApp.myColorTransparent,
+            onTap: widget.press,
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: widget.colorButton,
+                borderRadius: BorderRadius.circular(10.0),
+                // color: Colors.red
               ),
-              const SizedBox(width: 10.0),
-              Text(
-                widget.title,
-                style: const TextStyle(
-                    fontSize: 15.0, fontWeight: FontWeight.w500),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(width: 10.0),
+                  Icon(
+                    widget.myIcons,
+                    color: ColorApp.myColorGreenAuth,
+                  ),
+                  const SizedBox(width: 10.0),
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                        fontSize: 15.0, fontWeight: FontWeight.w500),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(height: 10.0),
+        ],
       ),
     );
   }
@@ -121,5 +125,4 @@ class AlertsWidget extends StatelessWidget {
     );
   }
 }
-
 /// ============================================
