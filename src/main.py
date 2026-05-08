@@ -39,8 +39,11 @@ async def init_db() -> None:
 @app.on_event("startup")
 async def startup_event() -> None:
     logging.info("Starting application...")
-    await init_db()
-    logging.info("Initial data created.")
+    if settings.MODE != "TEST":
+        await init_db()
+        logging.info("Initial data created.")
+    else:
+        logging.info("TEST mode: skipping initial data creation.")
 
 
 if __name__ == "__main__":
@@ -49,4 +52,4 @@ if __name__ == "__main__":
     uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)
 
 # Это очень важно, не удалять!
-from .errors import *
+from src.errors import *

@@ -1,13 +1,14 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-from src.config import get_url
+from src.config import settings
 
-engine = create_engine(get_url(), pool_pre_ping=True)
+
+engine = create_engine(settings.DB_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def get_session() -> SessionLocal:
+def get_session():
     session = SessionLocal()
     try:
         yield session

@@ -21,3 +21,4 @@ venv
 
 # Obsidian vault local state (do not commit)
 knowledge-vault/.obsidian/*.json
+/.test.env

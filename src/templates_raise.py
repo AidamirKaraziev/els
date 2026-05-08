@@ -6,6 +6,7 @@ from src.exceptions import InaccessibleEntity, UnfoundEntity, UnprocessableEntit
 
 email_already_have = -100
 location_not_found = -101
+location_name_exist = -1011
 
 role_not_found = -102
 role_incorrectly_selected = -1021  # неправильно выбрано, попытка создать клиента
@@ -111,6 +112,13 @@ def get_raise(code: Any):
         raise UnfoundEntity(
             message="Такого города не существует!",
             num=101,
+            description="Выберете существующий город!",
+            path="$.body",
+        )
+    if code == -1011:
+        raise UnprocessableEntity(
+            message="Такого города не существует!",
+            num=1011,
             description="Выберете существующий город!",
             path="$.body",
         )

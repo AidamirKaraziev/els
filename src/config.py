@@ -2,7 +2,6 @@ import os
 import secrets
 from typing import Any, Dict, List, Optional, Union
 
-from dotenv import load_dotenv
 from pydantic import (
     AnyHttpUrl,
     BaseSettings,
@@ -12,22 +11,23 @@ from pydantic import (
     validator,
 )
 
-load_dotenv(".env")
-
-
-def get_url():
-    user = os.getenv("DB_USER")
-    password = os.getenv("DB_PASSWORD")
-    host = os.getenv("DB_HOST")
-    port = os.getenv("DB_PORT")
-    db_name = os.getenv("DB_NAME")
-    return f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
-
 
 class Settings(BaseSettings):
+    MODE: str
+
     API_V1_STR: str = "/api/v1"
-    APP_PORT: str = os.getenv("APP_PORT", "8000")
+    APP_PORT: str = "8000"
     SECRET_KEY: str = secrets.token_urlsafe(32)
+
+    DB_HOST: str
+    DB_PORT: int
+    DB_USER: str
+    DB_PASS: str
+    DB_NAME: str
+
+    @property
+    def DB_URL(self):
+        return f"postgresql://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     TOKEN_CLAIMS_EXTRA_FIELDS = ["exp", "nbf", "iat", "jti"]
