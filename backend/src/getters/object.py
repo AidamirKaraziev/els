@@ -8,6 +8,7 @@ from src.getters.contact_person import get_contact_person
 from src.getters.contract import get_contract
 from src.getters.division import get_division
 from src.getters.factory_model import get_factory_model
+from src.getters.static_url import static_base_url
 from src.getters.universal_user import get_universal_user
 from src.models import Object
 from src.schemas.object import ObjectGet
@@ -18,13 +19,7 @@ def get_object(
     obj: Object, request: Optional[Request], config: Settings = settings
 ) -> Optional[ObjectGet]:
     if request is not None:
-        url = (
-            request.url.hostname
-            + ":"
-            + str(settings.APP_PORT)
-            + config.API_V1_STR
-            + "/static/"
-        )
+        url = static_base_url(request, config)
         if obj.letter_of_appointment is not None:
             obj.letter_of_appointment = url + str(obj.letter_of_appointment)
         else:

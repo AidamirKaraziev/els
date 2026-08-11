@@ -4,6 +4,7 @@ from fastapi import Request
 
 from src.config import Settings, settings
 from src.getters.location import get_location
+from src.getters.static_url import static_base_url
 from src.models.company import Company
 from src.schemas.company import CompanyGet
 
@@ -12,13 +13,7 @@ def getting_company(
     company: Company, request: Optional[Request], config: Settings = settings
 ) -> Optional[CompanyGet]:
     if request is not None:
-        url = (
-            request.url.hostname
-            + ":"
-            + str(settings.APP_PORT)
-            + config.API_V1_STR
-            + "/static/"
-        )
+        url = static_base_url(request, config)
         if company.photo is not None:
             company.photo = url + str(company.photo)
         else:

@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import Request
 
 from src.config import Settings, settings
+from src.getters.static_url import static_base_url
 from src.getters.status import get_statuses
 from src.models import ActFact
 from src.schemas.act_fact import ActFactGet
@@ -12,13 +13,7 @@ def get_acts_facts(
     obj: ActFact, request: Optional[Request], config: Settings = settings
 ) -> ActFactGet:
     if request is not None:
-        url = (
-            request.url.hostname
-            + ":"
-            + str(settings.APP_PORT)
-            + config.API_V1_STR
-            + "/static/"
-        )
+        url = static_base_url(request, config)
         if obj.file is not None:
             obj.file = url + str(obj.file)
         else:

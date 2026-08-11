@@ -5,6 +5,7 @@ from fastapi import Request
 from src.config import Settings, settings
 from src.getters.defective_act_photo import getting_defective_act_photo
 from src.getters.planned_to import get_planned_to
+from src.getters.static_url import static_base_url
 from src.getters.status import get_statuses
 from src.getters.universal_user import get_universal_user
 from src.models import DefectiveAct
@@ -21,13 +22,7 @@ def getting_defective_act(
         obj.updated_at = to_timestamp(obj.updated_at)
 
     if request is not None:
-        url = (
-            request.url.hostname
-            + ":"
-            + str(settings.APP_PORT)
-            + config.API_V1_STR
-            + "/static/"
-        )
+        url = static_base_url(request, config)
         if obj.pdf_file is not None:
             obj.pdf_file = url + str(obj.pdf_file)
         else:

@@ -4,6 +4,7 @@ from fastapi import Request
 
 from src.config import Settings, settings
 from src.getters.company import getting_company
+from src.getters.static_url import static_base_url
 from src.models.contact_person import ContactPerson
 from src.schemas.contact_person import ContactPersonGet
 
@@ -14,13 +15,7 @@ def get_contact_person(
     config: Settings = settings,
 ) -> Optional[ContactPersonGet]:
     if request is not None:
-        url = (
-            request.url.hostname
-            + ":"
-            + str(settings.APP_PORT)
-            + config.API_V1_STR
-            + "/static/"
-        )
+        url = static_base_url(request, config)
         if contact_person.photo is not None:
             contact_person.photo = url + str(contact_person.photo)
         else:

@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import Request
 
 from src.config import Settings, settings
+from src.getters.static_url import static_base_url
 from src.getters.universal_user import get_universal_user
 from src.models import Organization
 from src.schemas.organization import OrganizationGet
@@ -12,13 +13,7 @@ def get_organization(
     organization: Organization, request: Optional[Request], config: Settings = settings
 ) -> Optional[OrganizationGet]:
     if request is not None:
-        url = (
-            request.url.hostname
-            + ":"
-            + str(settings.APP_PORT)
-            + config.API_V1_STR
-            + "/static/"
-        )
+        url = static_base_url(request, config)
         if organization.photo is not None:
             organization.photo = url + str(organization.photo)
         else:

@@ -5,6 +5,7 @@ from fastapi import Request
 from src.config import Settings, settings
 from src.getters.company import getting_company
 from src.getters.cost_type import get_cost_types
+from src.getters.static_url import static_base_url
 from src.getters.type_contract import get_type_contracts
 from src.models.contract import Contract
 from src.schemas.contract import ContractGet
@@ -14,13 +15,7 @@ def get_contract(
     obj: Contract, request: Optional[Request], config: Settings = settings
 ) -> Optional[ContractGet]:
     if request is not None:
-        url = (
-            request.url.hostname
-            + ":"
-            + str(settings.APP_PORT)
-            + config.API_V1_STR
-            + "/static/"
-        )
+        url = static_base_url(request, config)
         if obj.file is not None:
             obj.file = url + str(obj.file)
 

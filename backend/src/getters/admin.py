@@ -5,6 +5,7 @@ from fastapi import Request
 from config import Settings, settings
 from src.getters.location import get_location
 from src.getters.role import get_roles
+from src.getters.static_url import static_base_url
 from src.getters.working_specialty import get_working_specialty
 from src.models import UniversalUser
 from src.schemas.universal_user import UniversalUserGet
@@ -15,13 +16,7 @@ def get_admin(
     admin: UniversalUser, request: Optional[Request], config: Settings = settings
 ) -> Optional[UniversalUserGet]:
     if request is not None:
-        url = (
-            request.url.hostname
-            + ":"
-            + str(settings.APP_PORT)
-            + config.API_V1_STR
-            + "/static/"
-        )
+        url = static_base_url(request, config)
         if admin.photo is not None:
             admin.photo = url + str(admin.photo)
         else:
