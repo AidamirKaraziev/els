@@ -7,7 +7,8 @@
 
 .PHONY: help up down logs ps sync dev lint format test test-db-up test-db-down \
         web-build web-logs vault-check release build migrate migrate-status \
-        openapi-update prod-deploy prod-ps prod-logs prod-down
+        openapi-update prod-deploy prod-ps prod-logs prod-down prod-nginx \
+        cert-staging cert-issue cert-renew cert-renew-dry cert-info
 
 # Пути внутри compose-файлов относительны корня, поэтому --project-directory .
 COMPOSE := docker compose --project-directory . -f infra/docker-compose.yml
@@ -77,6 +78,54 @@ prod-deploy:  ## на сервере: забрать новые образы, н
 	@$(COMPOSE_PROD) exec -T backend alembic current
 	@echo
 	@$(COMPOSE_PROD) images
+
+## --- сертификат Let's Encrypt (запускать НА СЕРВЕРЕ) ---
+
+# Домены и почта. Почта нужна один раз, при первом выпуске: на неё приходит
+# предупреждение, если автопродление сломалось и сертификат скоро истечёт.
+# Это единственный сигнал о поломке, поэтому адрес обязателен.
+CERT_DOMAIN ?= els23.ru
+CERT_DOMAIN_WWW ?= www.els23.ru
+
+_CERTBOT_ARGS = certonly --webroot -w /var/www/certbot \
+	-d $(CERT_DOMAIN) -d $(CERT_DOMAIN_WWW) \
+	--email "$(CERTBOT_EMAIL)" --agree-tos --no-eff-email
+
+_require_email = @if [ -z "$(CERTBOT_EMAIL)" ]; then \
+		echo "Нужна почта для Let's Encrypt:"; \
+		echo "  CERTBOT_EMAIL=you@example.com make $@"; \
+		exit 1; \
+	fi
+
+cert-staging:  ## пробный выпуск на тестовом сервере LE (не тратит лимиты)
+	$(call _require_email)
+	$(COMPOSE_PROD) run --rm certbot $(_CERTBOT_ARGS) --staging
+	@echo
+	@echo "Проверка прошла. Теперь боевой выпуск: make cert-issue"
+	@echo "Тестовый сертификат сначала удалить:"
+	@echo "  $(COMPOSE_PROD) run --rm certbot delete --cert-name $(CERT_DOMAIN)"
+
+cert-issue:  ## боевой выпуск сертификата
+	$(call _require_email)
+	$(COMPOSE_PROD) run --rm certbot $(_CERTBOT_ARGS)
+	@$(MAKE) --no-print-directory cert-info
+
+cert-renew:  ## продлить сертификат и перезагрузить nginx (для cron)
+	$(COMPOSE_PROD) run --rm certbot renew
+	@$(COMPOSE_PROD) exec -T frontend nginx -s reload || true
+
+cert-renew-dry:  ## прогнать продление вхолостую, не дожидаясь трёх месяцев
+	$(COMPOSE_PROD) run --rm certbot renew --dry-run
+
+cert-info:  ## что за сертификаты выпущены и до какого числа
+	$(COMPOSE_PROD) run --rm certbot certificates
+
+prod-nginx:  ## применить правку infra/nginx.conf на проде
+	# Пересоздание, а не `restart`: nginx.conf примонтирован как отдельный
+	# файл, docker держит его по inode, а `git pull` записывает файл заново.
+	# После перезапуска контейнер видел бы старое содержимое.
+	$(COMPOSE_PROD) up -d --force-recreate frontend
+	@$(COMPOSE_PROD) exec -T frontend nginx -t
 
 prod-ps:  ## что запущено на проде
 	$(COMPOSE_PROD) ps

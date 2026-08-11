@@ -119,13 +119,42 @@ services:
       - "${WEB_PORT_TLS:-443}:443"
     volumes:
       # Конфиг проксирования монтируется, а не вшит в образ: поправить его
-      # можно `git pull` + `docker compose restart frontend`, без пересборки.
+      # можно без пересборки образа — `git pull` и `make prod-nginx`.
+      #
+      # Именно `make prod-nginx`, а не `restart`. Это монтирование одного
+      # файла, а не каталога: docker привязывается к конкретному inode. И
+      # `git pull`, и любой редактор записывают файл заново, создавая новый
+      # inode, — старый остаётся висеть, и контейнер либо продолжает видеть
+      # прежнее содержимое, либо перестаёт находить файл вовсе. Перезапуск
+      # тут не помогает, нужно пересоздать контейнер.
       - ./infra/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       # Загруженные файлы nginx отдаёт сам, минуя uvicorn. На одном ядре это
       # существенно: иначе каждая аватарка занимает единственный процесс
       # приложения. Только на чтение — писать в том имеет право лишь бэкенд.
       - static_data:/app/static:ro
+      # Каталог для проверки владения доменом. Пишет туда certbot, читает
+      # nginx — отсюда общий том.
+      - certbot_www:/var/www/certbot:ro
+      # Сами сертификаты. Понадобятся, когда включим HTTPS; смонтированы
+      # заранее, чтобы включение не требовало пересоздавать контейнер.
+      - certbot_conf:/etc/letsencrypt:ro
+
+  # Выпуск и продление сертификата Let's Encrypt.
+  #
+  # В `docker compose up` не участвует — сидит в профиле `tools` и запускается
+  # разово через `make cert-staging`, `make cert-issue`, `make cert-renew`.
+  # Демоном его держать незачем: продление вызывается по расписанию с хоста,
+  # так виден результат и не нужен ещё один вечно живущий контейнер на машине
+  # с гигабайтом памяти.
+  certbot:
+    profiles: ["tools"]
+    image: certbot/certbot:latest
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
 
 volumes:
   postgres_data:
   static_data:
+  certbot_conf:
+  certbot_www:
