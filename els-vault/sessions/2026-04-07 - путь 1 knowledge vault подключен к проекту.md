@@ -7,7 +7,8 @@ date: 2026-04-07
 
 ## Что сделали
 - Добавили `CLAUDE.md` с правилами работы и инструкциями по чтению/пополнению Obsidian vault.
-- Создали `knowledge-vault/` со структурой из гайда (00-home/atlas/knowledge/sessions/inbox).
+- Создали vault со структурой из гайда (00-home/atlas/knowledge/sessions/inbox).
+  Тогда он назывался `knowledge-vault/`, 2026-08-11 переименован в `els-vault/`.
 - Заполнили стартовые заметки по архитектуре/БД/деплою/конфигу/auth, плюс patterns/decisions/debugging.
 - Добавили шпаргалку с готовыми командами для Cursor: `00-home/шпаргалка - как работать с Cursor и графом знаний.md`.
 

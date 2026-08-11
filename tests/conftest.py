@@ -31,6 +31,98 @@ def _assert_test_env_is_safe() -> None:
 
 
 @pytest.fixture(scope="session")
+def migrated_test_db():
+    """
+    1) Прогоняет alembic миграции в ТЕСТОВУЮ БД.
+    2) Заполняет справочники через create_initial_data().
+
+    Использует текущую инфраструктуру:
+    - Alembic берёт URL из `src/config.settings` (см. `alembic/env.py`)
+    - Сидинг через `src/core/db/init_db.py:create_initial_data`
+    """
+    _assert_test_env_is_safe()
+
+    from sqlalchemy import text
+    from sqlalchemy.exc import OperationalError
+
+    from src.session import engine
+
+    # Если БД недоступна — просто скипаем интеграционные тесты, не падая на коллекции.
+    try:
+        with engine.connect() as conn:  # noqa: F841
+            pass
+    except OperationalError as exc:
+        pytest.skip(f"Test database is not available: {exc}")
+
+    # 1) Полная очистка тестовой БД (только public schema).
+    # Это быстрее и надёжнее, чем пытаться удалять таблицы по одной.
+    # После тестов базу НЕ трогаем, чтобы можно было посмотреть состояние.
+    with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+        conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
+
+    from alembic import command
+    from alembic.config import Config
+
+    alembic_cfg = Config(str(_REPO_ROOT / "alembic.ini"))
+    # Важно: `alembic/env.py` сам подставит `settings.DB_URL` в конфиг.
+    command.upgrade(alembic_cfg, "head")
+
+    from src.core.db.init_db import create_initial_data
+
+    # 2) Наполнение тестовой БД начальными данными.
+    create_initial_data()
+
+    # После сидинга с "ручными id" нужно поднять sequences,
+    # иначе следующий INSERT может попытаться снова выдать id=1/2/...
+    from src.session import engine as _engine
+
+    # Таблицы, которые сидятся "ручными id" и/или требуют корректного nextval().
+    # Названия берём из `__tablename__` моделей.
+    tables_to_fix_sequences = [
+        "locations",
+        "fault_category",
+        "reason_fault",
+        "roles",
+        "statuses",
+        "type_objects",
+        "types_contracts",
+        "types_acts",
+        "cost_types",
+    ]
+
+    with _engine.begin() as conn:
+        for table in tables_to_fix_sequences:
+            # pg_get_serial_sequence возвращает NULL, если у колонки нет sequence.
+            seq = conn.execute(
+                text("SELECT pg_get_serial_sequence(:table, 'id')"),
+                {"table": table},
+            ).scalar()
+            if not seq:
+                continue
+
+            # Идентификаторы нельзя параметризовать, поэтому используем `format(%I)` внутри DO.
+            conn.execute(
+                text(
+                    """
+                    DO $$
+                    DECLARE
+                      _seq text := :seq;
+                      _tbl text := :tbl;
+                      _max_id bigint;
+                    BEGIN
+                      EXECUTE format('SELECT COALESCE(MAX(id), 1) FROM %I', _tbl) INTO _max_id;
+                      EXECUTE format('SELECT setval(%L, %s, true)', _seq, _max_id);
+                    END $$;
+                    """
+                ),
+                {"seq": seq, "tbl": table},
+            )
+    return True
+
+
+@pytest.fixture(scope="session")
 def app():
     _assert_test_env_is_safe()
     from src.main import app as fastapi_app
@@ -39,7 +131,7 @@ def app():
 
 
 @pytest.fixture
-def db_session():
+def db_session(migrated_test_db):
     """
     Изолированная сессия БД на тест.
 
@@ -71,8 +163,10 @@ def db_session():
     try:
         yield session
     finally:
+
         session.close()
-        transaction.rollback()
+        transaction.commit()
+        # transaction.rollback()
         connection.close()
 
 

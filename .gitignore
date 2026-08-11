@@ -20,5 +20,5 @@ venv
 /.venv/
 
 # Obsidian vault local state (do not commit)
-knowledge-vault/.obsidian/*.json
+els-vault/.obsidian/*.json
 /.test.env

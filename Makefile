@@ -13,4 +13,4 @@ format:
 	./scripts/format.sh
 
 vault-check:
-	python ./scripts/check_windows_safe_filenames.py knowledge-vault
+	python ./scripts/check_windows_safe_filenames.py els-vault
