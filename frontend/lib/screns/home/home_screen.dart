@@ -9,7 +9,7 @@ import '../responsive_screens/responsive.dart';
 import 'best_employee.dart';
 import 'overdue_maintenance.dart';
 import 'schedule_execution.dart';
-import 'top_breakdowns.dart';
+import 'top_breakdowns/top_breakdowns.dart';
 
 ///Главная
 

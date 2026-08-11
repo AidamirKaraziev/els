@@ -40,6 +40,11 @@ dependencies:
   cupertino_icons: ^1.0.2
   lottie: ^2.3.2
   dio: any
+  # 73 файла делают `import 'package:http/http.dart'`, но прямой зависимости
+  # не было: пакет приезжал транзитивно (его тянут google_fonts и другие).
+  # Стоит любому из них сменить ограничение — и все 73 файла перестают
+  # компилироваться разом. Версия та же, что уже стоит в pubspec.lock.
+  http: ^0.13.6
   bloc_concurrency: any
   stream_transform: any
   badges: ^3.0.2
