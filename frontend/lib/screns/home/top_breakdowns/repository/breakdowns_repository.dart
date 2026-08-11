@@ -113,6 +113,31 @@ class BreakdownsRepository {
         .toList(growable: false);
   }
 
+  /// Адрес выгрузки отчёта в PDF.
+  ///
+  /// Файл собирает бэкенд — тем же кодом, что считает отчёт на экране, иначе
+  /// цифры в отправленном заказчику файле однажды разошлись бы с виджетом.
+  ///
+  /// ВАЖНО: по этому адресу нужен заголовок `Authorization`, поэтому просто
+  /// открыть его в новой вкладке нельзя — придёт 403. Способ скачивания на
+  /// фронте пока не выбран, см. кнопку на экране подробностей.
+  String exportUrl({
+    required int year,
+    required int month,
+    int? divisionId,
+    int? organizationId,
+  }) {
+    final Map<String, String> query = <String, String>{
+      'year': '$year',
+      'month': '$month',
+      if (divisionId != null) 'division_id': '$divisionId',
+      if (organizationId != null) 'organization_id': '$organizationId',
+    };
+    return Uri.parse('${ApiConfig.base}/statistics/breakdowns/export')
+        .replace(queryParameters: query)
+        .toString();
+  }
+
   /// Справочник участков для фильтра.
   Future<List<NamedRef>> fetchDivisions() async {
     return NamedRef.listFrom(
