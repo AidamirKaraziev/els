@@ -96,6 +96,32 @@ class Settings(BaseSettings):
         case_sensitive = True
         env_file = _ENV_FILES
 
+        @classmethod
+        def parse_env_var(cls, field_name: str, raw_val: str) -> Any:
+            """Разбор переменных окружения для полей-контейнеров.
+
+            Нужен из-за порядка работы pydantic 1.x: значения полей сложных
+            типов (`List`, `Dict`) он сначала разбирает как JSON и только
+            потом отдаёт валидаторам. Поэтому `assemble_cors_origins` выше,
+            хоть и объявлен с `pre=True`, до переменной окружения не
+            доходит — до него всё падает с
+            `SettingsError: error parsing env var`.
+
+            Из-за этого форма через запятую никогда не работала, хотя именно
+            она была написана в README и в комментарии `main.py`. Прод лёг
+            ровно на ней.
+
+            Здесь принимаем обе: и JSON `["https://a","https://b"]`, и
+            человеческую `https://a,https://b`.
+            """
+            if field_name == "BACKEND_CORS_ORIGINS":
+                value = raw_val.strip()
+                if not value:
+                    return []
+                if not value.startswith("["):
+                    return [item.strip() for item in value.split(",") if item.strip()]
+            return cls.json_loads(raw_val)
+
 
 # Инициализация настроек
 settings = Settings()

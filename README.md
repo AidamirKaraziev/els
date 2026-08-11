@@ -151,7 +151,7 @@ docker compose --project-directory . -f infra/docker-compose.yml up -d --build
 | `SECRET_KEY` | Секрет подписи JWT; **задайте в production**, иначе при отсутствии в окружении возможно нестабильное поведение из‑за дефолта |
 | `PROJECT_NAME` | Имя проекта в OpenAPI и письмах |
 | `SERVER_HOST`, `SERVER_NAME` | Метаданные сервера |
-| `BACKEND_CORS_ORIGINS` | CORS (в `main.py` сейчас разрешён `*`; настройка в конфиге может использоваться при доработке) |
+| `BACKEND_CORS_ORIGINS` | Список доменов для CORS. Через запятую (`https://a.ru,https://b.ru`) или JSON (`["https://a.ru"]`). Пусто — API открыт всем |
 | `FIRST_SUPERUSER`, `FIRST_SUPERUSER_PASSWORD` | Учётные данные начального суперпользователя (см. `init_db`) |
 | `SMTP_*`, `EMAILS_FROM_EMAIL` | SMTP; `EMAILS_ENABLED` вычисляется при наличии хоста, порта и email отправителя |
 | `SENTRY_DSN` | Опционально Sentry |
