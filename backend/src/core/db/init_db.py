@@ -170,21 +170,70 @@ def create_locations():
 
 
 def check_fault_category(db: Session):
+    # `counts_as_breakdown=False` — плановые работы, капремонт и ложные вызовы:
+    # в статистику поломок они не входят. Коды дублируют начало `name`,
+    # потому что в интерфейсе полное название не всегда помещается.
     check_list = [
-        FaultCategory(id=1, name="AA (Застревание пассажира. Опасность)"),
         FaultCategory(
-            id=2, name="А (Остановка лифта, подъемника, эскалатора, траволатора)"
+            id=1,
+            name="AA (Застревание пассажира. Опасность)",
+            code="AA",
+            counts_as_breakdown=True,
         ),
         FaultCategory(
-            id=3, name="В (Ухудшение рабочих характеристик, требуется наладка)"
+            id=2,
+            name="А (Остановка лифта, подъемника, эскалатора, траволатора)",
+            code="А",
+            counts_as_breakdown=True,
         ),
-        FaultCategory(id=4, name="Н (Незначительные проблемы)"),
-        FaultCategory(id=5, name="Д (Заказчик или другие)"),
-        FaultCategory(id=6, name="ТО (Плановые работы)"),
-        FaultCategory(id=7, name="ПТО (Периодическое техническое освидетельствование)"),
-        FaultCategory(id=8, name="КР (Капитальный ремонт, Ремонт)"),
-        FaultCategory(id=9, name="С (Проблемы по связи)"),
-        FaultCategory(id=10, name="Л (Ложный вызов)"),
+        FaultCategory(
+            id=3,
+            name="В (Ухудшение рабочих характеристик, требуется наладка)",
+            code="В",
+            counts_as_breakdown=True,
+        ),
+        FaultCategory(
+            id=4,
+            name="Н (Незначительные проблемы)",
+            code="Н",
+            counts_as_breakdown=True,
+        ),
+        FaultCategory(
+            id=5,
+            name="Д (Заказчик или другие)",
+            code="Д",
+            counts_as_breakdown=True,
+        ),
+        FaultCategory(
+            id=6,
+            name="ТО (Плановые работы)",
+            code="ТО",
+            counts_as_breakdown=False,
+        ),
+        FaultCategory(
+            id=7,
+            name="ПТО (Периодическое техническое освидетельствование)",
+            code="ПТО",
+            counts_as_breakdown=False,
+        ),
+        FaultCategory(
+            id=8,
+            name="КР (Капитальный ремонт, Ремонт)",
+            code="КР",
+            counts_as_breakdown=False,
+        ),
+        FaultCategory(
+            id=9,
+            name="С (Проблемы по связи)",
+            code="С",
+            counts_as_breakdown=True,
+        ),
+        FaultCategory(
+            id=10,
+            name="Л (Ложный вызов)",
+            code="Л",
+            counts_as_breakdown=False,
+        ),
     ]
     creation_list = []
     for obj in check_list:
