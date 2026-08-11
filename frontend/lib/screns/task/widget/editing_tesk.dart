@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/helper/button/my_button.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -27,7 +28,7 @@ class _EditingTaskState extends State<EditingTask> {
   /// Функция Редактирование Задачи ==
   editingTask(int userId) async {
     var response = await http.put(
-      Uri.parse("http://${IntTest.myIp}/api/v1/order/$userId/"),
+      Uri.parse("${ApiConfig.base}/order/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -58,7 +59,7 @@ class _EditingTaskState extends State<EditingTask> {
 
   /// Автор  ================
   getAuthorTask() async {
-    final url = 'http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1';
+    final url = '${ApiConfig.base}/cp/all-employee/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -76,7 +77,7 @@ class _EditingTaskState extends State<EditingTask> {
 
   /// Исполнитель ========================
   getExecutorTask() async {
-    final url = 'http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1';
+    final url = '${ApiConfig.base}/cp/all-employee/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -94,7 +95,7 @@ class _EditingTaskState extends State<EditingTask> {
 
   /// Объект ============================
   getTaskObjectList() async {
-    final url = 'http://${IntTest.myIp}/api/v1/all-objects/';
+    final url = '${ApiConfig.base}/all-objects/';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -112,7 +113,7 @@ class _EditingTaskState extends State<EditingTask> {
 
   /// Статус ========================
   getStatusTask() async {
-    final url = 'http://${IntTest.myIp}/api/v1/statuses/?page=1';
+    final url = '${ApiConfig.base}/statuses/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',

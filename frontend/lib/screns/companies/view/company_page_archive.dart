@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/screns/companies/widgets/company_account_freeze.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/class_colors.dart';
@@ -33,7 +34,7 @@ class CompanyPageArchive extends StatefulWidget {
 defrostingCompany(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/company/$userId/unzip/"),
+        Uri.parse("${ApiConfig.base}/company/$userId/unzip/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

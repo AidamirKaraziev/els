@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -12,7 +13,7 @@ import '../../home_page/home_page.dart';
 
 /// Контактное Лицо ====================
 getContactPersonObjectList() async {
-  final url = 'http://${IntTest.myIp}/api/v1/all-contact-person/?page=1';
+  final url = '${ApiConfig.base}/all-contact-person/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -27,7 +28,7 @@ List contactPersonList = [];
 
 /// Контактное лицо выбранной компании ==========
 getContactPersonSelectedCompanyList() async {
-  final url = 'http://${IntTest.myIp}/api/v1/contact-person/sort-by-company/${IntTest.pressHover}/?page=1';
+  final url = '${ApiConfig.base}/contact-person/sort-by-company/${IntTest.pressHover}/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -55,7 +56,7 @@ class _AddContactPersonObjectState extends State<AddContactPersonObject> {
   /// Добавление контактного лица ==
   addingContactPerson() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/contact-person/"),
+      Uri.parse("${ApiConfig.base}/contact-person/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

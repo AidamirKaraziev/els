@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/button/my_button.dart';
@@ -11,7 +12,7 @@ import '../screns/object/widgets/add_object.dart';
 
 /// Организация ========================
 getOrganizationObjectList() async {
-  final url = 'http://${IntTest.myIp}/api/v1/all-organization/?page=1';
+  final url = '${ApiConfig.base}/all-organization/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -39,7 +40,7 @@ class _AddOrganizationState extends State<AddOrganization> {
   /// Создание организации =======
   createOrganization() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/organization/"),
+      Uri.parse("${ApiConfig.base}/organization/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

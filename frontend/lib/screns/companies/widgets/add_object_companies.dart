@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:http/http.dart' as http;
@@ -34,7 +35,7 @@ class _AddObjectCompaniesState extends State<AddObjectCompanies> {
   /// Создание Обьекта компании =====
   createObjectCompanies() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/object/"), // listSelectedCompany['data']['id']
+      Uri.parse("${ApiConfig.base}/object/"), // listSelectedCompany['data']['id']
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}', // organizationTitle <<<<<

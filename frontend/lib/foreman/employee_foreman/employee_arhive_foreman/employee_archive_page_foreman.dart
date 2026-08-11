@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -728,7 +729,7 @@ class _WorksPhotoDocUdoState extends State<WorksPhotoDocUdo> {
       "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
-        "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
+        "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
@@ -831,7 +832,7 @@ class _WorksPhotoDocState extends State<WorksPhotoDoc> {
       "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
-        "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
+        "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,

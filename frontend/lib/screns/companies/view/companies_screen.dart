@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/screns/companies/widgets/top_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,7 +18,7 @@ import 'companies_screen_archive.dart';
 
 getNewCompanyList() async {
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/all-company/?page=$newScreensCompany'),
+      Uri.parse('${ApiConfig.base}/all-company/?page=$newScreensCompany'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
@@ -65,7 +66,7 @@ int isHover = -1;
 getListCompanyInfo(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/company/$userId/"),
+        Uri.parse("${ApiConfig.base}/company/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

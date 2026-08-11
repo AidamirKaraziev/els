@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gap/gap.dart';
 import 'package:els/screns/object/widgets/editing_object.dart';
@@ -28,7 +29,7 @@ class ObjectPage extends StatefulWidget {
 freezingObject(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/object/$userId/archive/"),
+        Uri.parse("${ApiConfig.base}/object/$userId/archive/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -43,7 +44,7 @@ freezingObject(int userId) async {
 defrostingObject(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/object/$userId/unzip/"),
+        Uri.parse("${ApiConfig.base}/object/$userId/unzip/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -80,7 +81,7 @@ class _ObjectPageState extends State<ObjectPage> {
       "Accept": "application/json",
       "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
-    var uri = Uri.parse("http://${IntTest.myIp}/api/v1/object/${IntTest.pressHover}/letter_of_appointment/");
+    var uri = Uri.parse("${ApiConfig.base}/object/${IntTest.pressHover}/letter_of_appointment/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
@@ -123,7 +124,7 @@ class _ObjectPageState extends State<ObjectPage> {
       "Accept": "application/json",
       "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
-    var uri = Uri.parse("http://${IntTest.myIp}/api/v1/object/${IntTest.pressHover}/act_pto/");
+    var uri = Uri.parse("${ApiConfig.base}/object/${IntTest.pressHover}/act_pto/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
@@ -145,7 +146,7 @@ class _ObjectPageState extends State<ObjectPage> {
   /// Механик ==============
   getMechanic() async {
     final url =
-        'http://${IntTest.myIp}/api/v1/universal-user/sort-by-role/3/';
+        '${ApiConfig.base}/universal-user/sort-by-role/3/';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -163,7 +164,7 @@ class _ObjectPageState extends State<ObjectPage> {
   /// Прораб ==============
   getForeman() async {
     final url =
-        'http://${IntTest.myIp}/api/v1/universal-user/sort-by-role/2/';
+        '${ApiConfig.base}/universal-user/sort-by-role/2/';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -182,7 +183,7 @@ class _ObjectPageState extends State<ObjectPage> {
   /// Функция изменение мех заморож ===========
   editingObjectMechanic(int userId) async {
     var response = await http.put(
-      Uri.parse("http://${IntTest.myIp}/api/v1/object/$userId/"),
+      Uri.parse("${ApiConfig.base}/object/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -202,7 +203,7 @@ class _ObjectPageState extends State<ObjectPage> {
   /// Функция изменение прораба заморож =======
   editingObjectForeman(int userId) async {
     var response = await http.put(
-      Uri.parse("http://${IntTest.myIp}/api/v1/object/$userId/"),
+      Uri.parse("${ApiConfig.base}/object/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

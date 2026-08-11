@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:els/helper/api_config.dart';
 import 'dart:convert';
 import 'package:els/foreman/task_foreman/task_widget_foreman/add_task_foreman.dart';
 import 'package:flutter/material.dart';
@@ -35,7 +36,7 @@ class TaskScreenForeman extends StatefulWidget {
 /// Список всех задач ==========
 getListTaskForeman() async {
   final res = await http
-      .get(Uri.parse('http://${IntTest.myIp}/api/v1/order/all'), headers: {
+      .get(Uri.parse('${ApiConfig.base}/order/all'), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
     'Authorization': 'Bearer ${IntTest.token}',
@@ -51,7 +52,7 @@ getListTaskForeman() async {
 getListTaskInfoForeman(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/order/$userId/"),
+        Uri.parse("${ApiConfig.base}/order/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -67,7 +68,7 @@ getListTaskInfoForeman(int userId) async {
 getPhotoSelectedTaskInfoForeman(int taskId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/order-photo/$taskId?page=1"),
+        Uri.parse("${ApiConfig.base}/order-photo/$taskId?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

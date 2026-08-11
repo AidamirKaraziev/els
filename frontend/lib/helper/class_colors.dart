@@ -40,8 +40,6 @@ class IntTest {
   static int badgeCount = 2;
   static String myTitle = 'Главная';
   static String token = '';
-  static String myIp = '185.154.193.42:8000';
+  // Адрес бэкенда переехал в helper/api_config.dart: он больше не зашит в код,
+  // а определяется origin страницы (веб) или --dart-define API_ORIGIN (телефон).
 }
-
-/// http://37.77.104.2:8000/api/v1/order-photo/1?page=1
-/// http://37.77.104.2:8000/api/v1/cp/sign-in/

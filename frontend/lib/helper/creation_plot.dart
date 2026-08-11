@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -19,7 +20,7 @@ class _CreationPlotState extends State<CreationPlot> {
   /// Создание участка ======
   createPlot() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/divisions/"),
+      Uri.parse("${ApiConfig.base}/divisions/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

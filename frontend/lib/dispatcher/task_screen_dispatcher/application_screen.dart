@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:els/helper/api_config.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -18,7 +19,7 @@ import '../widgets/add_application.dart';
 /// Список созданых заявок ===
 getListApplication() async {
   final res = await http
-      .get(Uri.parse('http://${IntTest.myIp}/api/v1/order/my'), headers: {
+      .get(Uri.parse('${ApiConfig.base}/order/my'), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
     'Authorization': 'Bearer ${IntTest.token}',
@@ -38,7 +39,7 @@ List dataApplication = [];
 getListApplicationInfo(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/order/$userId/"),
+        Uri.parse("${ApiConfig.base}/order/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

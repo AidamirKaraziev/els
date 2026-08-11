@@ -70,8 +70,9 @@ services:
       context: frontend
       dockerfile: Dockerfile
       args:
-        # Относительный путь: веб ходит на тот же origin, откуда отдан.
-        API_BASE_URL: ${API_BASE_URL:-/api/v1}
+        # Пусто = веб определяет адрес API из origin страницы. Переопределять
+        # нужно только если API вынесен на отдельный хост.
+        API_ORIGIN: ${API_ORIGIN:-}
     container_name: frontend
     depends_on:
       - backend

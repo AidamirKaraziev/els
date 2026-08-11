@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:els/helper/button/my_button.dart';
@@ -53,7 +54,7 @@ class _EditingCompanyState extends State<EditingCompany> {
       "Accept": "application/json",
       "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
-    var uri = Uri.parse("http://${IntTest.myIp}/api/v1/company/${IntTest.pressHover}/photo/");
+    var uri = Uri.parse("${ApiConfig.base}/company/${IntTest.pressHover}/photo/");
     http.MultipartRequest request =  http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
@@ -74,7 +75,7 @@ class _EditingCompanyState extends State<EditingCompany> {
   /// Функция редактировании компании ==
   editingCompany(int userId) async {
     var response = await http.put(
-      Uri.parse("http://${IntTest.myIp}/api/v1/company/$userId/"),
+      Uri.parse("${ApiConfig.base}/company/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

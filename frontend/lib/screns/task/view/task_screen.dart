@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:els/helper/api_config.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -38,7 +39,7 @@ class TaskScreen extends StatefulWidget {
 /// Список всех задач ===
 getListTask() async {
   final res = await http
-      .get(Uri.parse('http://${IntTest.myIp}/api/v1/order/all'), headers: {
+      .get(Uri.parse('${ApiConfig.base}/order/all'), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
     'Authorization': 'Bearer ${IntTest.token}',
@@ -57,7 +58,7 @@ getListTask() async {
 getListTaskInfo(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/order/$userId/"),
+        Uri.parse("${ApiConfig.base}/order/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -73,7 +74,7 @@ getListTaskInfo(int userId) async {
 getPhotoSelectedTaskInfo(int taskId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/order-photo/$taskId?page=1"),
+        Uri.parse("${ApiConfig.base}/order-photo/$taskId?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -89,7 +90,7 @@ getPhotoSelectedTaskInfo(int taskId) async {
 getPhotoTaskSelected(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/order-photo/$userId/"),
+        Uri.parse("${ApiConfig.base}/order-photo/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

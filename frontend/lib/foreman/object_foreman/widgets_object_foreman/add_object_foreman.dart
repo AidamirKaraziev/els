@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/foreman/object_foreman/object_screen_foreman.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -20,7 +21,7 @@ import '../../../widgets_create/organization_greate.dart';
 
 /// Договор =====================
 getTreatyObjectList() async {
-  final url = 'http://${IntTest.myIp}/api/v1/all-contract/?page=1';
+  final url = '${ApiConfig.base}/all-contract/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -48,7 +49,7 @@ class _AddObjectForemanState extends State<AddObjectForeman> {
   /// Создание Обьекта ======
   createObjectForeman() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/object/"),
+      Uri.parse("${ApiConfig.base}/object/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

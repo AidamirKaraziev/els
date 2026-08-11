@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/screns/companies/widgets/top_button.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/class_colors.dart';
@@ -20,7 +21,7 @@ Map listSelectedCompanyForeman = {};
 /// Список всех компаний
 getListCompanyForeman() async {
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/all-company/?page=1'),
+      Uri.parse('${ApiConfig.base}/all-company/?page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
@@ -50,7 +51,7 @@ int isHover = -1;
 getListCompanyInfoForeman(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/company/$userId/"),
+        Uri.parse("${ApiConfig.base}/company/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

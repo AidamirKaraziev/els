@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +26,7 @@ class _AddAccountsState extends State<AddAccounts> {
   /// Добавление акаунта ==========
   addingContactPerson() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/cp/admin/create-client/"),
+      Uri.parse("${ApiConfig.base}/cp/admin/create-client/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

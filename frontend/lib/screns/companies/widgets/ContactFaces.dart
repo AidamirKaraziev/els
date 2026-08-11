@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -24,7 +25,7 @@ Map listEditingContactPerson = {};
 getSelectContactFacesCompany(int numberCompany) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/contact-person/$numberCompany"),
+        Uri.parse("${ApiConfig.base}/contact-person/$numberCompany"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -348,7 +349,7 @@ class _EditingContactPersonState extends State<EditingContactPerson> {
   /// Изменение контактного лица ===
   editingContactPerson() async {
     var response = await http.put(
-      Uri.parse("http://${IntTest.myIp}/api/v1/contact-person/${selectedContactFaces['data']['id']}/"),
+      Uri.parse("${ApiConfig.base}/contact-person/${selectedContactFaces['data']['id']}/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

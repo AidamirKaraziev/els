@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/button/my_button.dart';
 import 'package:http/http.dart' as http;
@@ -20,7 +21,7 @@ class _AddTaskForemanState extends State<AddTaskForeman> {
   /// Создание задачи ==============
   createNewTaskForeman() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/order/"),
+      Uri.parse("${ApiConfig.base}/order/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -55,7 +56,7 @@ class _AddTaskForemanState extends State<AddTaskForeman> {
 
   /// Механик ========================
   getMechanicObjectList() async {
-    final url = 'http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1';
+    final url = '${ApiConfig.base}/cp/all-employee/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -73,7 +74,7 @@ class _AddTaskForemanState extends State<AddTaskForeman> {
 
   /// Объект ========================
   getOrganizationObjectList() async {
-    final url = 'http://${IntTest.myIp}/api/v1/all-objects/?page=1';
+    final url = '${ApiConfig.base}/all-objects/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -91,7 +92,7 @@ class _AddTaskForemanState extends State<AddTaskForeman> {
 
   /// Категория неисправности ============
   faultCategory() async {
-    final url = 'http://${IntTest.myIp}/api/v1/fault-category/all?page=1';
+    final url = '${ApiConfig.base}/fault-category/all?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -110,7 +111,7 @@ class _AddTaskForemanState extends State<AddTaskForeman> {
 
   /// Все сотрудники =======
   allEmployee() async {
-    final url = 'http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1';
+    final url = '${ApiConfig.base}/cp/all-employee/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',

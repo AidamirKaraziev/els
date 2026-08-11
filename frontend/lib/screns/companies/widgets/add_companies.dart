@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/button/my_button.dart';
 import '../../../helper/class_colors.dart';
@@ -10,7 +11,7 @@ import '../view/companies_screen.dart';
 
 /// Компании =====================
 getCompanyObjectList() async {
-  final url = 'http://${IntTest.myIp}/api/v1/all-company/?page=1';
+  final url = '${ApiConfig.base}/all-company/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -40,7 +41,7 @@ class _AddCompanyState extends State<AddCompany> {
   /// Создание Компании =====
   createCompany() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/company/"),
+      Uri.parse("${ApiConfig.base}/company/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

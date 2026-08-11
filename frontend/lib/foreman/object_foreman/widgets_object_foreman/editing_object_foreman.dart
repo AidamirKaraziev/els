@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/foreman/object_foreman/object_screen_foreman.dart';
 import 'package:els/helper/button/my_button.dart';
 import 'package:flutter/material.dart';
@@ -32,7 +33,7 @@ class _EditingObjectForemanState extends State<EditingObjectForeman> {
   /// Функция Редактирование объекта ==
   editingObject(int userId) async {
     var response = await http.put(
-      Uri.parse("http://${IntTest.myIp}/api/v1/object/$userId/"),
+      Uri.parse("${ApiConfig.base}/object/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

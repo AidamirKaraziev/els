@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/helper/splash_screen.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
@@ -43,7 +44,7 @@ class _LogAndPassState extends State<LogAndPass> {
 
     // Future<void> sendOptionsRequest() async {
     //   var client = HttpClient();
-    //   var url = Uri.parse('http://${IntTest.myIp}/api/v1/cp/sign-in/');
+    //   var url = Uri.parse('${ApiConfig.base}/cp/sign-in/');
     //
     //   var request = await client.openUrl('OPTIONS', url);
     //   request.headers.set('Content-Type', 'application/json');
@@ -61,7 +62,7 @@ class _LogAndPassState extends State<LogAndPass> {
     auth() async {
 
       SharedPreferences preferences = await SharedPreferences.getInstance();
-      var response = await http.post(Uri.parse('http://${IntTest.myIp}/api/v1/cp/sign-in/'),
+      var response = await http.post(Uri.parse('${ApiConfig.base}/cp/sign-in/'),
           headers: {
             "Content-Type": "application/json; charset=utf-8",
           },

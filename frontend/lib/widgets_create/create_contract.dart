@@ -1,6 +1,7 @@
 /// createContract
 
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/button/my_button.dart';
@@ -26,7 +27,7 @@ class _CreateContractState extends State<CreateContract> {
   /// Добавление договора ==========
   createContract() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/contract/"),
+      Uri.parse("${ApiConfig.base}/contract/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -62,7 +63,7 @@ class _CreateContractState extends State<CreateContract> {
 
   /// Компании =====================
   getCompanyObjectList() async {
-    final url = 'http://${IntTest.myIp}/api/v1/all-company/?page=1';
+    final url = '${ApiConfig.base}/all-company/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -81,7 +82,7 @@ class _CreateContractState extends State<CreateContract> {
 
   /// Список НДС ==================
   getContractNDSList() async {
-    final url = 'http://${IntTest.myIp}/api/v1/cost-types/?page=1';
+    final url = '${ApiConfig.base}/cost-types/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -97,7 +98,7 @@ class _CreateContractState extends State<CreateContract> {
 
   /// Список тип договора =========
   getTypeContractList() async {
-    final url = 'http://${IntTest.myIp}/api/v1/contracts/?page=1';
+    final url = '${ApiConfig.base}/contracts/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/foreman/companies_foreman/companies_screen_foreman.dart';
 import 'package:els/foreman/companies_foreman/company_page_foreman.dart';
 import 'package:email_validator/email_validator.dart';
@@ -24,7 +25,7 @@ Map listEditingContactPersonForeman = {};
 getSelectContactFacesCompanyForeman(int numberCompany) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/contact-person/$numberCompany"),
+        Uri.parse("${ApiConfig.base}/contact-person/$numberCompany"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -349,7 +350,7 @@ class _EditingContactPersonForemanState extends State<EditingContactPersonForema
   /// Изменение контактного лица ===
   editingContactPerson() async {
     var response = await http.put(
-      Uri.parse("http://${IntTest.myIp}/api/v1/contact-person/${selectedContactFacesForeman['data']['id']}/"),
+      Uri.parse("${ApiConfig.base}/contact-person/${selectedContactFacesForeman['data']['id']}/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

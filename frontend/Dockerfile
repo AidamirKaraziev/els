@@ -14,10 +14,12 @@ RUN flutter pub get
 
 COPY . .
 
-# Адрес API. По умолчанию относительный путь: веб ходит на тот же origin,
-# что и сам отдаётся, поэтому CORS в браузере не участвует вовсе.
-ARG API_BASE_URL=/api/v1
-RUN flutter build web --release --dart-define=API_BASE_URL=${API_BASE_URL}
+# Адрес бэкенда. Пустое значение — правильное значение по умолчанию: веб-сборка
+# сама берёт origin страницы (см. lib/helper/api_config.dart), поэтому один образ
+# работает и на localhost:8080, и на боевом домене, и по HTTPS.
+# Задавать нужно только если API живёт на другом хосте, чем сам фронт.
+ARG API_ORIGIN=""
+RUN flutter build web --release --dart-define=API_ORIGIN=${API_ORIGIN}
 
 
 FROM nginx:alpine

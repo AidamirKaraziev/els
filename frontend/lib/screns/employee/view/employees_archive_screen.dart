@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/screns/employee/widgets/topButton.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/class_colors.dart';
@@ -22,7 +23,7 @@ late int testId;
 /// Получение списка сотрудников Архив
 getListEmployeeArchived() async{
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1'),
+      Uri.parse('${ApiConfig.base}/cp/all-employee/?page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
@@ -53,7 +54,7 @@ class _EmployeesArchiveScreenState extends State<EmployeesArchiveScreen> {
   getListEmployeesInfoArchived(int userId) async {
     await Future(() async {
       final res = await http.get(
-          Uri.parse("http://${IntTest.myIp}/api/v1/cp/universal-user/$userId/"),
+          Uri.parse("${ApiConfig.base}/cp/universal-user/$userId/"),
           headers: {
             "Content-Type": "application/json; charset=utf-8",
             'Authorization': 'Bearer ${IntTest.token}',

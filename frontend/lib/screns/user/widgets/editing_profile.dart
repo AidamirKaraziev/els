@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:dotted_border/dotted_border.dart';
@@ -38,7 +39,7 @@ class _EditingProfileState extends State<EditingProfile> {
   /// Изменение юзера =======================
   editingProfile() async {
     var response = await http.put(
-      Uri.parse("http://${IntTest.myIp}/api/v1/cp/universal-user/me/"),
+      Uri.parse("${ApiConfig.base}/cp/universal-user/me/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -81,7 +82,7 @@ class _EditingProfileState extends State<EditingProfile> {
       "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
-        "http://${IntTest.myIp}/api/v1/cp/universal-user/me/photo/");
+        "${ApiConfig.base}/cp/universal-user/me/photo/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,

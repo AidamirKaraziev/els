@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/foreman/object_foreman/widgets_object_foreman/add_object_foreman.dart';
 import 'package:els/main.dart';
 import 'package:els/screns/object/widgets/top_widget.dart';
@@ -24,7 +25,7 @@ List archiveDataObjectForeman = [];
 /// Список обьектов прораба ======
 getListObjectForeman() async {
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/object/by-foreman/?foreman_id=${userProfile[0]['id']}&page=1'),
+      Uri.parse('${ApiConfig.base}/object/by-foreman/?foreman_id=${userProfile[0]['id']}&page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
@@ -41,7 +42,7 @@ getListObjectForeman() async {
 getListObjectInfoForeman(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/object/$userId/"),
+        Uri.parse("${ApiConfig.base}/object/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

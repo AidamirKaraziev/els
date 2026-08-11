@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/screns/schedule/schedule_page.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -22,7 +23,7 @@ int newScreensSchedule = 1;
 
 getScheduleFun() async {
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/all-objects/?page=$newScreensSchedule'),
+      Uri.parse('${ApiConfig.base}/all-objects/?page=$newScreensSchedule'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',

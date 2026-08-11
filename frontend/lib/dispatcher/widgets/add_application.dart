@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/button/my_button.dart';
 import 'package:http/http.dart' as http;
@@ -26,7 +27,7 @@ class _AddApplicationState extends State<AddApplication> {
   /// Создание Заявки ==============
   createNewApplication() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/order/"),
+      Uri.parse("${ApiConfig.base}/order/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -51,7 +52,7 @@ class _AddApplicationState extends State<AddApplication> {
 
   /// Объект =============================
   getListObjectApplication() async {
-    final url = 'http://${IntTest.myIp}/api/v1/all-objects/';
+    final url = '${ApiConfig.base}/all-objects/';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -67,7 +68,7 @@ class _AddApplicationState extends State<AddApplication> {
 
   /// Механик ============================
   getListMechanicApplication() async {
-    final url = 'http://${IntTest.myIp}/api/v1/universal-user/sort-by-role/3/';
+    final url = '${ApiConfig.base}/universal-user/sort-by-role/3/';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -83,7 +84,7 @@ class _AddApplicationState extends State<AddApplication> {
 
   /// Категория неисправности ============
   faultCategoryApplication() async {
-    final url = 'http://${IntTest.myIp}/api/v1/fault-category/all?page=1';
+    final url = '${ApiConfig.base}/fault-category/all?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -130,7 +131,7 @@ class _AddApplicationState extends State<AddApplication> {
 
   /// Причины неисправности =============
   // causeOfMalfunction() async {
-  //   final url = 'http://${IntTest.myIp}/api/v1/reason-fault/all?page=1';
+  //   final url = '${ApiConfig.base}/reason-fault/all?page=1';
   //   final res = await http.get(Uri.parse(url), headers: {
   //     "Content-Type": "application/json; charset=utf-8",
   //     'Accept': 'application/json',
@@ -498,7 +499,7 @@ class _SearchPageState extends State<SearchPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://${IntTest.myIp}/api/v1/all-objects/'),
+        Uri.parse('${ApiConfig.base}/all-objects/'),
           headers: {
             "Content-Type": "application/json; charset=utf-8",
             'Accept': 'application/json',
@@ -595,7 +596,7 @@ class _SearchAndSelectPageState extends State<SearchAndSelectPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://${IntTest.myIp}/api/v1/all-objects/'),
+        Uri.parse('${ApiConfig.base}/all-objects/'),
       );
 
       if (response.statusCode == 200) {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/screns/schedule/schedule_page.dart';
 import 'package:els/screns/schedule/schedule_screen.dart';
 import 'package:http/http.dart' as http;
@@ -29,7 +30,7 @@ class _TestWindowState extends State<TestWindow> {
   getListCompanyInfoObjectSchedule(int userId) async {
     await Future(() async {
       final res = await http.get(
-          Uri.parse("http://${IntTest.myIp}/api/v1/object/$userId/"),
+          Uri.parse("${ApiConfig.base}/object/$userId/"),
           headers: {
             "Content-Type": "application/json; charset=utf-8",
             'Authorization': 'Bearer ${IntTest.token}',

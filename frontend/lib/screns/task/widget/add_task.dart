@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/button/my_button.dart';
 import 'package:http/http.dart' as http;
@@ -21,7 +22,7 @@ class _AddTaskState extends State<AddTask> {
   /// Создание задачи ========
   createNewTask() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/order/"),
+      Uri.parse("${ApiConfig.base}/order/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -66,7 +67,7 @@ class _AddTaskState extends State<AddTask> {
 
   /// Участок ===================
   // getPlotTaskList() async {
-  //   final url = 'http://${IntTest.myIp}/api/v1/divisions/?page=1';
+  //   final url = '${ApiConfig.base}/divisions/?page=1';
   //   final res = await http.get(Uri.parse(url), headers: {
   //     "Content-Type": "application/json; charset=utf-8",
   //     'Accept': 'application/json',
@@ -84,7 +85,7 @@ class _AddTaskState extends State<AddTask> {
 
   /// Объект ====================
   getListObjectTask() async {
-    final url = 'http://${IntTest.myIp}/api/v1/all-objects/';
+    final url = '${ApiConfig.base}/all-objects/';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -101,7 +102,7 @@ class _AddTaskState extends State<AddTask> {
 
   /// Механик =====================
   // getListEmployeeTask() async {
-  //   final url = 'http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1';
+  //   final url = '${ApiConfig.base}/cp/all-employee/?page=1';
   //   final res = await http.get(Uri.parse(url), headers: {
   //     "Content-Type": "application/json; charset=utf-8",
   //     'Accept': 'application/json',
@@ -119,7 +120,7 @@ class _AddTaskState extends State<AddTask> {
 
   /// Категория неисправности ===
   faultCategoryTask() async {
-    final url = 'http://${IntTest.myIp}/api/v1/fault-category/all?page=1';
+    final url = '${ApiConfig.base}/fault-category/all?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -138,7 +139,7 @@ class _AddTaskState extends State<AddTask> {
 
   /// Все сотрудники ===========
   allEmployee() async {
-    final url = 'http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1';
+    final url = '${ApiConfig.base}/cp/all-employee/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',

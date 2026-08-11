@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -15,7 +16,7 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
 
   _getEmployee(EmployeeGetUserEvent event, Emitter<EmployeeState> emit) async {
     final res = await http.get(
-        Uri.parse('http://${IntTest.myIp}/api/v1/cp/all-employee/?page=$newScreensEmployee'),
+        Uri.parse('${ApiConfig.base}/cp/all-employee/?page=$newScreensEmployee'),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Accept': 'application/json',

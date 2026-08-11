@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:els/screns/object/bloc/object_bloc.dart';
 import 'package:flutter/foundation.dart';
@@ -29,7 +30,7 @@ class OpenViewEmployee extends StatefulWidget {
 freezingEmployee(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/cp/admin/$userId/archive/"),
+        Uri.parse("${ApiConfig.base}/cp/admin/$userId/archive/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -48,7 +49,7 @@ freezingEmployee(int userId) async {
 defrostingEmployee(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/cp/admin/$userId/unzip/"),
+        Uri.parse("${ApiConfig.base}/cp/admin/$userId/unzip/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -68,7 +69,7 @@ deleteEmployee(int userId) async {
   await Future(() async {
     final res = await http.delete(
         Uri.parse(
-            "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/$userId/"),
+            "${ApiConfig.base}/cp/admin/universal-user/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -103,7 +104,7 @@ requestHttp(MediaInfo imageFile) async {
     "Authorization": "Bearer ${IntTest.token}"
   }; // ignore this headers if there is no authentication
   var uri = Uri.parse(
-      "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/photo/");
+      "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/photo/");
   http.MultipartRequest request = http.MultipartRequest("PUT", uri);
   http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
       'file', imageFile.data!,
@@ -150,7 +151,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
       "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
-        "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
+        "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
@@ -195,7 +196,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
       "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
-        "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
+        "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
@@ -1194,7 +1195,7 @@ class _WorksPhotoDocUdoState extends State<WorksPhotoDocUdo> {
       "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
-        "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
+        "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
@@ -1296,7 +1297,7 @@ class _WorksPhotoDocState extends State<WorksPhotoDoc> {
       "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
-        "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
+        "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:els/foreman/employee_foreman/employees_screen_foreman.dart';
 import 'package:els/helper/button/my_button.dart';
@@ -24,7 +25,7 @@ class EditingEmployeeForeman extends StatefulWidget {
 class _EditingEmployeeForemanState extends State<EditingEmployeeForeman> {
   /// Получение Должность для изменения ==
   // getEditingEmployeeJobTitle() async {
-  //   final url = 'http://${IntTest.myIp}/api/v1/roles/?page=1';
+  //   final url = '${ApiConfig.base}/roles/?page=1';
   //   final res = await http.get(Uri.parse(url), headers: {
   //     "Content-Type": "application/json; charset=utf-8",
   //     'Accept': 'application/json',
@@ -51,7 +52,7 @@ class _EditingEmployeeForemanState extends State<EditingEmployeeForeman> {
   editingEmployeeUserForeman(int userId) async {
     var res = await http.put(
       Uri.parse(
-          "http://${IntTest.myIp}/api/v1/cp/foreman/universal-user/$userId/"),
+          "${ApiConfig.base}/cp/foreman/universal-user/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -92,7 +93,7 @@ class _EditingEmployeeForemanState extends State<EditingEmployeeForeman> {
       "Authorization": "Bearer ${IntTest.token}"
     };
     var uri = Uri.parse(
-        "http://${IntTest.myIp}/api/v1/cp/foreman/universal-user/${IntTest.pressHover}/photo/");
+        "${ApiConfig.base}/cp/foreman/universal-user/${IntTest.pressHover}/photo/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', await imageFile.readAsBytes(),

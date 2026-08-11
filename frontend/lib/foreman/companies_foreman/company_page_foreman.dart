@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/class_colors.dart';
 import 'package:http/http.dart' as http;
@@ -24,7 +25,7 @@ List listSelectedContactPersonCompanyForeman = [];
 getAccountCompanyForeman(int numberCompany) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/company/clients/${IntTest.pressHover}"),
+        Uri.parse("${ApiConfig.base}/company/clients/${IntTest.pressHover}"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -41,7 +42,7 @@ getAccountCompanyForeman(int numberCompany) async {
 getListObjectCompanyForeman(int numberCompany) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/object/sort-by-company/$numberCompany/?page=1"),
+        Uri.parse("${ApiConfig.base}/object/sort-by-company/$numberCompany/?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -58,7 +59,7 @@ getListObjectCompanyForeman(int numberCompany) async {
 getContactPersonCompanyForeman() async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/contact-person/sort-by-company/${IntTest.pressHover}/?page=1"),
+        Uri.parse("${ApiConfig.base}/contact-person/sort-by-company/${IntTest.pressHover}/?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

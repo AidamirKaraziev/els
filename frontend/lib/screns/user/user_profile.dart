@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:els/screns/user/user_contact.dart';
 import 'package:els/screns/user/widgets/editing_profile.dart';
@@ -56,7 +57,7 @@ class _UserProfileState extends State<UserProfile> {
       "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
-        "http://${IntTest.myIp}/api/v1/cp/universal-user/me/photo/");
+        "${ApiConfig.base}/cp/universal-user/me/photo/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,

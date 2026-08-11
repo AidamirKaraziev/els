@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/main.dart';
 import 'package:els/screns/object/widgets/top_widget.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +30,7 @@ int newScreensObject = 1;
 /// Список всех обьектов ========
 getAllListOfObjects() async {
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/all-objects/'),
+      Uri.parse('${ApiConfig.base}/all-objects/'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
@@ -51,7 +52,7 @@ getAllListOfObjects() async {
 /// Список обьектов архив ========
 getListObjectArchive() async {
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/all-objects/?page=1'),
+      Uri.parse('${ApiConfig.base}/all-objects/?page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
@@ -71,7 +72,7 @@ getListObjectArchive() async {
 getListObjectInfo(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/object/$userId/"),
+        Uri.parse("${ApiConfig.base}/object/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

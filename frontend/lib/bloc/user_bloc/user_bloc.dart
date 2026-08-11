@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:http/http.dart' as http;
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
@@ -18,7 +19,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
   }
   _getUser(UserGetEvent event, Emitter<UserState> emit) async {
     final res = await http.get(
-        Uri.parse('http://${IntTest.myIp}/api/v1/cp/universal-user/me/'),
+        Uri.parse('${ApiConfig.base}/cp/universal-user/me/'),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Accept': 'application/json',

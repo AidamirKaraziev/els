@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:http/http.dart' as http;
@@ -14,7 +15,7 @@ class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
   }
   _getCompany(CompanyGetUserEvent event, Emitter<CompanyState> emit) async {
     final res = await http.get(
-        Uri.parse('http://${IntTest.myIp}/api/v1/all-company/?page=$newScreensCompany'),
+        Uri.parse('${ApiConfig.base}/all-company/?page=$newScreensCompany'),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Accept': 'application/json',

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -25,7 +26,7 @@ class _AddContactPersonState extends State<AddContactPerson> {
   /// Добавление контактного лица ==
   addingContactPerson() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/contact-person/"),
+      Uri.parse("${ApiConfig.base}/contact-person/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

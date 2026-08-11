@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'dart:typed_data';
 import 'package:els/screns/schedule/schedule_screen.dart';
 import 'package:flutter/material.dart';
@@ -43,7 +44,7 @@ int intMonTOTes = 0;
 
 ///  =======================
 getSampleTO(int idObject) async {
-  final url = 'http://${IntTest.myIp}/api/v1/act-fact/by-object/$idObject/';
+  final url = '${ApiConfig.base}/act-fact/by-object/$idObject/';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -99,7 +100,7 @@ List<String> pairs = [];
 createTemplateTO(int factoryModelId, int typeActId, List stepList) async {
   String encodeTemplateTO = jsonEncode(stepList);
   var response = await http.post(
-    Uri.parse("http://${IntTest.myIp}/api/v1/act-base/"),
+    Uri.parse("${ApiConfig.base}/act-base/"),
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Authorization': 'Bearer ${IntTest.token}',
@@ -120,7 +121,7 @@ createTemplateTO(int factoryModelId, int typeActId, List stepList) async {
 /// Изменение шаблона ТО
 correctCreateTemplateTO(int factoryModelId, int typeActId, String stepList) async {
   var response = await http.put(
-    Uri.parse("http://${IntTest.myIp}/api/v1/act-base/"),
+    Uri.parse("${ApiConfig.base}/act-base/"),
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Authorization': 'Bearer ${IntTest.token}',
@@ -137,7 +138,7 @@ correctCreateTemplateTO(int factoryModelId, int typeActId, String stepList) asyn
 
 /// Получение всех Шаблонов
 getAllTemplateTO() async {
-  final url = 'http://${IntTest.myIp}/api/v1/acts-bases/?page=1';
+  final url = '${ApiConfig.base}/acts-bases/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -149,7 +150,7 @@ getAllTemplateTO() async {
 
 /// Получение шаблонов привязанных к обьекту
 getAllTemplateTOInIdObject(int idObject) async {
-  final url = 'http://${IntTest.myIp}/api/v1/act-base/by-object/$idObject/';
+  final url = '${ApiConfig.base}/act-base/by-object/$idObject/';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -165,7 +166,7 @@ getAllTemplateTOInIdObject(int idObject) async {
 /// Получение выбранного шаблона
 getSelectedTemplateTO(int actFactId) async {
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/act-base/$actFactId/'),
+      Uri.parse('${ApiConfig.base}/act-base/$actFactId/'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
@@ -187,7 +188,7 @@ getSelectedTemplateTO(int actFactId) async {
 /// Получение фактических актов привязанных к обьекту
 getFactActListInIdObject(int idObject) async {
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/act-fact/by-object/$idObject/'),
+      Uri.parse('${ApiConfig.base}/act-fact/by-object/$idObject/'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
@@ -214,7 +215,7 @@ getFactActListInIdObject(int idObject) async {
 /// Добавить один акт факт в БД. Который в последствии будет выполнять механик, заполняя данными о ходе выполнения работ.
 creationFactActList(int numberActBase) async {
   var res = await http.post(
-    Uri.parse("http://${IntTest.myIp}/api/v1/act-fact/"),
+    Uri.parse("${ApiConfig.base}/act-fact/"),
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Authorization': 'Bearer ${IntTest.token}',
@@ -238,7 +239,7 @@ creationFactActList(int numberActBase) async {
 /// Изменить акт факт
 correctFactActList(int idSelected, String newListToMon) async {
   var res = await http.put(
-    Uri.parse("http://${IntTest.myIp}/api/v1/act-fact/$idSelected/"),
+    Uri.parse("${ApiConfig.base}/act-fact/$idSelected/"),
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Authorization': 'Bearer ${IntTest.token}',
@@ -256,7 +257,7 @@ correctFactActList(int idSelected, String newListToMon) async {
 /// Добавить список то в акт факт
 addListFactAct(int idSelectedAct, String listAct) async {
   var res = await http.put(
-    Uri.parse("http://${IntTest.myIp}/api/v1/act-fact/$idSelectedAct/"),
+    Uri.parse("${ApiConfig.base}/act-fact/$idSelectedAct/"),
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Authorization': 'Bearer ${IntTest.token}',
@@ -274,7 +275,7 @@ addListFactAct(int idSelectedAct, String listAct) async {
 /// Изменить статус акт факт
 correctFactActStatus(int idSelected) async {
   var res = await http.put(
-    Uri.parse("http://${IntTest.myIp}/api/v1/act-fact/$idSelected/"),
+    Uri.parse("${ApiConfig.base}/act-fact/$idSelected/"),
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Authorization': 'Bearer ${IntTest.token}',
@@ -297,7 +298,7 @@ correctFactActStatus(int idSelected) async {
 
 /// Получение всех ТО
 getAllTOGraphics() async {
-  final url = 'http://${IntTest.myIp}/api/v1/all-planned-to/?page=1';
+  final url = '${ApiConfig.base}/all-planned-to/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -309,7 +310,7 @@ getAllTOGraphics() async {
 /// Получить список плановых TO привязанных к обьекту
 getTOScheduleIdObject(int idObject) async {
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/planned-to/by-object/$idObject/?page=1'),
+      Uri.parse('${ApiConfig.base}/planned-to/by-object/$idObject/?page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
@@ -348,7 +349,7 @@ bool checkMon(){
 /// Назначение ТО Обьекту
 creationTOGraphics(String year,int objectId,) async {
   var response = await http.post(
-    Uri.parse("http://${IntTest.myIp}/api/v1/planned-to/"),
+    Uri.parse("${ApiConfig.base}/planned-to/"),
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Authorization': 'Bearer ${IntTest.token}',
@@ -368,7 +369,7 @@ creationTOGraphics(String year,int objectId,) async {
 /// Изменить ТО Обьекту
 changeTOGraphics(String myMonTo ,int idTO, int idTOGraphics) async {
   var response = await http.put(
-    Uri.parse("http://${IntTest.myIp}/api/v1/planned-to/$idTOGraphics/"),
+    Uri.parse("${ApiConfig.base}/planned-to/$idTOGraphics/"),
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Authorization': 'Bearer ${IntTest.token}',

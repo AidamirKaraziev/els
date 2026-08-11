@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/screns/employee/widgets/topButton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -35,7 +36,7 @@ var myColorButtonEmployee;
 /// Получение списка сотрудников ===
 getListEmployee() async{
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/cp/all-employee/?page=$newScreensEmployee'),
+      Uri.parse('${ApiConfig.base}/cp/all-employee/?page=$newScreensEmployee'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
@@ -55,7 +56,7 @@ getListEmployee() async{
 getListEmployeesInfo(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/cp/universal-user/$userId/"),
+        Uri.parse("${ApiConfig.base}/cp/universal-user/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

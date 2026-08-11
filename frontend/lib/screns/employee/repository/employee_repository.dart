@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:dio/dio.dart';
 import 'package:els/screns/employee/models/employee.dart';
 import 'package:http/http.dart';
@@ -30,7 +31,7 @@ import 'package:http/http.dart';
 // class EmployeeRepository {
 //   Future<List<Employee>> getEmployee() async {
 //     final res = await http.get(
-//         Uri.parse('http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1'),
+//         Uri.parse('${ApiConfig.base}/cp/all-employee/?page=1'),
 //         headers: {
 //           "Content-Type": "application/json; charset=utf-8",
 //           'Accept': 'application/json',
@@ -58,7 +59,7 @@ import 'package:http/http.dart';
 
 
 // class EmployeeRepository {
-//   String endpoint = 'http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1';
+//   String endpoint = '${ApiConfig.base}/cp/all-employee/?page=1';
 //   Future<List> getEmployee() async {
 //     var response = await get(Uri.parse(endpoint),
 //         headers: {

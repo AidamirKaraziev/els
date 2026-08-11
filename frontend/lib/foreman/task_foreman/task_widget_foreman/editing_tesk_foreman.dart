@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/helper/button/my_button.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -26,7 +27,7 @@ class _EditingTaskForemanState extends State<EditingTaskForeman> {
   /// Функция Редактирование Задачи ==
   editingTaskForeman(int userId) async {
     var response = await http.put(
-      Uri.parse("http://${IntTest.myIp}/api/v1/order/$userId/"),
+      Uri.parse("${ApiConfig.base}/order/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -56,7 +57,7 @@ class _EditingTaskForemanState extends State<EditingTaskForeman> {
 
   /// Автор  ================
   getAuthorTask() async {
-    final url = 'http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1';
+    final url = '${ApiConfig.base}/cp/all-employee/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -74,7 +75,7 @@ class _EditingTaskForemanState extends State<EditingTaskForeman> {
 
   /// Исполнитель ========================
   getExecutorTask() async {
-    final url = 'http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1';
+    final url = '${ApiConfig.base}/cp/all-employee/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -92,7 +93,7 @@ class _EditingTaskForemanState extends State<EditingTaskForeman> {
 
   /// Объект ============================
   getTaskObjectList() async {
-    final url = 'http://${IntTest.myIp}/api/v1/all-objects/?page=1';
+    final url = '${ApiConfig.base}/all-objects/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -110,7 +111,7 @@ class _EditingTaskForemanState extends State<EditingTaskForeman> {
 
   /// Статус ========================
   getStatusTask() async {
-    final url = 'http://${IntTest.myIp}/api/v1/statuses/?page=1';
+    final url = '${ApiConfig.base}/statuses/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',

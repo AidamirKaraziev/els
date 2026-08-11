@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -14,7 +15,7 @@ var typeSelectModel; /// разобраться с
 
 /// Тип =======================
 getTypeObjectList() async {
-  final url = 'http://${IntTest.myIp}/api/v1/type-object/?page=1';
+  final url = '${ApiConfig.base}/type-object/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -31,7 +32,7 @@ List typeObjectList = [];
 /// Модэль по ID ============================
 getModelObjectListId(var modelId) async {
   //api/v1/factory-model/sort-by-type-object/$modelId/?page=1
-  final url = 'http://${IntTest.myIp}/api/v1/factory-model/sort-by-type-object/$modelId/?page=1';
+  final url = '${ApiConfig.base}/factory-model/sort-by-type-object/$modelId/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -58,7 +59,7 @@ class _AddModelState extends State<AddModel> {
   /// Добавление модели ======
   addingModel() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/api/v1/factory-model/"),
+      Uri.parse("${ApiConfig.base}/factory-model/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/foreman/object_foreman/object_screen_foreman.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -19,7 +20,7 @@ List getScheduleListForeman = [];
 /// Данные выбраного графика прораба
 getListScheduleForeman() async {
   final res = await http.get(
-      Uri.parse('http://${IntTest.myIp}/api/v1/object/by-foreman/?foreman_id=${userProfile[0]['id']}&page=1'),
+      Uri.parse('${ApiConfig.base}/object/by-foreman/?foreman_id=${userProfile[0]['id']}&page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
@@ -35,7 +36,7 @@ getListScheduleForeman() async {
 getListScheduleInfoForeman(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/object/$userId/"),
+        Uri.parse("${ApiConfig.base}/object/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

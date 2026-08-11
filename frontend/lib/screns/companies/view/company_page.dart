@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:els/screns/companies/widgets/company_account_freeze.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/class_colors.dart';
@@ -20,7 +21,7 @@ bool addObjectSelectedCompany = false;
 getContactPersonCompany() async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/contact-person/sort-by-company/${IntTest.pressHover}/?page=1"),
+        Uri.parse("${ApiConfig.base}/contact-person/sort-by-company/${IntTest.pressHover}/?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -37,7 +38,7 @@ getContactPersonCompany() async {
 getAccountCompany(int numberCompany) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/company/clients/${IntTest.pressHover}"),
+        Uri.parse("${ApiConfig.base}/company/clients/${IntTest.pressHover}"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -54,7 +55,7 @@ getAccountCompany(int numberCompany) async {
 getListObjectCompany(int numberCompany) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/object/sort-by-company/$numberCompany/?page=1"),
+        Uri.parse("${ApiConfig.base}/object/sort-by-company/$numberCompany/?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -71,7 +72,7 @@ getListObjectCompany(int numberCompany) async {
 freezingCompany(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/company/$userId/archive/"),
+        Uri.parse("${ApiConfig.base}/company/$userId/archive/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',
@@ -86,7 +87,7 @@ freezingCompany(int userId) async {
 defrostingCompany(int userId) async {
   await Future(() async {
     final res = await http.get(
-        Uri.parse("http://${IntTest.myIp}/api/v1/company/$userId/unzip/"),
+        Uri.parse("${ApiConfig.base}/company/$userId/unzip/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Authorization': 'Bearer ${IntTest.token}',

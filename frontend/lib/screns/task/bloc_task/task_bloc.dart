@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:http/http.dart' as http;
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
@@ -15,8 +16,8 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
   }
   _getTask(TaskGetEvent event, Emitter<TaskState> emit) async {
     final res = await http.get(
-        Uri.parse('http://${IntTest.myIp}/api/v1/order/all'),
-        // Uri.parse('http://${IntTest.myIp}/api/v1/order/for-me'),
+        Uri.parse('${ApiConfig.base}/order/all'),
+        // Uri.parse('${ApiConfig.base}/order/for-me'),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Accept': 'application/json',

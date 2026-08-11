@@ -1,4 +1,5 @@
 import 'package:dotted_border/dotted_border.dart';
+import 'package:els/helper/api_config.dart';
 import 'package:els/helper/button/my_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -21,7 +22,7 @@ import '../../employee/view/employees_screen.dart';
 //
 //   /// Получение Должность для изменения ==
 //   // getEditingUserJobTitle() async {
-//   //   final url = 'http://${IntTest.myIp}/api/v1/roles/?page=1';
+//   //   final url = '${ApiConfig.base}/roles/?page=1';
 //   //   final res = await http.get(Uri.parse(url), headers: {
 //   //     "Content-Type": "application/json; charset=utf-8",
 //   //     'Accept': 'application/json',

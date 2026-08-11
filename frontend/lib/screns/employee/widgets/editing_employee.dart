@@ -1,6 +1,7 @@
 // ignore_for_file: must_be_immutable
 
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:els/helper/button/my_button.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +22,7 @@ import 'package:http_parser/http_parser.dart';
 
 /// Участок =================
 getPlotEmployee() async {
-  final url = 'http://${IntTest.myIp}/api/v1/divisions/?page=1';
+  final url = '${ApiConfig.base}/divisions/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -51,7 +52,7 @@ class EditingEmployee extends StatefulWidget {
 class _EditingEmployeeState extends State<EditingEmployee> {
   /// Получение Должность для изменения ==
   getEditingEmployeeJobTitle() async {
-    final url = 'http://${IntTest.myIp}/api/v1/roles/?page=1';
+    final url = '${ApiConfig.base}/roles/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
@@ -80,7 +81,7 @@ class _EditingEmployeeState extends State<EditingEmployee> {
   editingEmployeeUser(int userId) async {
     var response = await http.put(
       Uri.parse(
-          "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/$userId/"),
+          "${ApiConfig.base}/cp/admin/universal-user/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -106,7 +107,7 @@ class _EditingEmployeeState extends State<EditingEmployee> {
   editingPlotEmployeeUser(int userId) async {
     var response = await http.put(
       Uri.parse(
-          "http://${IntTest.myIp}/api/v1/cp/admin/$userId/division/"),
+          "${ApiConfig.base}/cp/admin/$userId/division/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -170,7 +171,7 @@ class _EditingEmployeeState extends State<EditingEmployee> {
       "Authorization": "Bearer ${IntTest.token}"
     };
     var uri = Uri.parse(
-        "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/photo/");
+        "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/photo/");
     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', await imageFile.readAsBytes(),

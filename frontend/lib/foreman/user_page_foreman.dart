@@ -1,4 +1,5 @@
 import 'package:dotted_border/dotted_border.dart';
+import 'package:els/helper/api_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -24,7 +25,7 @@ class OpenViewUserForeman extends StatefulWidget {
 // freezingEmployeeForeman(int userId) async {
 //   await Future(() async {
 //     final res = await http.get(
-//         Uri.parse("http://${IntTest.myIp}/api/v1/cp/admin/$userId/archive/"),
+//         Uri.parse("${ApiConfig.base}/cp/admin/$userId/archive/"),
 //         headers: {
 //           "Content-Type": "application/json; charset=utf-8",
 //           'Authorization': 'Bearer ${IntTest.token}',
@@ -40,7 +41,7 @@ class OpenViewUserForeman extends StatefulWidget {
 // defrostingEmployeeForeman(int userId) async {
 //   await Future(() async {
 //     final res = await http.get(
-//         Uri.parse("http://${IntTest.myIp}/api/v1/cp/admin/$userId/unzip/"),
+//         Uri.parse("${ApiConfig.base}/cp/admin/$userId/unzip/"),
 //         headers: {
 //           "Content-Type": "application/json; charset=utf-8",
 //           'Authorization': 'Bearer ${IntTest.token}',
@@ -78,7 +79,7 @@ class OpenViewUserForeman extends StatefulWidget {
 //     "Authorization": "Bearer ${IntTest.token}"
 //   }; // ignore this headers if there is no authentication
 //   var uri = Uri.parse(
-//       "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/photo/");
+//       "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/photo/");
 //   http.MultipartRequest request = http.MultipartRequest("PUT", uri);
 //   http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
 //       'file', imageFile.data!,
@@ -123,7 +124,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
   //     "Authorization": "Bearer ${IntTest.token}"
   //   }; // ignore this headers if there is no authentication
   //   var uri = Uri.parse(
-  //       "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
+  //       "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
   //   http.MultipartRequest request = http.MultipartRequest("PUT", uri);
   //   http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
   //       'file', imageFile.data!,
@@ -166,7 +167,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
   //     "Authorization": "Bearer ${IntTest.token}"
   //   }; // ignore this headers if there is no authentication
   //   var uri = Uri.parse(
-  //       "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
+  //       "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
   //   http.MultipartRequest request = http.MultipartRequest("PUT", uri);
   //   http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
   //       'file', imageFile.data!,
@@ -1129,7 +1130,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
 //       "Authorization": "Bearer ${IntTest.token}"
 //     }; // ignore this headers if there is no authentication
 //     var uri = Uri.parse(
-//         "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
+//         "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
 //     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
 //     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
 //         'file', imageFile.data!,
@@ -1231,7 +1232,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
 //       "Authorization": "Bearer ${IntTest.token}"
 //     }; // ignore this headers if there is no authentication
 //     var uri = Uri.parse(
-//         "http://${IntTest.myIp}/api/v1/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
+//         "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
 //     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
 //     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
 //         'file', imageFile.data!,

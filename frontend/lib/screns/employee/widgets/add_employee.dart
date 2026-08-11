@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:els/helper/api_config.dart';
 import 'dart:html';
 import 'dart:typed_data';
 import 'package:email_validator/email_validator.dart';
@@ -21,7 +22,7 @@ bool myBoolTest = false;
 /// Прораб =======================
 getForemanObjectList() async {
   final url =
-      'http://${IntTest.myIp}/api/v1/universal-user/sort-by-role/2/?page=1';
+      '${ApiConfig.base}/universal-user/sort-by-role/2/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -40,7 +41,7 @@ List foremanList = [];
 /// Механик ========================
 getMechanicObjectList() async {
   final url =
-      'http://${IntTest.myIp}/api/v1/universal-user/sort-by-role/3/?page=1';
+      '${ApiConfig.base}/universal-user/sort-by-role/3/?page=1';
   final res = await http.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
@@ -66,7 +67,7 @@ class _AddEmployeeState extends State<AddEmployee> {
   /// Создание юзера ======
   createUser() async {
     var response = await http.post(
-      Uri.parse("http://${IntTest.myIp}/$myLink/"),
+      Uri.parse("${ApiConfig.origin}/$myLink/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Authorization': 'Bearer ${IntTest.token}',
@@ -137,7 +138,7 @@ class _AddEmployeeState extends State<AddEmployee> {
 
   /// Должность ===================
   getEmployeeJobTitle() async {
-    final url = 'http://${IntTest.myIp}/api/v1/roles/?page=1';
+    final url = '${ApiConfig.base}/roles/?page=1';
     final res = await http.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
