@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'package:els/helper/image_picking.dart';
 import 'package:els/helper/api_config.dart';
-import 'dart:html';
 import 'dart:typed_data';
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/foundation.dart';
@@ -559,7 +559,7 @@ class _AddEmployeeState extends State<AddEmployee> {
                   //       child: InkWell(
                   //         onTap: () async {
                   //           final imageClassification =
-                  //           await ImagePickerWeb.getImageInfo;
+                  //           await pickImageFromGallery();
                   //         },
                   //         child: DottedBorder(
                   //           color: ColorApp.myColorGray,

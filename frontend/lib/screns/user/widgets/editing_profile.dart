@@ -6,7 +6,7 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:els/helper/button/my_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker_web/image_picker_web.dart';
+import 'package:els/helper/image_picking.dart';
 import '../../../bloc/user_bloc/user_bloc.dart';
 import '../../../helper/class_colors.dart';
 import '../../employee/bloc/employee_bloc.dart';
@@ -68,7 +68,7 @@ class _EditingProfileState extends State<EditingProfile> {
   }
   Future openGallery() async {
     if (kIsWeb) {
-      MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+      PickedImage? imageFile = (await pickImageFromGallery());
       if (imageFile != null) {
         imagePath = imageFile;
         // print(imagePath);
@@ -76,7 +76,7 @@ class _EditingProfileState extends State<EditingProfile> {
       }
     }
   }
-  requestHttp(MediaInfo imageFile) async {
+  requestHttp(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
       "Authorization": "Bearer ${IntTest.token}"

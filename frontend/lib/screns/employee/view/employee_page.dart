@@ -4,7 +4,7 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:els/screns/object/bloc/object_bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker_web/image_picker_web.dart';
+import 'package:els/helper/image_picking.dart';
 import 'package:intl/intl.dart';
 import '../../../helper/class_colors.dart';
 import '../../../helper/my_user.dart';
@@ -90,7 +90,7 @@ String basename(String path) {
 }
 Future openGallery() async {
   if (kIsWeb) {
-    MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+    PickedImage? imageFile = (await pickImageFromGallery());
     if (imageFile != null) {
       imagePath = imageFile;
       print(imagePath);
@@ -98,7 +98,7 @@ Future openGallery() async {
     }
   }
 }
-requestHttp(MediaInfo imageFile) async {
+requestHttp(PickedImage imageFile) async {
   Map<String, String> headers = {
     "Accept": "application/json",
     "Authorization": "Bearer ${IntTest.token}"
@@ -135,7 +135,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
   }
   Future openGalleryDocUserCertificate() async {
     if (kIsWeb) {
-      MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+      PickedImage? imageFile = (await pickImageFromGallery());
       if (imageFile != null) {
         imagePath = imageFile;
         print(imagePath);
@@ -145,7 +145,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
     Navigator.pop(context);
     myStream.add(IntTest.indexScreens);
   }
-  requestHttp(MediaInfo imageFile) async {
+  requestHttp(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
       "Authorization": "Bearer ${IntTest.token}"
@@ -180,7 +180,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
   }
   Future openGalleryDocUserQualifications() async {
     if (kIsWeb) {
-      MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+      PickedImage? imageFile = (await pickImageFromGallery());
       if (imageFile != null) {
         imagePathDoc = imageFile;
         print(imagePathDoc);
@@ -190,7 +190,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
     Navigator.pop(context);
     myStream.add(IntTest.indexScreens);
   }
-  requestHttpDoc(MediaInfo imageFile) async {
+  requestHttpDoc(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
       "Authorization": "Bearer ${IntTest.token}"
@@ -1181,7 +1181,7 @@ class _WorksPhotoDocUdoState extends State<WorksPhotoDocUdo> {
   }
   Future openGalleryDocUser() async {
     if (kIsWeb) {
-      MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+      PickedImage? imageFile = (await pickImageFromGallery());
       if (imageFile != null) {
         imagePath = imageFile;
         print(imagePath);
@@ -1189,7 +1189,7 @@ class _WorksPhotoDocUdoState extends State<WorksPhotoDocUdo> {
       }
     }
   }
-  requestHttp(MediaInfo imageFile) async {
+  requestHttp(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
       "Authorization": "Bearer ${IntTest.token}"
@@ -1283,7 +1283,7 @@ class _WorksPhotoDocState extends State<WorksPhotoDoc> {
   }
   Future openGalleryDocUser() async {
     if (kIsWeb) {
-      MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+      PickedImage? imageFile = (await pickImageFromGallery());
       if (imageFile != null) {
         imagePathDoc = imageFile;
         print(imagePathDoc);
@@ -1291,7 +1291,7 @@ class _WorksPhotoDocState extends State<WorksPhotoDoc> {
       }
     }
   }
-  requestHttpDoc(MediaInfo imageFile) async {
+  requestHttpDoc(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
       "Authorization": "Bearer ${IntTest.token}"

@@ -53,7 +53,8 @@ dependencies:
   intl: 0.20.2
 #  webfeed: any
   dotted_border: any
-  image_picker_web: ^2.1.1
+  # image_picker_web убран: он тянет dart:html и ломал сборку под Android/iOS.
+  # Кросс-платформенный image_picker ниже сам подключает image_picker_for_web.
   email_validator: ^2.1.17
   equatable: any
   flutter_bloc: ^8.1.1

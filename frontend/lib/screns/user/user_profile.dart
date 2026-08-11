@@ -5,7 +5,7 @@ import 'package:els/screns/user/user_contact.dart';
 import 'package:els/screns/user/widgets/editing_profile.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:image_picker_web/image_picker_web.dart';
+import 'package:els/helper/image_picking.dart';
 import '../../bloc/user_bloc/user_bloc.dart';
 import '../../helper/class_colors.dart';
 import '../employee/view/employees_screen.dart';
@@ -43,7 +43,7 @@ class _UserProfileState extends State<UserProfile> {
   }
   Future openGallery() async {
     if (kIsWeb) {
-      MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+      PickedImage? imageFile = (await pickImageFromGallery());
       if (imageFile != null) {
         imagePath = imageFile;
         // print(imagePath);
@@ -51,7 +51,7 @@ class _UserProfileState extends State<UserProfile> {
       }
     }
   }
-  requestHttp(MediaInfo imageFile) async {
+  requestHttp(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
       "Authorization": "Bearer ${IntTest.token}"

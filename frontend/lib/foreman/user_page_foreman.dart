@@ -1,4 +1,5 @@
 import 'package:dotted_border/dotted_border.dart';
+import 'package:els/helper/image_picking.dart';
 import 'package:els/helper/api_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -65,7 +66,7 @@ class OpenViewUserForeman extends StatefulWidget {
 // }
 // Future openGallery() async {
 //   if (kIsWeb) {
-//     MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+//     PickedImage? imageFile = (await pickImageFromGallery());
 //     if (imageFile != null) {
 //       imagePath = imageFile;
 //       print(imagePath);
@@ -73,7 +74,7 @@ class OpenViewUserForeman extends StatefulWidget {
 //     }
 //   }
 // }
-// requestHttp(MediaInfo imageFile) async {
+// requestHttp(PickedImage imageFile) async {
 //   Map<String, String> headers = {
 //     "Accept": "application/json",
 //     "Authorization": "Bearer ${IntTest.token}"
@@ -110,7 +111,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
   // }
   // Future openGalleryDocUserCertificate() async {
   //   if (kIsWeb) {
-  //     MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+  //     PickedImage? imageFile = (await pickImageFromGallery());
   //     if (imageFile != null) {
   //       imagePath = imageFile;
   //       print(imagePath);
@@ -118,7 +119,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
   //     }
   //   }
   // }
-  // requestHttp(MediaInfo imageFile) async {
+  // requestHttp(PickedImage imageFile) async {
   //   Map<String, String> headers = {
   //     "Accept": "application/json",
   //     "Authorization": "Bearer ${IntTest.token}"
@@ -153,7 +154,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
   // }
   // Future openGalleryDocUserQualifications() async {
   //   if (kIsWeb) {
-  //     MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+  //     PickedImage? imageFile = (await pickImageFromGallery());
   //     if (imageFile != null) {
   //       imagePathDoc = imageFile;
   //       print(imagePathDoc);
@@ -161,7 +162,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
   //     }
   //   }
   // }
-  // requestHttpDoc(MediaInfo imageFile) async {
+  // requestHttpDoc(PickedImage imageFile) async {
   //   Map<String, String> headers = {
   //     "Accept": "application/json",
   //     "Authorization": "Bearer ${IntTest.token}"
@@ -1116,7 +1117,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
 //   }
 //   Future openGalleryDocUser() async {
 //     if (kIsWeb) {
-//       MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+//       PickedImage? imageFile = (await pickImageFromGallery());
 //       if (imageFile != null) {
 //         imagePath = imageFile;
 //         print(imagePath);
@@ -1124,7 +1125,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
 //       }
 //     }
 //   }
-//   requestHttp(MediaInfo imageFile) async {
+//   requestHttp(PickedImage imageFile) async {
 //     Map<String, String> headers = {
 //       "Accept": "application/json",
 //       "Authorization": "Bearer ${IntTest.token}"
@@ -1218,7 +1219,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
 //   }
 //   Future openGalleryDocUser() async {
 //     if (kIsWeb) {
-//       MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+//       PickedImage? imageFile = (await pickImageFromGallery());
 //       if (imageFile != null) {
 //         imagePathDoc = imageFile;
 //         print(imagePathDoc);
@@ -1226,7 +1227,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
 //       }
 //     }
 //   }
-//   requestHttpDoc(MediaInfo imageFile) async {
+//   requestHttpDoc(PickedImage imageFile) async {
 //     Map<String, String> headers = {
 //       "Accept": "application/json",
 //       "Authorization": "Bearer ${IntTest.token}"

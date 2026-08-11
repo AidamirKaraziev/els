@@ -5,7 +5,7 @@ import 'package:gap/gap.dart';
 import 'package:els/screns/object/widgets/editing_object.dart';
 import 'package:els/screns/object/widgets/object_accountFreeze.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker_web/image_picker_web.dart';
+import 'package:els/helper/image_picking.dart';
 import '../../../helper/act.dart';
 import '../../../helper/class_colors.dart';
 import '../../../helper/my_map/my_map.dart';
@@ -69,14 +69,14 @@ class _ObjectPageState extends State<ObjectPage> {
   }
   Future openGalleryDocOfDestination() async {
     if (kIsWeb) {
-      MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+      PickedImage? imageFile = (await pickImageFromGallery());
       if (imageFile != null) {
         imagePathLetterOfAppointment = imageFile;
         requestHttp(imageFile);
       }
     }
   }
-  requestHttp(MediaInfo imageFile) async {
+  requestHttp(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
       "Authorization": "Bearer ${IntTest.token}"
@@ -112,14 +112,14 @@ class _ObjectPageState extends State<ObjectPage> {
   }
   Future openGalleryDocAPO() async {
     if (kIsWeb) {
-      MediaInfo? imageFile = (await ImagePickerWeb.getImageInfo);
+      PickedImage? imageFile = (await pickImageFromGallery());
       if (imageFile != null) {
         imagePathAPO = imageFile;
         requestHttpAPO(imageFile);
       }
     }
   }
-  requestHttpAPO(MediaInfo imageFile) async {
+  requestHttpAPO(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
       "Authorization": "Bearer ${IntTest.token}"
