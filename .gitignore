@@ -24,8 +24,12 @@ backend/envs/.env.prod
 venv
 .venv/
 
-# Зависимости фронта — появятся вместе с кодом
+# Зависимости фронта
 node_modules/
+
+# Переменные сборки фронта: локальные не коммитим, env/example.json — коммитим
+frontend/env/*.json
+!frontend/env/example.json
 
 # Obsidian vault local state (do not commit)
 els-vault/.obsidian/*.json

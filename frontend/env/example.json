@@ -1,0 +1,12 @@
+{
+  "_comment": "Скопируйте в env/local.json (он в .gitignore) и правьте под себя. Файл читается ТОЛЬКО при сборке: flutter run --dart-define-from-file=env/local.json. Секретов здесь быть не может — всё, что попало в сборку, доступно любому, кто распакует APK или откроет исходники страницы.",
+
+  "_API_ORIGIN": "Схема, хост и порт бэкенда, без завершающего слэша. Веб-сборке задавать НЕ нужно: она берёт origin страницы. Нужно телефону — там localhost это сам телефон. Android-эмулятор: http://10.0.2.2:8080",
+  "API_ORIGIN": "http://192.168.1.5:8080",
+
+  "_MAP_TILE_URL": "Сервер тайлов карты. По умолчанию публичный OSM.",
+  "MAP_TILE_URL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+
+  "_OSM_USER_AGENT": "OSM и Nominatim блокируют анонимные запросы, User-Agent должен опознавать приложение.",
+  "OSM_USER_AGENT": "els-app (+https://tochkalift.ru)"
+}

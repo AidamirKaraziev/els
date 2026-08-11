@@ -73,6 +73,8 @@ services:
         # Пусто = веб определяет адрес API из origin страницы. Переопределять
         # нужно только если API вынесен на отдельный хост.
         API_ORIGIN: ${API_ORIGIN:-}
+        MAP_TILE_URL: ${MAP_TILE_URL:-}
+        OSM_USER_AGENT: ${OSM_USER_AGENT:-}
     container_name: frontend
     depends_on:
       - backend

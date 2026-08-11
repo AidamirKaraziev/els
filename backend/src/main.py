@@ -12,13 +12,29 @@ app = FastAPI(
     title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Set all CORS enabled origins
-origins = ["*"]
-# if settings.BACKEND_CORS_ORIGINS:
+# Список доменов задаётся переменной BACKEND_CORS_ORIGINS в .env, например:
+#   BACKEND_CORS_ORIGINS=https://els.example.ru,https://admin.els.example.ru
+#
+# Переменная существовала в конфиге и раньше, но не читалась: здесь был
+# зашитый `["*"]`. Пустое значение сохраняет прежнее поведение, чтобы прод
+# не отвалился при обновлении, — но в проде её нужно заполнить.
+#
+# `allow_credentials=True` вместе с `*` браузеры игнорируют: спецификация
+# запрещает такую комбинацию. Поэтому пока список пуст, credentials выключены —
+# так поведение честно совпадает с тем, что реально делает браузер.
+origins = settings.BACKEND_CORS_ORIGINS or ["*"]
+allow_credentials = bool(settings.BACKEND_CORS_ORIGINS)
+
+if not settings.BACKEND_CORS_ORIGINS:
+    logging.warning(
+        "BACKEND_CORS_ORIGINS не задан: API открыт для любого домена. "
+        "Задайте список доменов в .env."
+    )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

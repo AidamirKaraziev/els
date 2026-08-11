@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:location_picker_flutter_map/location_picker_flutter_map.dart';
 
+import 'package:els/helper/app_config.dart';
+
 /// Выбор адреса объекта на карте OpenStreetMap.
 ///
 /// Единственное место в приложении, которое знает про пакет-выборщик точки.
@@ -28,9 +30,6 @@ class AddressPicker extends StatelessWidget {
 
   final String buttonText;
 
-  /// Nominatim требует опознаваемый User-Agent и блокирует анонимные запросы.
-  static const _userAgent = 'els-app/1.0 (+https://tochkalift.ru)';
-
   /// Улица и номер дома, если геокодер их вернул.
   ///
   /// Раньше строка собиралась как `'${address['road']} ${address['house_number']}'`
@@ -47,7 +46,7 @@ class AddressPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FlutterLocationPicker(
-      userAgent: _userAgent,
+      userAgent: AppConfig.osmUserAgent,
       initPosition: initialCenter,
       selectLocationButtonText: buttonText,
       selectLocationButtonStyle: ButtonStyle(
