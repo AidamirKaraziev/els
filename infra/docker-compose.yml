@@ -1,10 +1,21 @@
+# Основной стек проекта. Запускать ИЗ КОРНЯ репозитория, через Makefile:
+#   make up / make down / make logs
+#
+# Все пути внутри файла относительны корня монорепо, а не каталога `infra/`,
+# поэтому нужен флаг `--project-directory .`:
+#   docker compose --project-directory . -f infra/docker-compose.yml up -d
+# Он же подсовывает compose корневой `.env` для подстановки ${...}.
+
 services:
   postgres:
     image: postgres:13
     container_name: postgres
     environment:
       POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # В `.env` историческая путаница: приложение читает DB_PASS, шаблоны в
+      # backend/envs/ — DB_PASSWORD. Берём то, что есть, чтобы контейнер не
+      # поднимался с пустым паролем.
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-${DB_PASS}}
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -20,12 +31,12 @@ services:
 
   backend:
     build:
-      context: .
+      context: backend
       dockerfile: Dockerfile
     container_name: backend
     environment:
       DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PASS: ${DB_PASS:-${DB_PASSWORD}}
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       DB_NAME: ${DB_NAME}
@@ -39,6 +50,8 @@ services:
       - static_data:/app/static
     env_file:
       - .env
+
+  # frontend: появится вместе с кодом фронта в каталоге `frontend/`.
 
   pgadmin:
     image: dpage/pgadmin4:latest

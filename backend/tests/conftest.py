@@ -11,9 +11,14 @@ from dotenv import load_dotenv
 
 from src.config import settings
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-# Файла может не быть локально — тогда задаёте переменные в окружении / CI (см. .test.env.example).
-load_dotenv(_REPO_ROOT / ".test.env", override=True)
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent
+_REPO_ROOT = _BACKEND_ROOT.parent
+
+# `.test.env` может лежать и в корне монорепо, и рядом с бэкендом — забираем оба,
+# корневой перебивает. Файла может не быть вовсе: тогда переменные задаются
+# в окружении / CI (см. `backend/.test.env.example`).
+for _env_file in (_BACKEND_ROOT / ".test.env", _REPO_ROOT / ".test.env"):
+    load_dotenv(_env_file, override=True)
 
 
 def _assert_test_env_is_safe() -> None:
@@ -65,7 +70,7 @@ def migrated_test_db():
     from alembic import command
     from alembic.config import Config
 
-    alembic_cfg = Config(str(_REPO_ROOT / "alembic.ini"))
+    alembic_cfg = Config(str(_BACKEND_ROOT / "alembic.ini"))
     # Важно: `alembic/env.py` сам подставит `settings.DB_URL` в конфиг.
     command.upgrade(alembic_cfg, "head")
 

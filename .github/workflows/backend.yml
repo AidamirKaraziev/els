@@ -1,0 +1,72 @@
+name: backend
+
+# Джоба бэкенда. Фронтовая появится отдельным файлом вместе с кодом фронта —
+# части монорепо проверяются независимо друг от друга.
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --all-groups
+      - run: uv run ruff check src
+      - run: uv run ruff format --check src
+
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_postgres
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d test_postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Те же значения, что в backend/.test.env.example. Файла в CI нет —
+      # conftest и pytest-dotenv спокойно работают на переменных окружения.
+      MODE: TEST
+      DB_HOST: localhost
+      DB_PORT: 5435
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_NAME: test_postgres
+      SECRET_KEY: test-secret-key-for-ci
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --all-groups
+      - run: uv run pytest -q
+
+  vault:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      # Имена заметок vault должны оставаться Windows-совместимыми,
+      # иначе репозиторий не чекаутится на Windows.
+      - run: python ./scripts/check_windows_safe_filenames.py els-vault

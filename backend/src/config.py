@@ -1,4 +1,5 @@
 import secrets
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import (
@@ -9,6 +10,13 @@ from pydantic import (
     root_validator,
     validator,
 )
+
+# `.env` ищем по абсолютному пути, а не относительно текущего каталога: в монорепо
+# приложение запускают и из корня, и из `backend/`, и из контейнера. Оба варианта
+# размещения файла рабочие, корневой перебивает бэкендовый.
+_BACKEND_DIR = Path(__file__).resolve().parent.parent
+_REPO_ROOT = _BACKEND_DIR.parent
+_ENV_FILES = (_BACKEND_DIR / ".env", _REPO_ROOT / ".env")
 
 
 class Settings(BaseSettings):
@@ -86,7 +94,7 @@ class Settings(BaseSettings):
 
     class Config:
         case_sensitive = True
-        env_file = ".env"
+        env_file = _ENV_FILES
 
 
 # Инициализация настроек

@@ -5,8 +5,9 @@
 # Поднять:  make test-db-up
 # Погасить: make test-db-down
 #
-# Переменные берутся из `.test.env` (см. `.test.env.example`), поэтому запускать
-# нужно с `--env-file .test.env` — это уже зашито в Makefile.
+# Переменные берутся из `.test.env` (см. `backend/.test.env.example`), поэтому
+# запускать нужно из корня репозитория с `--env-file .test.env` — это зашито
+# в Makefile.
 
 services:
   test-postgres:

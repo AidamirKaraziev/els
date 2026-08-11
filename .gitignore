@@ -12,13 +12,20 @@ block_schemas/
 **/.DS_Store
 **/static
 задачи.txt
-venv
+
+# Окружения: секреты не коммитим ни в корне, ни внутри частей монорепо
 .env
-/envs/.env.docker
-/envs/.env.local
-/envs/.env.prod
-/.venv/
+.test.env
+backend/envs/.env.docker
+backend/envs/.env.local
+backend/envs/.env.prod
+
+# Виртуальные окружения (корневое — наследие раскладки до монорепо)
+venv
+.venv/
+
+# Зависимости фронта — появятся вместе с кодом
+node_modules/
 
 # Obsidian vault local state (do not commit)
 els-vault/.obsidian/*.json
-/.test.env
