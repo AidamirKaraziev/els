@@ -20,7 +20,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      # Наружу — только чтобы подключиться клиентом БД с хоста. Если 5432 занят
+      # другим проектом, задайте DB_HOST_PORT в .env; приложение это не заметит,
+      # внутри сети оно ходит на postgres:5432.
+      - "${DB_HOST_PORT:-5432}:5432"
     env_file:
       - .env
     healthcheck:
@@ -35,23 +38,47 @@ services:
       dockerfile: Dockerfile
     container_name: backend
     environment:
+      # Топологию сети задаёт compose, а не .env: внутри неё база всегда
+      # postgres:5432. В .env лежат настройки для запуска с хоста
+      # (DB_HOST=localhost), и если их не перебить, контейнер стучится в себя
+      # самого и падает с "connection to localhost refused".
+      # Блок environment в compose приоритетнее env_file — этого и добиваемся.
+      DB_HOST: postgres
+      DB_PORT: 5432
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS:-${DB_PASSWORD}}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
       DB_NAME: ${DB_NAME}
       UVICORN_RELOAD: ${UVICORN_RELOAD}
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      - "8000:8000"
+    # Порт наружу не публикуем: браузер и телефон ходят через nginx фронта,
+    # один origin на всё. Для отладки бэкенда в обход прокси раскомментируйте.
+    # ports:
+    #   - "8000:8000"
+    expose:
+      - "8000"
     volumes:
       - static_data:/app/static
     env_file:
       - .env
 
-  # frontend: появится вместе с кодом фронта в каталоге `frontend/`.
+  # Веб-сборка Flutter + nginx, он же единая точка входа в систему:
+  # `/` — приложение, `/api/v1/` — проксируется на backend.
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+      args:
+        # Относительный путь: веб ходит на тот же origin, откуда отдан.
+        API_BASE_URL: ${API_BASE_URL:-/api/v1}
+    container_name: frontend
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    volumes:
+      - ./infra/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
   pgadmin:
     image: dpage/pgadmin4:latest

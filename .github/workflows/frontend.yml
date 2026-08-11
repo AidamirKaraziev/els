@@ -1,0 +1,45 @@
+name: frontend
+
+# Джоба фронта. Независима от бэкендовой: у частей монорепо свои зависимости
+# и свои проверки, общее у них только REST-контракт.
+#
+# ВАЖНО: на момент добавления (2026-08-11) не проверено, собирается ли код
+# Вовы вообще — Flutter SDK локально нет, и эта джоба и есть способ выяснить.
+# Первые прогоны, скорее всего, красные: pubspec.lock собран под Dart 3.10,
+# а сам код писался в 2023 году под Dart 2.17.
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: flutter --version
+        run: flutter --version
+
+      - name: pub get
+        run: flutter pub get
+
+      # Диагностика, а не гейт: на 71 тысяче строк кода 2023 года анализатор
+      # даст много замечаний, и падать из-за них на каждом пуше смысла нет.
+      # Смотрим на цифру в логе и уменьшаем её по мере рефакторинга.
+      - name: analyze
+        continue-on-error: true
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      # А вот это настоящий гейт: собирается или нет.
+      - name: build web
+        run: flutter build web --release

@@ -2,9 +2,13 @@
 
 ## Контекст проекта
 - **Проект**: «Единая лифтовая система» — моно-репозиторий: REST API + фронтенд.
-- **Раскладка**: `backend/` (FastAPI), `frontend/` (появится вместе с кодом фронта),
-  `infra/` (docker compose), `els-vault/` (база знаний), `docs/`, `scripts/` (инструменты репо).
+- **Раскладка**: `backend/` (FastAPI), `frontend/` (Flutter), `infra/` (docker compose),
+  `els-vault/` (база знаний), `docs/`, `scripts/` (инструменты репо).
 - **Стек бэка**: FastAPI, SQLAlchemy 1.4, Alembic, PostgreSQL, JWT (python-jose), uv/uvicorn, Ruff
+- **Стек фронта**: Flutter (Dart), сборки android/ios/web, flutter_bloc + provider, dio.
+  Код унаследован от прежнего подрядчика, качество низкое — см.
+  `els-vault/knowledge/debugging/аудит фронта на 2026-08-11 - Flutter, 71 тысяча строк.md`.
+  Собирается ли он, пока неизвестно: локально Flutter SDK нет, проверяет CI.
 - **Точка входа**: `backend/src/main.py`
 - **API**: префикс `settings.API_V1_STR` (см. `backend/src/config.py`), роутер `backend/src/api/api_v1/api.py`
 - **Локальный Python бэка**: 3.11 (`backend/.python-version`) — pydantic 1.10 несовместим с 3.12.

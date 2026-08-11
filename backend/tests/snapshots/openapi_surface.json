@@ -1,0 +1,917 @@
+{
+  "DELETE /api/v1/cp/admin/universal-user/{user_id}/": {
+    "required_body": [],
+    "required_params": [
+      "user_id"
+    ]
+  },
+  "DELETE /api/v1/defective-act-photo/{defective_act_photo_id}/": {
+    "required_body": [],
+    "required_params": [
+      "defective_act_photo_id"
+    ]
+  },
+  "DELETE /api/v1/order-photo/{order_photo_id}/": {
+    "required_body": [],
+    "required_params": [
+      "order_photo_id"
+    ]
+  },
+  "GET /api/v1/act-base/by-object/{object_id}/": {
+    "required_body": [],
+    "required_params": [
+      "object_id"
+    ]
+  },
+  "GET /api/v1/act-base/{act_base_id}/": {
+    "required_body": [],
+    "required_params": [
+      "act_base_id"
+    ]
+  },
+  "GET /api/v1/act-fact/by-object/{object_id}/": {
+    "required_body": [],
+    "required_params": [
+      "object_id"
+    ]
+  },
+  "GET /api/v1/act-fact/{act_fact_id}/": {
+    "required_body": [],
+    "required_params": [
+      "act_fact_id"
+    ]
+  },
+  "GET /api/v1/acts-bases/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/all-acts-fact/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/all-company/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/all-contact-person/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/all-contract/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/all-factory-model/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/all-objects/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/all-organization/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/all-planned-to/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/company/clients/{company_id}/": {
+    "required_body": [],
+    "required_params": [
+      "company_id"
+    ]
+  },
+  "GET /api/v1/company/{company_id}/": {
+    "required_body": [],
+    "required_params": [
+      "company_id"
+    ]
+  },
+  "GET /api/v1/company/{company_id}/archive/": {
+    "required_body": [],
+    "required_params": [
+      "company_id"
+    ]
+  },
+  "GET /api/v1/company/{company_id}/unzip/": {
+    "required_body": [],
+    "required_params": [
+      "company_id"
+    ]
+  },
+  "GET /api/v1/contact-person/sort-by-company/{company_id}/": {
+    "required_body": [],
+    "required_params": [
+      "company_id"
+    ]
+  },
+  "GET /api/v1/contact-person/{contact_person_id}/": {
+    "required_body": [],
+    "required_params": [
+      "contact_person_id"
+    ]
+  },
+  "GET /api/v1/contact-person/{contact_person_id}/archive/": {
+    "required_body": [],
+    "required_params": [
+      "contact_person_id"
+    ]
+  },
+  "GET /api/v1/contact-person/{contact_person_id}/unzip/": {
+    "required_body": [],
+    "required_params": [
+      "contact_person_id"
+    ]
+  },
+  "GET /api/v1/contract/sort-by-company/{company_id}/": {
+    "required_body": [],
+    "required_params": [
+      "company_id"
+    ]
+  },
+  "GET /api/v1/contract/{contract_id}/": {
+    "required_body": [],
+    "required_params": [
+      "contract_id"
+    ]
+  },
+  "GET /api/v1/contract/{contract_id}/archive/": {
+    "required_body": [],
+    "required_params": [
+      "contract_id"
+    ]
+  },
+  "GET /api/v1/contract/{contract_id}/unzip/": {
+    "required_body": [],
+    "required_params": [
+      "contract_id"
+    ]
+  },
+  "GET /api/v1/contracts/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/cost-types/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/cp/admin/{id_user}/archive/": {
+    "required_body": [],
+    "required_params": [
+      "id_user"
+    ]
+  },
+  "GET /api/v1/cp/admin/{id_user}/unzip/": {
+    "required_body": [],
+    "required_params": [
+      "id_user"
+    ]
+  },
+  "GET /api/v1/cp/all-client/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/cp/all-employee/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/cp/all-users/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/cp/client/me/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/cp/client/{company_id}/": {
+    "required_body": [],
+    "required_params": [
+      "company_id"
+    ]
+  },
+  "GET /api/v1/cp/foreman/{id_user}/archive/": {
+    "required_body": [],
+    "required_params": [
+      "id_user"
+    ]
+  },
+  "GET /api/v1/cp/foreman/{id_user}/unzip/": {
+    "required_body": [],
+    "required_params": [
+      "id_user"
+    ]
+  },
+  "GET /api/v1/cp/universal-user/me/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/cp/universal-user/{user_id}/": {
+    "required_body": [],
+    "required_params": [
+      "user_id"
+    ]
+  },
+  "GET /api/v1/defective-act-photo/{defective_act_id}": {
+    "required_body": [],
+    "required_params": [
+      "defective_act_id"
+    ]
+  },
+  "GET /api/v1/defective-act/all": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/defective-act/by-planned-to/{planned_to_id}/": {
+    "required_body": [],
+    "required_params": [
+      "planned_to_id"
+    ]
+  },
+  "GET /api/v1/defective-act/{defective_act_id}/": {
+    "required_body": [],
+    "required_params": [
+      "defective_act_id"
+    ]
+  },
+  "GET /api/v1/divisions/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/factory-model/sort-by-type-object/{type_object_id}/": {
+    "required_body": [],
+    "required_params": [
+      "type_object_id"
+    ]
+  },
+  "GET /api/v1/factory-model/{factory_model_id}/": {
+    "required_body": [],
+    "required_params": [
+      "factory_model_id"
+    ]
+  },
+  "GET /api/v1/fault-category/all": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/fault-category/{fault_category_id}": {
+    "required_body": [],
+    "required_params": [
+      "fault_category_id"
+    ]
+  },
+  "GET /api/v1/locations/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/locations/{location_id}/": {
+    "required_body": [],
+    "required_params": [
+      "location_id"
+    ]
+  },
+  "GET /api/v1/object/by-client/": {
+    "required_body": [],
+    "required_params": [
+      "client_id"
+    ]
+  },
+  "GET /api/v1/object/by-foreman/": {
+    "required_body": [],
+    "required_params": [
+      "foreman_id"
+    ]
+  },
+  "GET /api/v1/object/by-mechanic/": {
+    "required_body": [],
+    "required_params": [
+      "mechanic_id"
+    ]
+  },
+  "GET /api/v1/object/sort-by-company/{company_id}/": {
+    "required_body": [],
+    "required_params": [
+      "company_id"
+    ]
+  },
+  "GET /api/v1/object/{object_id}/": {
+    "required_body": [],
+    "required_params": [
+      "object_id"
+    ]
+  },
+  "GET /api/v1/object/{object_id}/archive/": {
+    "required_body": [],
+    "required_params": [
+      "object_id"
+    ]
+  },
+  "GET /api/v1/object/{object_id}/unzip/": {
+    "required_body": [],
+    "required_params": [
+      "object_id"
+    ]
+  },
+  "GET /api/v1/order-photo/all": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/order-photo/{order_id}": {
+    "required_body": [],
+    "required_params": [
+      "order_id"
+    ]
+  },
+  "GET /api/v1/order-photo/{order_photo_id}/": {
+    "required_body": [],
+    "required_params": [
+      "order_photo_id"
+    ]
+  },
+  "GET /api/v1/order/all": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/order/for-me": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/order/my": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/order/statistics/top-breakdowns": {
+    "required_body": [],
+    "required_params": [
+      "month",
+      "year"
+    ]
+  },
+  "GET /api/v1/order/{order_id}/": {
+    "required_body": [],
+    "required_params": [
+      "order_id"
+    ]
+  },
+  "GET /api/v1/organization/{organization_id}/": {
+    "required_body": [],
+    "required_params": [
+      "organization_id"
+    ]
+  },
+  "GET /api/v1/organization/{organization_id}/archive/": {
+    "required_body": [],
+    "required_params": [
+      "organization_id"
+    ]
+  },
+  "GET /api/v1/organization/{organization_id}/unzip/": {
+    "required_body": [],
+    "required_params": [
+      "organization_id"
+    ]
+  },
+  "GET /api/v1/planned-to/by-object/{object_id}/": {
+    "required_body": [],
+    "required_params": [
+      "object_id"
+    ]
+  },
+  "GET /api/v1/planned-to/schedule-execution-stats/": {
+    "required_body": [],
+    "required_params": [
+      "month",
+      "year"
+    ]
+  },
+  "GET /api/v1/planned-to/{planned_to_id}/": {
+    "required_body": [],
+    "required_params": [
+      "planned_to_id"
+    ]
+  },
+  "GET /api/v1/reason-fault/all": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/reason-fault/{reason_fault_id}": {
+    "required_body": [],
+    "required_params": [
+      "reason_fault_id"
+    ]
+  },
+  "GET /api/v1/roles/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/static/{filename}": {
+    "required_body": [],
+    "required_params": [
+      "filename"
+    ]
+  },
+  "GET /api/v1/statuses/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/steps/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/steps/{step_id}/": {
+    "required_body": [],
+    "required_params": [
+      "step_id"
+    ]
+  },
+  "GET /api/v1/sub-steps/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/sub-steps/{sub_step_id}/": {
+    "required_body": [],
+    "required_params": [
+      "sub_step_id"
+    ]
+  },
+  "GET /api/v1/type-acts/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/type-object/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/universal-user/sort-by-role/{role_id}/": {
+    "required_body": [],
+    "required_params": [
+      "role_id"
+    ]
+  },
+  "GET /api/v1/working-specialty/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/working-specialty/{working_specialty_id}/": {
+    "required_body": [],
+    "required_params": [
+      "working_specialty_id"
+    ]
+  },
+  "POST /api/v1/act-base/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "POST /api/v1/act-fact/": {
+    "required_body": [
+      "act_base_id",
+      "foreman_id",
+      "main_mechanic_id",
+      "object_id"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/company/": {
+    "required_body": [
+      "director_name",
+      "name"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/contact-person/": {
+    "required_body": [
+      "phone"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/contract/": {
+    "required_body": [
+      "company_id",
+      "title"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/cp/admin/create-admin/": {
+    "required_body": [
+      "email",
+      "name",
+      "password"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/cp/admin/create-client/": {
+    "required_body": [
+      "company_id",
+      "email",
+      "name",
+      "password"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/cp/admin/create-employee/": {
+    "required_body": [
+      "email",
+      "name",
+      "password",
+      "role_id"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/cp/foreman/create-employee/": {
+    "required_body": [
+      "email",
+      "name",
+      "password",
+      "role_id"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/cp/sign-in/": {
+    "required_body": [
+      "email",
+      "password"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/defective-act-photo/{defective_act_id}/": {
+    "required_body": [
+      "file"
+    ],
+    "required_params": [
+      "defective_act_id"
+    ]
+  },
+  "POST /api/v1/defective-act/": {
+    "required_body": [
+      "month",
+      "planned_to_id",
+      "responsible_user_id",
+      "title"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/defective-act/{defective_act_id}/pdf/": {
+    "required_body": [],
+    "required_params": [
+      "defective_act_id"
+    ]
+  },
+  "POST /api/v1/divisions/": {
+    "required_body": [
+      "title"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/factory-model/": {
+    "required_body": [
+      "factory",
+      "model",
+      "type_object_id"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/locations/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/object/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "POST /api/v1/order-photo/{order_id}/": {
+    "required_body": [],
+    "required_params": [
+      "order_id"
+    ]
+  },
+  "POST /api/v1/order/": {
+    "required_body": [
+      "executor_id"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/organization/": {
+    "required_body": [
+      "title"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/planned-to/": {
+    "required_body": [
+      "object_id",
+      "year"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/steps/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/sub-steps/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/working-specialty/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/{fault_category}": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/{reason_fault}": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": []
+  },
+  "PUT /api/v1/act-base/{act_base_id}/": {
+    "required_body": [],
+    "required_params": [
+      "act_base_id"
+    ]
+  },
+  "PUT /api/v1/act-fact/{act_fact_id}/": {
+    "required_body": [],
+    "required_params": [
+      "act_fact_id"
+    ]
+  },
+  "PUT /api/v1/company/{company_id}/": {
+    "required_body": [],
+    "required_params": [
+      "company_id"
+    ]
+  },
+  "PUT /api/v1/company/{company_id}/photo/": {
+    "required_body": [],
+    "required_params": [
+      "company_id"
+    ]
+  },
+  "PUT /api/v1/contact-person/{contact_person_id}/": {
+    "required_body": [],
+    "required_params": [
+      "contact_person_id"
+    ]
+  },
+  "PUT /api/v1/contact-person/{contact_person_id}/photo/": {
+    "required_body": [],
+    "required_params": [
+      "contact_person_id"
+    ]
+  },
+  "PUT /api/v1/contract/{contract_id}/": {
+    "required_body": [],
+    "required_params": [
+      "contract_id"
+    ]
+  },
+  "PUT /api/v1/contract/{contract_id}/file/": {
+    "required_body": [],
+    "required_params": [
+      "contract_id"
+    ]
+  },
+  "PUT /api/v1/cp/admin/universal-user/{user_id}/": {
+    "required_body": [],
+    "required_params": [
+      "user_id"
+    ]
+  },
+  "PUT /api/v1/cp/admin/universal-user/{user_id}/identity-card/": {
+    "required_body": [],
+    "required_params": [
+      "user_id"
+    ]
+  },
+  "PUT /api/v1/cp/admin/universal-user/{user_id}/photo/": {
+    "required_body": [],
+    "required_params": [
+      "user_id"
+    ]
+  },
+  "PUT /api/v1/cp/admin/universal-user/{user_id}/qualification-file/": {
+    "required_body": [],
+    "required_params": [
+      "user_id"
+    ]
+  },
+  "PUT /api/v1/cp/admin/{client_id}/company/": {
+    "required_body": [
+      "company_id"
+    ],
+    "required_params": [
+      "client_id"
+    ]
+  },
+  "PUT /api/v1/cp/admin/{employee_id}/division/": {
+    "required_body": [
+      "division_id"
+    ],
+    "required_params": [
+      "employee_id"
+    ]
+  },
+  "PUT /api/v1/cp/client/me/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "PUT /api/v1/cp/foreman/me/division/": {
+    "required_body": [
+      "division_id"
+    ],
+    "required_params": []
+  },
+  "PUT /api/v1/cp/foreman/universal-user/{user_id}/": {
+    "required_body": [],
+    "required_params": [
+      "user_id"
+    ]
+  },
+  "PUT /api/v1/cp/foreman/universal-user/{user_id}/identity-card/": {
+    "required_body": [],
+    "required_params": [
+      "user_id"
+    ]
+  },
+  "PUT /api/v1/cp/foreman/universal-user/{user_id}/photo/": {
+    "required_body": [],
+    "required_params": [
+      "user_id"
+    ]
+  },
+  "PUT /api/v1/cp/foreman/universal-user/{user_id}/qualification-file/": {
+    "required_body": [],
+    "required_params": [
+      "user_id"
+    ]
+  },
+  "PUT /api/v1/cp/foreman/{employee_id}/division/": {
+    "required_body": [
+      "division_id"
+    ],
+    "required_params": [
+      "employee_id"
+    ]
+  },
+  "PUT /api/v1/cp/universal-user/me/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "PUT /api/v1/cp/universal-user/me/identity-card/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "PUT /api/v1/cp/universal-user/me/photo/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "PUT /api/v1/cp/universal-user/me/qualification-file/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "PUT /api/v1/defective-act/{defective_act_id}/": {
+    "required_body": [],
+    "required_params": [
+      "defective_act_id"
+    ]
+  },
+  "PUT /api/v1/defective-act/{defective_act_id}/status/": {
+    "required_body": [
+      "status_id"
+    ],
+    "required_params": [
+      "defective_act_id"
+    ]
+  },
+  "PUT /api/v1/divisions/{division_id}/": {
+    "required_body": [
+      "title"
+    ],
+    "required_params": [
+      "division_id"
+    ]
+  },
+  "PUT /api/v1/divisions/{division_id}/photo/": {
+    "required_body": [],
+    "required_params": [
+      "division_id"
+    ]
+  },
+  "PUT /api/v1/factory-model/{factory_model_id}/": {
+    "required_body": [],
+    "required_params": [
+      "factory_model_id"
+    ]
+  },
+  "PUT /api/v1/fault-category/{fault_category_id}/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": [
+      "fault_category_id"
+    ]
+  },
+  "PUT /api/v1/locations/{location_id}/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": [
+      "location_id"
+    ]
+  },
+  "PUT /api/v1/object/{object_id}/": {
+    "required_body": [],
+    "required_params": [
+      "object_id"
+    ]
+  },
+  "PUT /api/v1/object/{object_id}/acceptance_certificate/": {
+    "required_body": [],
+    "required_params": [
+      "object_id"
+    ]
+  },
+  "PUT /api/v1/object/{object_id}/act_pto/": {
+    "required_body": [],
+    "required_params": [
+      "object_id"
+    ]
+  },
+  "PUT /api/v1/object/{object_id}/letter_of_appointment/": {
+    "required_body": [],
+    "required_params": [
+      "object_id"
+    ]
+  },
+  "PUT /api/v1/order/{order_id}/": {
+    "required_body": [],
+    "required_params": [
+      "order_id"
+    ]
+  },
+  "PUT /api/v1/organization/{organization_id}/": {
+    "required_body": [
+      "title"
+    ],
+    "required_params": [
+      "organization_id"
+    ]
+  },
+  "PUT /api/v1/organization/{organization_id}/photo/": {
+    "required_body": [],
+    "required_params": [
+      "organization_id"
+    ]
+  },
+  "PUT /api/v1/planned-to/{planned_to_id}/": {
+    "required_body": [],
+    "required_params": [
+      "planned_to_id"
+    ]
+  },
+  "PUT /api/v1/reason-fault/{reason_fault_id}/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": [
+      "reason_fault_id"
+    ]
+  },
+  "PUT /api/v1/steps/{step_id}/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": [
+      "step_id"
+    ]
+  },
+  "PUT /api/v1/sub-steps/{sub_step_id}/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": [
+      "sub_step_id"
+    ]
+  },
+  "PUT /api/v1/working-specialty/{working_specialty_id}/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": [
+      "working_specialty_id"
+    ]
+  }
+}

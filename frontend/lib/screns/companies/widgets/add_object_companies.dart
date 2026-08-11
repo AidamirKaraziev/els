@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:http/http.dart' as http;
 import 'package:location/location.dart';
-import 'package:open_street_map_search_and_pick/open_street_map_search_and_pick.dart';
+import 'package:els/helper/my_map/address_picker.dart';
 import '../../../helper/class_colors.dart';
 import '../../../widgets_create/organization_greate.dart';
 import '../../companies/widgets/add_companies.dart';
@@ -1436,28 +1436,14 @@ class _AddObjectCompaniesState extends State<AddObjectCompanies> {
                     SizedBox(
                         width: MediaQuery.of(context).size.width,
                         height: 350.0,
-                        child: OpenStreetMapSearchAndPick(
-                            locationPinText: myAddress ?? '',
-                            center: const LatLong(45.034604, 39.035051),
-                            zoomInIcon: Icons.add,
-                            zoomOutIcon: Icons.remove,
-                            buttonColor: Colors.green.shade300,
-                            buttonText: '+ добавить адресс',
-                            onPicked: (pickedData) {
+                        child: AddressPicker(
+                            onPicked: (address, latitude, longitude) {
                               setState(() {
-                                myAddress =
-                                '${pickedData.address['road']} ${pickedData.address['house_number']}';
+                                myAddress = address;
                                 legalAddress.text = myAddress;
-                                myLat = pickedData.latLong.latitude;
-                                myLong = pickedData.latLong.longitude;
+                                myLat = latitude;
+                                myLong = longitude;
                               });
-                              print(
-                                  '${pickedData.address['road']} ${pickedData.address['house_number']}');
-                              print(myLat);
-                              print(myLong);
-                              print(myAddress);
-                              print(pickedData.address);
-                              // print(pickedData.);
                             })),
                   ],
                 ),

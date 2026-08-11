@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:gap/gap.dart';
-import 'package:open_street_map_search_and_pick/open_street_map_search_and_pick.dart';
 import 'package:els/screns/object/widgets/editing_object.dart';
 import 'package:els/screns/object/widgets/object_accountFreeze.dart';
 import 'package:flutter/material.dart';

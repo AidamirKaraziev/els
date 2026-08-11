@@ -18,7 +18,11 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.17.6 <3.0.0"
+  # Было ">=2.17.6 <3.0.0" с 2023 года, хотя коммит «Глобальное обновление»
+  # (апрель 2026) пересобрал pubspec.lock под пакеты, требующие Dart 3.10.3.
+  # С прежним ограничением `flutter pub get` падает на version solving,
+  # поэтому приведено в соответствие с lock-файлом.
+  sdk: ">=3.10.3 <4.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -57,22 +61,24 @@ dependencies:
   html: any
   toggle_switch: ^2.0.1
   url_launcher: any
-  flutter_map: ^3.1.0
-  latlong2: ^0.8.1
+  flutter_map: ^8.3.1
+  latlong2: ^0.9.1
   flutter_svg: any
   calendar_date_picker2: ^0.5.2
   auto_size_text: ^3.0.0
-  open_street_map_search_and_pick: ^0.1.0
+  # open_street_map_search_and_pick заброшен (последний релиз 2023-12,
+  # держал flutter_map ^3). Заменён на живой location_picker_flutter_map.
+  location_picker_flutter_map: ^4.1.0
   image_picker: ^1.0.4
   gap: ^3.0.1
-  geolocator: ^10.1.0
+  geolocator: ^14.0.2
 
 
 
   flutter_localizations:
     sdk: flutter
   prompt_dialog: ^1.0.13
-  google_fonts: ^4.0.4
+  google_fonts: ^8.2.1
 
 
 dev_dependencies:

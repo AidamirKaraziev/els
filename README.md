@@ -4,7 +4,7 @@
 
 ```
 backend/     FastAPI: src, alembic, tests, свой pyproject и Dockerfile
-frontend/    клиентское приложение (появится вместе с кодом фронта)
+frontend/    Flutter-приложение: android, ios, web
 infra/       docker compose для стека и для тестовой БД
 els-vault/   база знаний проекта (Obsidian)
 docs/        схема БД и прочая документация
@@ -21,6 +21,11 @@ scripts/     инструменты репозитория (проверка и�
 | Auth | JWT (python-jose), bcrypt / passlib |
 | Пакетный менеджер | [uv](https://github.com/astral-sh/uv) |
 | Линт / формат | Ruff |
+| Фронт | Flutter, Dart ≥ 3.10.3, flutter_bloc + provider, dio |
+
+### Состояние фронта
+
+Код `frontend/` перенесён из репозитория прежнего подрядчика вместе с историей (`git subtree`). Он **не приведён в порядок**: 71 тысяча строк, экраны продублированы под каждую роль, адрес бэкенда зашит в исходники в двух разных вариантах, слоя работы с API нет. Разбор с цифрами — в `els-vault/knowledge/debugging/аудит фронта на 2026-08-11 - Flutter, 71 тысяча строк.md`, порядок работ — в `els-vault/00-home/план работ - интеграция фронта и рефакторинг.md`. Не считайте текущий вид `frontend/` образцом стиля этого репозитория.
 
 ## Требования
 
@@ -57,17 +62,35 @@ scripts/     инструменты репозитория (проверка и�
 
 При старте вызывается `create_initial_data()` (`backend/src/core/db/init_db.py`) — инициализация базовых данных.
 
-## Docker Compose
-
-Стек: **postgres** (13), **backend** (сборка из `backend/Dockerfile`), **pgadmin**.
+## Запуск всего проекта локально
 
 ```bash
 make up
 ```
 
-- Backend: `8000:8000`
-- PostgreSQL: `5432:5432`
-- pgAdmin: `55907:80`
+Стек: **postgres** (13), **backend** (`backend/Dockerfile`), **frontend** (веб-сборка Flutter + nginx), **pgadmin**. Первая сборка тянет образ Flutter (~1 ГБ) и занимает несколько минут.
+
+nginx во фронте — единая точка входа, поэтому наружу смотрит один порт:
+
+| Адрес | Что |
+|-------|-----|
+| `http://localhost:8080/` | веб-приложение |
+| `http://localhost:8080/api/v1/` | API (проксируется на `backend:8000`) |
+| `http://localhost:8080/docs` | Swagger бэкенда |
+| `http://localhost:55907` | pgAdmin |
+| `localhost:5432` | PostgreSQL |
+
+Один origin на приложение и API — поэтому браузеру не нужен CORS, а фронту достаточно относительного пути `/api/v1`. Порт меняется переменной `WEB_PORT` в `.env`.
+
+### Мобильные сборки (iOS / Android)
+
+В docker их нет и быть не может: Android нужен SDK с эмулятором, iOS собирается только на macOS с Xcode. Кодовая база при этом **одна** — отличается только адрес API:
+
+```bash
+cd frontend && flutter run -d <device> --dart-define=API_BASE_URL=http://192.168.1.X:8080/api/v1
+```
+
+Телефон и компьютер должны быть в одной сети; для Android-эмулятора вместо IP машины используется `10.0.2.2`, для iOS-симулятора — `localhost`.
 
 Compose живёт в `infra/`, но пути внутри него относительны корня репозитория, поэтому вызывать его нужно с `--project-directory .` — `make up` и `make down` это уже делают:
 

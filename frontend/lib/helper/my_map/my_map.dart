@@ -88,15 +88,15 @@ class _MyMapState extends State<MyMap> {
 
   void _zoom() {
     if(currentZoom > 3) {
-      currentZoom = mapController.zoom - 1;
+      currentZoom = mapController.camera.zoom - 1;
     }
-    mapController.move(mapController.center, currentZoom);
+    mapController.move(mapController.camera.center, currentZoom);
   }
   void _zoomPlus() {
     if(currentZoom < 18) {
-      currentZoom = mapController.zoom + 1;
+      currentZoom = mapController.camera.zoom + 1;
     }
-    mapController.move(mapController.center, currentZoom);
+    mapController.move(mapController.camera.center, currentZoom);
   }
 
   LatLng? _center;
@@ -122,7 +122,7 @@ class _MyMapState extends State<MyMap> {
     );
 
     // Обновим контроллер карты для отображения всех точек
-    mapController.fitBounds(bounds);
+    mapController.fitCamera(CameraFit.bounds(bounds: bounds));
 
 
     _center = LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2);
@@ -146,13 +146,13 @@ class _MyMapState extends State<MyMap> {
       body: FlutterMap(
         mapController: mapController,
         options: MapOptions(
-          zoom: currentZoom,
+          initialZoom: currentZoom,
           // minZoom: 18.0,
           onTap: (pos, myLatLong) {
             setState(() {});
             print('${pos.relative} ${myLatLong.longitude}');
           },
-          center: _center,
+          initialCenter: _center ?? const LatLng(45.034604, 39.035051),
         ),
         children: [
           TileLayer(
@@ -168,7 +168,7 @@ class _MyMapState extends State<MyMap> {
                 point: LatLng(double.parse(getAllObject[i]['geo'].split(',')[0]), double.parse(getAllObject[i]['geo'].split(',')[1])),
                 width: 50,
                 height: 50,
-                builder: (context) =>
+                child:
                     Tooltip(
                       message: '${getAllObject[i]['name']}',
                       child: Container(
@@ -314,7 +314,7 @@ class _MyMapState extends State<MyMap> {
           //       point: LatLng(myLatLong.longitude, myLatLong.latitude),
           //       width: 80,
           //       height: 80,
-          //       builder: (context) => const Icon(Icons.home_outlined,size: 40, ),
+          //       child: const Icon(Icons.home_outlined,size: 40, ),
           //     ),
           //   ],
           // ),
@@ -388,13 +388,13 @@ class _MyMapObjectState extends State<MyMapObject> {
       body: FlutterMap(
         mapController: mapController,
         options: MapOptions(
-          zoom: currentZoom,
+          initialZoom: currentZoom,
           // minZoom: 18.0,
           onTap: (pos, myLatLong) {
             setState(() {});
             print('${pos.relative} ${myLatLong.longitude}');
           },
-          center: currentCenter,
+          initialCenter: currentCenter,
         ),
         children: [
           TileLayer(
@@ -407,7 +407,7 @@ class _MyMapObjectState extends State<MyMapObject> {
                 point: LatLng(latObject, longObject),
                 width: 40,
                 height: 40,
-                builder: (context) =>
+                child:
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(25.0),
@@ -422,7 +422,7 @@ class _MyMapObjectState extends State<MyMapObject> {
           //       point: LatLng(myLat.longitude, myLatLong.latitude),
           //       width: 80,
           //       height: 80,
-          //       builder: (context) => const Icon(Icons.home_outlined,size: 40, ),
+          //       child: const Icon(Icons.home_outlined,size: 40, ),
           //     ),
           //   ],
           // ),
@@ -432,114 +432,6 @@ class _MyMapObjectState extends State<MyMapObject> {
   }
 }
 /// ====================================================
-
-
-///Карта выбраного объекта ===========================================
-class MyMapCompanyObject extends StatefulWidget {
-  const MyMapCompanyObject({Key? key}) : super(key: key);
-
-  @override
-  State<MyMapCompanyObject> createState() => _MyMapCompanyObjectState();
-}
-class _MyMapCompanyObjectState extends State<MyMapCompanyObject> {
-
-  double latObject = double.parse(listSelectedObjectViewingCompany['data']['geo'].split(',')[0]);
-  double longObject = double.parse(listSelectedObjectViewingCompany['data']['geo'].split(',')[1]);
-  var myLat;
-  var myLatLong;
-
-
-  double currentZoom = 17.0;
-  MapController mapController = MapController();
-  LatLng currentCenter = LatLng(double.parse(listSelectedObjectViewingCompany['data']['geo'].split(',')[0]), double.parse(listSelectedObjectViewingCompany['data']['geo'].split(',')[1]));
-
-  @override
-  void initState() {
-    if(currentCenter == 'strind'){
-      latObject = 45.02940966586966;
-      longObject = 39.04147912461196;
-      print('карта');
-    }
-    // TODO: implement initState
-    super.initState();
-  }
-
-  void _zoom() {
-    if(currentZoom > 3) {
-      currentZoom = currentZoom - 1;
-    }
-    mapController.move(currentCenter, currentZoom);
-  }
-  void _zoomPlus() {
-    if(currentZoom < 18) {
-      currentZoom = currentZoom + 1;
-    }
-    mapController.move(currentCenter, currentZoom);
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-              backgroundColor: ColorApp.myColorGreen,
-              onPressed: _zoomPlus, child: const Icon(Icons.add)),
-          const SizedBox(height: 10.0),
-          FloatingActionButton(
-              backgroundColor: ColorApp.myColorGreen,
-              onPressed: _zoom, child: const Icon(Icons.remove)),
-        ],
-      ),
-      body: FlutterMap(
-        mapController: mapController,
-        options: MapOptions(
-          zoom: currentZoom,
-          // minZoom: 18.0,
-          onTap: (pos, myLatLong) {
-            setState(() {});
-            print('${pos.relative} ${myLatLong.longitude}');
-          },
-          center: currentCenter,
-        ),
-        children: [
-          TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.example.app',
-          ),
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: LatLng(latObject, longObject),
-                width: 40,
-                height: 40,
-                builder: (context) =>
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(25.0),
-                        color: Colors.green,),
-                      child: const Center(child: Text('3',style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold),)),),
-              ),
-            ],
-          ),
-          // MarkerLayer(
-          //   markers: [
-          //     Marker(
-          //       point: LatLng(myLat.longitude, myLatLong.latitude),
-          //       width: 80,
-          //       height: 80,
-          //       builder: (context) => const Icon(Icons.home_outlined,size: 40, ),
-          //     ),
-          //   ],
-          // ),
-        ],
-      ),
-    );
-  }
-}
-/// ==================================================================
 
 
 ///Карта выбраного объекта в графиках ==================================
@@ -604,13 +496,13 @@ class _MyMapScheduleObjectState extends State<MyMapScheduleObject> {
       body: FlutterMap(
         mapController: mapController,
         options: MapOptions(
-          zoom: currentZoom,
+          initialZoom: currentZoom,
           // minZoom: 18.0,
           onTap: (pos, myLatLong) {
             setState(() {});
             print('${pos.relative} ${myLatLong.longitude}');
           },
-          center: currentCenter,
+          initialCenter: currentCenter,
         ),
         children: [
           TileLayer(
@@ -623,7 +515,7 @@ class _MyMapScheduleObjectState extends State<MyMapScheduleObject> {
                 point: LatLng(latObject, longObject),
                 width: 40,
                 height: 40,
-                builder: (context) =>
+                child:
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(25.0),
@@ -638,7 +530,7 @@ class _MyMapScheduleObjectState extends State<MyMapScheduleObject> {
           //       point: LatLng(myLat.longitude, myLatLong.latitude),
           //       width: 80,
           //       height: 80,
-          //       builder: (context) => const Icon(Icons.home_outlined,size: 40, ),
+          //       child: const Icon(Icons.home_outlined,size: 40, ),
           //     ),
           //   ],
           // ),
