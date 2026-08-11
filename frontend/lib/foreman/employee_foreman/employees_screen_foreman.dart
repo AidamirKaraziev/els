@@ -1,0 +1,503 @@
+import 'dart:convert';
+import 'package:els/screns/employee/widgets/topButton.dart';
+import 'package:flutter/material.dart';
+import '../../../helper/class_colors.dart';
+import '../../../helper/header/header.dart';
+import 'package:http/http.dart' as http;
+import '../../screns/employee/view/employees_screen.dart';
+import '../../screns/home_page/home_page.dart';
+import '../drawer_foreman.dart';
+import '../user_page_foreman.dart';
+
+///Сотрудники
+
+/// Список сотрудников
+Map listSelectedEmployeeForeman = {};
+List getEmployeeForeman = [];
+List dataEmployeeForeman = [];
+
+final employeeScrollController = ScrollController();
+
+/// Получение списка сотрудников ==
+getListEmployeeForeman() async{
+  final res = await http.get(
+      Uri.parse('http://${IntTest.myIp}/api/v1/cp/all-employee/?page=1'),
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ${IntTest.token}',
+      });
+  var vova = jsonDecode(utf8.decode(res.bodyBytes));
+  getEmployeeForeman = vova['data'];
+  myStream.add(IntTest.indexScreens);
+}
+/// ===============================
+
+///Получение данных одного сотрудника =============
+getListEmployeesInfoForeman(int userId) async {
+  await Future(() async {
+    final res = await http.get(
+        Uri.parse("http://${IntTest.myIp}/api/v1/cp/universal-user/$userId/"),
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          'Authorization': 'Bearer ${IntTest.token}',
+        });
+    var vova = jsonDecode(utf8.decode(res.bodyBytes));
+    listSelectedEmployeeForeman = vova['data'];
+    print(listSelectedEmployeeForeman);
+  });
+}
+/// ===============================================
+
+///Сотрудники ================================================================
+class EmployeesScreenForeman extends StatefulWidget {
+  const EmployeesScreenForeman({
+    Key? key,
+  }) : super(key: key);
+
+
+  @override
+  State<EmployeesScreenForeman> createState() => _EmployeesScreenForemanState();
+}
+
+class _EmployeesScreenForemanState extends State<EmployeesScreenForeman> {
+
+  int isHover = -1;
+  int pressHover = -1;
+  bool isSortTest = false;
+
+  /// Функция поиска по имени ========================
+  void _runEmployeeFilter(String enteredKeyword) {
+    List result = [];
+    if(enteredKeyword.isEmpty){
+      result = getEmployeeForeman;
+    }else{
+      result = getEmployeeForeman.where((user) => user['name'].toLowerCase().contains(enteredKeyword.toLowerCase())).toList();
+    }
+    setState(() {
+      dataEmployeeForeman = result;
+    });
+  }
+  /// ================================================
+
+  @override
+  void initState() {
+    getListEmployeeForeman();
+    dataEmployeeForeman = getEmployeeForeman;
+    // TODO: implement initState
+    super.initState();
+  }
+
+  bool openListSearch = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final Size size = MediaQuery.of(context).size;
+    return StreamBuilder(
+      stream: myStream.stream,
+      builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+        return Scaffold(
+          key: myOpenDrawer,
+          drawer: const DrawerForeman(),
+          body: Container(
+            color: ColorApp.myColorTransparent,
+            child: Column(
+              children: [
+                ///Header ========
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(width: 0.3, color: Colors.grey.shade200),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal:ColorApp.kPadding),
+                  height: 70,
+                  width: double.infinity,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      ///Иконка меню
+                      if (size.width <= 1350)
+                        Row(
+                          children: [
+                            IconButton(
+                                onPressed: () {
+                                  myOpenDrawer.currentState!.openDrawer();
+                                  setState(() {});
+                                },
+                                icon: Icon(Icons.menu,
+                                    size: size.width > 350
+                                        ? 25.0
+                                        : 20)),
+                            const SizedBox(width: 10.0),
+                          ],
+                        ),
+                      /// Текст
+                      Text('Сотрудники',
+                          style: TextStyle(
+                              fontSize: size.width > 350
+                                  ? 25.0
+                                  : 18.0,
+                              fontWeight: size.width > 350
+                                  ? FontWeight.w700
+                                  : FontWeight.w500)),
+                      const SizedBox(width: 10.0),
+
+                      /// Список архивированных Сотрудников
+                      if (size.width > 500)
+                        IconButton(
+                            onPressed: () async {
+                              await getListEmployeeForeman();
+                              IntTest.indexScreensForeman = 22;
+                              myStream.add(IntTest.indexScreensForeman);
+                            },
+                            icon: const Icon(
+                                Icons.archive_outlined,
+                                size: 25.0,
+                                color: ColorApp.myColorGray)),
+
+                      ///Поиск Компании
+                      if (size.width > 500)
+                        Row(
+                          children: [
+                            if (openListSearch == false)
+                              IconButton(
+                                  onPressed: () {
+                                    openListSearch = true;
+                                    setState(() {});
+                                  },
+                                  icon: const Icon(
+                                      Icons.search,
+                                      size: 25.0,
+                                      color: ColorApp
+                                          .myColorGray)),
+                          ],
+                        ),
+                      if (openListSearch)
+                        Row(
+                          children: [
+                            const SizedBox(width: 10),
+                            SizedBox(
+                              width:
+                              MediaQuery.of(context).size.width * 0.3,
+                              height: 40.0,
+                              child: Form(
+                                child: TextField(
+                                  onChanged: (value) => _runEmployeeFilter(value),
+                                  cursorColor: ColorApp.myColorGray,
+                                  decoration:
+                                  InputDecoration(
+                                      contentPadding:
+                                      const EdgeInsets.all(0.0),
+                                      prefixIcon: IconButton(
+                                          onPressed: () {},
+                                          icon: const Icon(Icons.search)),
+                                      suffixIcon:
+                                      IconButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              dataEmployeeForeman = getEmployeeForeman;
+                                            });
+                                            openListSearch = false;
+                                            // myStream.add(IntTest.indexScreens);
+                                          },
+                                          icon: const Icon(Icons.close)),
+                                      border:
+                                      const OutlineInputBorder(),
+                                      focusedBorder:
+                                      const OutlineInputBorder(
+                                          borderSide:
+                                          BorderSide(color: ColorApp.myColorGreenAuth)),
+                                      labelText: 'Поиск',
+                                      labelStyle: const TextStyle(color: ColorApp.myColorGray)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      const Spacer(),
+                      ///Колокольчик
+                      if (size.width > 400)
+                        Badge(
+                          alignment:
+                          const AlignmentDirectional(21, 4),
+                          backgroundColor: ColorApp.myColorRed,
+                          isLabelVisible: IntTest.badgeCount > 0
+                              ? true
+                              : false,
+                          label: IntTest.badgeCount < 1
+                              ? const SizedBox.shrink()
+                              : Text(
+                              IntTest.badgeCount.toString(),
+                              style: const TextStyle(
+                                  fontSize: 12.0,
+                                  color:
+                                  ColorApp.myColorWhite,
+                                  fontWeight:
+                                  FontWeight.w500)),
+                          child: IconButton(
+                            onPressed: () {},
+                            icon: const Icon(
+                                Icons
+                                    .notifications_none_outlined,
+                                size: 25.0),
+                          ),
+                        ),
+                      SizedBox(width: size.width > 500 ? 40.0 : 10.0),
+                      ///Аватар Юзера
+                      const MyUserForeman(),
+                    ],
+                  ),
+                ),
+                /// Top Bar =====
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                    height: 50,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(5.0),
+                      color: ColorApp.myColorWhite,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.shade400,
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ///ФИО
+                        Expanded(
+                            child: Row(
+                              children: [
+                                TopButtonWidget(
+                                  text: 'ФИО',
+                                  press: () {
+                                    myColorButton = 1;
+                                    setState(() {});
+                                  },
+                                  pressIcon: () {},
+                                  colorButton: ColorApp.myColorWhite,
+                                  colorText:  ColorApp.myColorBlack,
+                                ),
+                                // const SizedBox(width: 5.0),
+                                // Container(
+                                //     width: 27,
+                                //     height: 27,
+                                //     decoration: BoxDecoration(
+                                //       border: Border.all(
+                                //           color: ColorApp.myColorGreen, width: 1.0),
+                                //       borderRadius: BorderRadius.circular(4.0),
+                                //     ),
+                                //     child: const Icon(Icons.arrow_drop_down_sharp)),
+                              ],
+                            )),
+                        ///Участок
+                        if (size.width > 550) Expanded(
+                          child: Row(
+                            children: [
+                              TopButtonWidget(
+                                text: 'Участок',
+                                press: () {
+                                  myColorButton = 2;
+                                  setState(() {
+                                  });
+                                },
+                                pressIcon: () {},
+                                colorButton: ColorApp.myColorWhite,
+                                colorText:  ColorApp.myColorBlack,
+                              ),
+                              // const SizedBox(width: 5.0),
+                              // Container(
+                              //     width: 27,
+                              //     height: 27,
+                              //     decoration: BoxDecoration(
+                              //       border: Border.all(
+                              //           color: ColorApp.myColorGreen, width: 1.0),
+                              //       borderRadius: BorderRadius.circular(4.0),
+                              //     ),
+                              //     child: const Icon(Icons.arrow_drop_down_sharp)),
+                            ],
+                          ),
+                        ),
+                        ///Номер телефона
+                        if (size.width > 1050)  Expanded(
+                          child: Row(
+                            children: [
+                              TopButtonWidget(
+                                text: 'Номер телефона',
+                                press: () {
+                                  myColorButton = 3;
+                                  setState(() {});
+                                },
+                                pressIcon: () {},
+                                colorButton: ColorApp.myColorWhite,
+                                colorText:  ColorApp.myColorBlack,
+                              ),
+                              // const SizedBox(width: 5.0),
+                              // Container(
+                              //     width: 27,
+                              //     height: 27,
+                              //     decoration: BoxDecoration(
+                              //       border: Border.all(
+                              //           color: ColorApp.myColorGreen, width: 1.0),
+                              //       borderRadius: BorderRadius.circular(4.0),
+                              //     ),
+                              //     child: const Icon(Icons.arrow_drop_down_sharp)),
+                            ],
+                          ),
+                        ),
+                        // Expanded(child: Text('Номер телефона'))
+                        ///Должность
+                        if (size.width > 600)Expanded(
+                          child: Row(
+                            children: [
+                              TopButtonWidget(
+                                text: 'Должность',
+                                press: () {
+                                  myColorButton = 3;
+                                  print(getEmployee[0]['role_id']['id']);
+                                  setState(() {});
+                                },
+                                pressIcon: () {},
+                                colorButton: ColorApp.myColorWhite,
+                                colorText:  ColorApp.myColorBlack,
+                              ),
+                              // const SizedBox(width: 5.0),
+                              // Container(
+                              //     width: 27,
+                              //     height: 27,
+                              //     decoration: BoxDecoration(
+                              //       border: Border.all(
+                              //           color: ColorApp.myColorGreen, width: 1.0),
+                              //       borderRadius: BorderRadius.circular(4.0),
+                              //     ),
+                              //     child: const Icon(Icons.arrow_drop_down_sharp)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                /// =============
+                /// Основной
+                Expanded(
+                  child: ListView.builder(
+                    controller: employeeScrollController,
+                    itemCount: dataEmployeeForeman.length,
+                    itemBuilder: (context, index) {
+                      final employee = dataEmployeeForeman[index];
+                      return employee['is_actual'] == false ? Container() : Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Card(
+                          key: ValueKey(dataEmployeeForeman[index]),
+                          child:  InkWell(
+                            onTap: () async {
+                              IntTest.indexUserList = index;
+                              IntTest.pressHover = employee['id'];
+                              await getListEmployeesInfoForeman(IntTest.pressHover);
+                              myStream.add(IntTest.indexScreensForeman);
+                              IntTest.indexScreensForeman = 21;
+                              setState(() {});
+                            },
+                            onHover: (val) {
+                              setState(() {
+                                isHover = index;
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 2.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(5.0),
+                                  color: isHover == index
+                                      ? Colors.grey.shade50
+                                      : ColorApp.myColorWhite,
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      ///ФИО
+                                      Expanded(
+                                        child: Container(
+                                          height: 60,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(10),
+                                            color: isHover == index
+                                                ? ColorApp.myColorWhite
+                                                : ColorApp.myColorGrayShadow,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Padding(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                                                child: StreamBuilder(
+                                                  stream: myStream.stream,
+                                                  builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+                                                    return CircleAvatar(
+                                                      foregroundImage:
+                                                      // newPhotoSelectEmployee != '' ? NetworkImage('http://$newPhotoSelectEmployee') :
+                                                      NetworkImage('http://${dataEmployeeForeman[index]['photo']}'),
+                                                      backgroundImage: const AssetImage('assets/user.png'),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                              Expanded(
+                                                  child:
+                                                  getEmployeeForeman[index]['name'] == null
+                                                      ? const Text('')
+                                                      : Text(employee['name'],
+                                                      style: TextStyle(fontSize: size.width > 450 ? 14 : 12))),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      ///Участок
+                                      if (size.width > 550) Expanded(
+                                          child: Row(
+                                            children: [
+                                              const SizedBox(width: 20.0),
+                                              employee['division_id'] == null
+                                                  ? const Text('')
+                                                  : Text(employee['division_id']['title'].toString(),
+                                                  style: TextStyle(fontSize: size.width > 450 ? 14 : 12)),
+                                            ],
+                                          )),
+                                      ///Номер телефона
+                                      if (size.width > 1050) Expanded(
+                                          child: employee['contact_phone'] != null
+                                              ? Text('+7${employee['contact_phone']}')
+                                              : const Text('')),
+                                      ///Должность
+                                      if (size.width > 600) Expanded(
+                                          child: Text(employee['role_id']['name'])
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20.0),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+///===========================================================================
