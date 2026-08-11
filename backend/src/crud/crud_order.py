@@ -8,10 +8,19 @@ from src.crud.base import CRUDBase
 from src.crud.crud_fault_category import crud_fault_category
 from src.crud.crud_object import crud_objects
 from src.crud.crud_reason_fault import crud_reason_fault
+from src.crud.crud_statistics import month_period
 from src.crud.crud_status import crud_status
 from src.crud.users.crud_universal_user import crud_universal_users
-from src.models import Company, Object, Order, Organization, UniversalUser
+from src.models import (
+    Company,
+    FaultCategory,
+    Object,
+    Order,
+    Organization,
+    UniversalUser,
+)
 from src.schemas.order import OrderCreate, OrderUpdate
+from src.utils import pagination
 
 
 def _object_display_label(name: Optional[str], object_id: int) -> str:
@@ -105,6 +114,55 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         # обновление данных
         db_obj = super().update(db=db, db_obj=order, obj_in=new_data)
         return db_obj, 0, None
+
+    def get_orders_filtered(
+        self,
+        *,
+        db: Session,
+        page: Optional[int],
+        object_id: Optional[int] = None,
+        year: Optional[int] = None,
+        month: Optional[int] = None,
+        only_breakdowns: bool = False,
+    ):
+        """Список заявок с необязательными фильтрами.
+
+        Все параметры необязательные: без них запрос совпадает с прежним
+        `get_multi`, поэтому старые клиенты ничего не замечают.
+
+        Нужно для перехода из виджета «Топ поломок»: человек видит у объекта
+        число за месяц и хочет посмотреть, какие именно это были заявки.
+        """
+        query = db.query(self.model)
+
+        if object_id is not None:
+            query = query.filter(self.model.object_id == object_id)
+
+        if year is not None and month is not None:
+            period = month_period(year, month)
+            query = query.filter(
+                self.model.created_at.isnot(None),
+                self.model.created_at >= period.start,
+                self.model.created_at < period.end,
+            )
+
+        if only_breakdowns:
+            # Тот же отбор, что и в статистике: без него человек, кликнув по
+            # «6 поломок», увидел бы девять заявок вместе с плановыми ТО и
+            # решил бы, что виджет врёт.
+            query = query.outerjoin(
+                FaultCategory, self.model.fault_category_id == FaultCategory.id
+            ).filter(
+                (self.model.fault_category_id.is_(None))
+                | (FaultCategory.counts_as_breakdown.is_(True))
+            )
+
+        # Порядок задаём только здесь, в отфильтрованной выдаче. У `get_multi`
+        # сортировки нет вовсе, и менять её сейчас — значит трогать экран,
+        # который и так работает.
+        query = query.order_by(self.model.created_at.desc().nullslast())
+
+        return pagination.get_page(query, page)
 
     def get_my_orders(self, *, db: Session, creator_id: int):
         my_orders = db.query(self.model).filter(self.model.creator_id == creator_id)

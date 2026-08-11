@@ -8,6 +8,7 @@ from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
 from src.crud.crud_order import _object_display_label, crud_orders
 from src.crud.users.crud_universal_user import crud_universal_users
+from src.exceptions import UnprocessableEntity
 from src.getters.order import getting_order
 from src.schemas.order import OrderCreate, OrderGet, OrderUpdate
 from src.schemas.statistics import TopBreakdownItem
@@ -65,18 +66,52 @@ def get_top_breakdowns_statistics(
     "/order/all",
     response_model=ListOfEntityResponse,
     name="get_orders",
-    description="Получение списка всех задач",
+    description=(
+        "Получение списка всех задач.\n\n"
+        "Все фильтры необязательные: без них ручка работает как раньше.\n\n"
+        "`year` и `month` задаются только вместе — период считается по дате "
+        "создания заявки. Связка с `object_id` и `only_breakdowns` нужна для "
+        "перехода из виджета «Топ поломок»: показать те самые заявки, которые "
+        "посчитаны в его счётчике."
+    ),
     tags=["Админ панель / Задачи"],
 )
 def get_orders(
     request: Request,
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
+    object_id: int = Query(None, title="Только заявки этого объекта"),
+    year: int = Query(None, ge=1990, le=2100, title="Год, вместе с month"),
+    month: int = Query(None, ge=1, le=12, title="Месяц (1–12), вместе с year"),
+    only_breakdowns: bool = Query(
+        False,
+        title="Только поломки",
+        description=(
+            "Исключает плановые ТО, ПТО, капремонт и ложные вызовы — тот же "
+            "отбор, что в статистике."
+        ),
+    ),
     # current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
 ):
-    logging.info(crud_orders.get_multi(db=session, page=None))
+    # Год и месяц описывают один период, поодиночке они бессмысленны.
+    # Молча игнорировать половину фильтра нельзя: человек увидит не тот
+    # список и не поймёт, почему.
+    if (year is None) != (month is None):
+        raise UnprocessableEntity(
+            message="Год и месяц задаются только вместе",
+            num=1292,
+            description="Параметры year и month описывают один период.",
+            path="$.query",
+        )
 
-    data, paginator = crud_orders.get_multi(db=session, page=page)
+    data, paginator = crud_orders.get_orders_filtered(
+        db=session,
+        page=page,
+        object_id=object_id,
+        year=year,
+        month=month,
+        only_breakdowns=only_breakdowns,
+    )
 
     return ListOfEntityResponse(
         data=[getting_order(obj=datum, request=request) for datum in data],
