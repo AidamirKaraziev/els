@@ -1,0 +1,83 @@
+name: release
+
+# Сборка образов для прода.
+#
+# Зачем отдельно от `backend.yml` и `frontend.yml`: те проверяют код на каждый
+# push и pull request, а этот собирает то, что поедет на сервер, и кладёт в
+# ghcr.io. Сервер потом только скачивает готовое.
+#
+# Так сделано из-за ресурсов сервера: `flutter build web --release` требует
+# несколько гигабайт оперативки и образ Flutter SDK на 3.76 ГБ. На машине с
+# 1 ГБ RAM сборка гарантированно падает по OOM в середине, оставляя мусор в
+# build cache. Раннер GitHub бесплатный и с 16 ГБ — пусть собирает он.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  # Пересобрать вручную из вкладки Actions, не делая коммит.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Нужно, чтобы GITHUB_TOKEN мог писать в ghcr.io.
+  packages: write
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+
+    strategy:
+      # Одна упавшая сборка не отменяет вторую: полезно видеть сразу обе.
+      fail-fast: false
+      matrix:
+        include:
+          - name: backend
+            context: backend
+            # Бэкенд собирается быстро и весит мало — кэшируем все слои.
+            cache_mode: max
+          - name: frontend
+            context: frontend
+            # У фронта слои тяжёлые (Flutter SDK), а кэш Actions ограничен
+            # 10 ГБ на репозиторий. mode=min кладёт только финальные слои,
+            # иначе кэш вытеснит сам себя и всё остальное заодно.
+            cache_mode: min
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # metadata-action сам приводит имя к нижнему регистру: ghcr.io
+          # заглавных букв не принимает, а владелец репозитория — AidamirKaraziev.
+          images: ghcr.io/${{ github.repository }}-${{ matrix.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=long
+            type=ref,event=tag
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Дешёвые VPS почти всегда x86. Если сервер окажется на ARM
+          # (Ampere, Graviton), поменяйте на linux/arm64 — собирать обе
+          # платформы вдвое дольше, а нужна одна.
+          platforms: linux/amd64
+          # Веб-сборке адрес API задавать не нужно: она берёт origin страницы,
+          # а nginx отдаёт приложение и /api/v1 с одного хоста.
+          build-args: |
+            MAP_TILE_URL=${{ vars.MAP_TILE_URL }}
+            OSM_USER_AGENT=${{ vars.OSM_USER_AGENT }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=${{ matrix.cache_mode }},scope=${{ matrix.name }}

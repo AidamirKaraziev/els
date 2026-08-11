@@ -62,6 +62,25 @@ services:
       - static_data:/app/static
     env_file:
       - .env
+    # Без этой проверки `up -d` возвращает успех, даже если контейнер упал на
+    # миграции: команда лишь просит docker запустить его. Проверка дёргает
+    # реальную ручку, поэтому «здоров» означает, что prestart.sh прошёл,
+    # `alembic upgrade head` отработал и приложение отвечает.
+    # curl в образе нет (python:3.8-slim), поэтому проверяем питоном.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import urllib.request,sys;
+          sys.exit(0 if urllib.request.urlopen(
+          'http://localhost:8000/api/v1/openapi.json', timeout=3
+          ).getcode() == 200 else 1)"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      # Пока идёт start_period, неудачные проверки не считаются падением.
+      # Запас на долгую миграцию на большой базе.
+      start_period: 90s
 
   # Веб-сборка Flutter + nginx, он же единая точка входа в систему:
   # `/` — приложение, `/api/v1/` — проксируется на backend.
@@ -83,22 +102,11 @@ services:
     volumes:
       - ./infra/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-    ports:
-      - "55907:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      - postgres
-    env_file:
-      - .env
+# pgAdmin убран из стека 2026-08-11: 173 МБ памяти и 528 МБ образа ради
+# веб-морды к базе. Дев-стек держим близким к прод-стеку, а базу смотреть
+# удобнее клиентом — postgres слушает localhost:5432 (порт меняется
+# переменной DB_HOST_PORT).
 
 volumes:
   postgres_data:
-  pgadmin_data:
   static_data:

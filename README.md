@@ -68,7 +68,7 @@ scripts/     инструменты репозитория (проверка и�
 make up
 ```
 
-Стек: **postgres** (13), **backend** (`backend/Dockerfile`), **frontend** (веб-сборка Flutter + nginx), **pgadmin**. Первая сборка тянет образ Flutter (~1 ГБ) и занимает несколько минут.
+Стек: **postgres** (13), **backend** (`backend/Dockerfile`), **frontend** (веб-сборка Flutter + nginx). Первая сборка тянет образ Flutter (~1 ГБ) и занимает несколько минут.
 
 nginx во фронте — единая точка входа, поэтому наружу смотрит один порт:
 
@@ -77,8 +77,7 @@ nginx во фронте — единая точка входа, поэтому �
 | `http://localhost:8080/` | веб-приложение |
 | `http://localhost:8080/api/v1/` | API (проксируется на `backend:8000`) |
 | `http://localhost:8080/docs` | Swagger бэкенда |
-| `http://localhost:55907` | pgAdmin |
-| `localhost:5432` | PostgreSQL |
+| `localhost:5432` | PostgreSQL (подключаться клиентом БД; порт меняется `DB_HOST_PORT`) |
 
 Один origin на приложение и API — поэтому браузеру не нужен CORS, а фронту достаточно относительного пути `/api/v1`. Порт меняется переменной `WEB_PORT` в `.env`.
 
@@ -150,7 +149,7 @@ docker compose --project-directory . -f infra/docker-compose.yml up -d --build
 | `FIRST_SUPERUSER`, `FIRST_SUPERUSER_PASSWORD` | Учётные данные начального суперпользователя (см. `init_db`) |
 | `SMTP_*`, `EMAILS_FROM_EMAIL` | SMTP; `EMAILS_ENABLED` вычисляется при наличии хоста, порта и email отправителя |
 | `SENTRY_DSN` | Опционально Sentry |
-| `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD` | Только для сервиса pgAdmin в Compose |
+| `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD` | Не используются: pgAdmin убран из Compose 2026-08-11, строки можно удалить |
 
 Переменная `SQLALCHEMY_DATABASE_URI` в примерах `backend/envs/` не подменяет `DB_URL` — для приложения критичны `DB_*`.
 

@@ -14,6 +14,6 @@ date: 2026-04-07
 - Команда контейнера: `uvicorn src.main:app --host 0.0.0.0 --port 8000 ${UVICORN_RELOAD}`
 
 ## Связанные темы
-- [[Docker Compose - postgres + backend + pgadmin]]
+- [[Docker Compose - postgres + backend + фронт с nginx]]
 - [[миграции Alembic - версии в alembic versions и импорт моделей из src.models]]
 

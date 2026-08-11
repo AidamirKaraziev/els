@@ -14,7 +14,7 @@ date: 2026-08-11
 - [[шпаргалка - как работать с Cursor и графом знаний]]
 - [[архитектура проекта - FastAPI API + CRUD + getters + SQLAlchemy модели]]
 - [[миграции Alembic - версии в alembic versions и импорт моделей из src.models]]
-- [[Docker Compose - postgres + backend + pgadmin]]
+- [[Docker Compose - postgres + backend + фронт с nginx]]
 
 ## Атлас (стабильные знания)
 - [[архитектура проекта - FastAPI API + CRUD + getters + SQLAlchemy модели]]

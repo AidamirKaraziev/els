@@ -1,0 +1,122 @@
+# Прод-стек: только запуск, без сборки.
+#
+# Запускать ИЗ КОРНЯ репозитория, через Makefile:
+#   make prod-deploy / make prod-logs / make prod-down
+#
+# Отличия от `docker-compose.yml`, и каждое — ради машины с 1 ГБ памяти:
+#
+# * образы не собираются, а скачиваются из ghcr.io. Сборка фронта требует
+#   несколько гигабайт RAM и образ Flutter на 3.76 ГБ — на сервере это OOM.
+#   Собирает CI (.github/workflows/release.yml);
+# * нет pgAdmin — 173 МБ памяти и 528 МБ диска ради морды, которой пользуются
+#   раз в месяц. Подключайтесь клиентом БД через SSH-туннель;
+# * postgres не торчит наружу: порт привязан к 127.0.0.1;
+# * у сервисов `restart: unless-stopped` — после перезагрузки сервера стек
+#   поднимается сам;
+# * postgres настроен под маленькую машину, а не под дефолт на 100 соединений.
+#
+# Миграции накатывает сам контейнер бэкенда: `prestart.sh` делает
+# `alembic upgrade head` до старта uvicorn.
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-${DB_PASS}}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Только на localhost. Наружу postgres на публичном сервере смотреть не
+      # должен — до него доберутся перебором за сутки. Клиентом подключаться
+      # через SSH-туннель:
+      #   ssh -L 5432:localhost:5432 user@server
+      - "127.0.0.1:${DB_HOST_PORT:-5432}:5432"
+    env_file:
+      - .env
+    # Дефолты postgres рассчитаны на машину заметно больше нашей: 100
+    # соединений, каждое со своим work_mem, плюс autovacuum. На 1 ГБ это
+    # верный способ получить OOM в тот момент, когда бэкенд генерирует PDF.
+    command:
+      - postgres
+      - -c
+      - max_connections=50
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - effective_cache_size=384MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    # Тег можно приколотить к конкретной сборке для отката:
+    #   IMAGE_TAG=sha-<полный хеш> make prod-deploy
+    image: ${BACKEND_IMAGE:-ghcr.io/aidamirkaraziev/els-backend}:${IMAGE_TAG:-latest}
+    container_name: backend
+    restart: unless-stopped
+    environment:
+      # Внутри сети compose база всегда postgres:5432. В .env лежат настройки
+      # для запуска с хоста, и если их не перебить, контейнер стучится сам
+      # в себя и падает с "connection to localhost refused".
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS:-${DB_PASSWORD}}
+      DB_NAME: ${DB_NAME}
+      # На проде автоперезагрузка не нужна: это второй процесс-наблюдатель,
+      # который следит за файлами. На одном ядре это заметно.
+      UVICORN_RELOAD: ""
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8000"
+    volumes:
+      # Фотографии заявок и актов, сгенерированные PDF. Растёт линейно и сам
+      # не чистится — на 15 ГБ диска за этим томом надо следить:
+      #   docker system df -v | grep static_data
+      - static_data:/app/static
+    env_file:
+      - .env
+    # «Здоров» здесь означает, что prestart.sh прошёл, миграции накатились и
+    # приложение отвечает. Без этого `up -d` рапортует успех, даже если
+    # контейнер упал на миграции.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import urllib.request,sys;
+          sys.exit(0 if urllib.request.urlopen(
+          'http://localhost:8000/api/v1/openapi.json', timeout=3
+          ).getcode() == 200 else 1)"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/aidamirkaraziev/els-frontend}:${IMAGE_TAG:-latest}
+    container_name: frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    volumes:
+      # Конфиг проксирования монтируется, а не вшит в образ: поправить его
+      # можно `git pull` + `docker compose restart frontend`, без пересборки.
+      - ./infra/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  postgres_data:
+  static_data:

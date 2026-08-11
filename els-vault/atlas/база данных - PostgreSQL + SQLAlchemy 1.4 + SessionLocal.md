@@ -17,5 +17,5 @@ date: 2026-04-07
 
 ## Связанные темы
 - [[конфигурация - .env через BaseSettings и get_url из DB переменных]]
-- [[Docker Compose - postgres + backend + pgadmin]]
+- [[Docker Compose - postgres + backend + фронт с nginx]]
 
