@@ -59,6 +59,11 @@ class OrderUpdate(BaseModel):
     created_at: Optional[Date]
     accepted_at: Optional[Date]
     in_progress_at: Optional[Date]
+    done_at: Optional[Date]
+    # Опечатка в имени, из-за которой `done_at` не заполнялся с самого начала:
+    # `CRUDBase.update` переносит только те поля, чьи имена совпадают с
+    # колонками модели, а колонка называется `done_at`. Поле оставлено, чтобы
+    # клиент, который его шлёт, не получил 422 — но на запись оно не влияет.
     dane_at: Optional[Date]
     status_id: Optional[int]
     is_viewed: Optional[bool]

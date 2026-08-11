@@ -109,7 +109,11 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         if new_data.status_id == 3:
             new_data.in_progress_at = datetime.datetime.utcnow()
         if new_data.status_id == 4:
-            new_data.dane_at = datetime.datetime.utcnow()
+            # Именно `done_at`: раньше здесь стоял `dane_at`, и заявка
+            # закрывалась без отметки о времени закрытия. Ошибки при этом не
+            # возникало — `CRUDBase.update` молча пропускает поля, которых нет
+            # среди колонок модели.
+            new_data.done_at = datetime.datetime.utcnow()
 
         # обновление данных
         db_obj = super().update(db=db, db_obj=order, obj_in=new_data)
