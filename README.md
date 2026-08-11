@@ -111,8 +111,23 @@ uv run alembic revision --autogenerate -m "описание"
 | `make sync` | `uv sync --all-groups` (runtime + dev) |
 | `make lint` | `ruff check` + `ruff format --check` для `src/` |
 | `make format` | автоисправления Ruff и форматирование |
+| `make test` | поднимает тестовую БД и гоняет `pytest` |
+| `make test-db-up` / `make test-db-down` | только контейнер с тестовой БД |
 
 Настройки Ruff: `pyproject.toml` (`[tool.ruff]`).
+
+## Тесты
+
+```bash
+make test
+```
+
+1. Скопируйте `.test.env.example` в `.test.env` — там **отдельная** база только под pytest.
+2. `make test-db-up` поднимает `docker-compose.test.yml`: PostgreSQL на своём порту, данные в tmpfs (исчезают вместе с контейнером).
+3. Сессионная фикстура `migrated_test_db` пересоздаёт схему `public`, накатывает Alembic до `head` и заполняет справочники через `create_initial_data()`.
+4. Фикстура `db_session` даёт сессию внутри SAVEPOINT и откатывает её после каждого теста — тесты не видят данных друг друга. За этим следит `TestDbSessionIsolation` в `tests/test_crud_location.py`.
+
+Перед прогоном `conftest.py` проверяет `MODE=TEST` и слово `test` в `DB_NAME` — предохранитель от запуска по боевой базе, потому что фикстура делает `DROP SCHEMA public`.
 
 ## Структура репозитория (логика)
 

@@ -1,0 +1,29 @@
+
+# PostgreSQL только для pytest. Отдельный контейнер, отдельный порт, отдельный том —
+# чтобы прогон тестов физически не мог дотянуться до боевой или локальной базы.
+#
+# Поднять:  make test-db-up
+# Погасить: make test-db-down
+#
+# Переменные берутся из `.test.env` (см. `.test.env.example`), поэтому запускать
+# нужно с `--env-file .test.env` — это уже зашито в Makefile.
+
+services:
+  test-postgres:
+    image: postgres:13
+    container_name: lift-test-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    # tmpfs вместо тома: база живёт в памяти и исчезает вместе с контейнером.
+    # Тестовым данным незачем переживать перезапуск, зато прогон заметно быстрее.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 3s
+      retries: 15

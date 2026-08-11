@@ -230,7 +230,9 @@ def build_defective_act_pdf(output_path: str, data: DefectiveActPdfData) -> None
                 img.hAlign = "CENTER"
                 row.append(img)
             except Exception:
-                row.append(_p(f"(файл недоступен: {os.path.basename(pth)})", cell_style))
+                row.append(
+                    _p(f"(файл недоступен: {os.path.basename(pth)})", cell_style)
+                )
             if len(row) == cols:
                 t = Table([row], colWidths=[max_w] * cols)
                 t.setStyle(

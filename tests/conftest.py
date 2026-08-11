@@ -102,22 +102,14 @@ def migrated_test_db():
             if not seq:
                 continue
 
-            # Идентификаторы нельзя параметризовать, поэтому используем `format(%I)` внутри DO.
+            # Имя таблицы нельзя передать параметром, но список выше — константа
+            # в этом же файле, так что подстановка безопасна.
+            max_id = conn.execute(
+                text(f"SELECT COALESCE(MAX(id), 1) FROM {table}")  # noqa: S608
+            ).scalar()
             conn.execute(
-                text(
-                    """
-                    DO $$
-                    DECLARE
-                      _seq text := :seq;
-                      _tbl text := :tbl;
-                      _max_id bigint;
-                    BEGIN
-                      EXECUTE format('SELECT COALESCE(MAX(id), 1) FROM %I', _tbl) INTO _max_id;
-                      EXECUTE format('SELECT setval(%L, %s, true)', _seq, _max_id);
-                    END $$;
-                    """
-                ),
-                {"seq": seq, "tbl": table},
+                text("SELECT setval(:seq, :value, true)"),
+                {"seq": seq, "value": max_id},
             )
     return True
 
@@ -163,10 +155,11 @@ def db_session(migrated_test_db):
     try:
         yield session
     finally:
-
+        # Откат внешней транзакции стирает всё, что тест успел закоммитить внутри
+        # savepoint'а. Каждый следующий тест видит ровно то состояние, которое
+        # оставила сессионная фикстура: миграции + справочники, без чужих данных.
         session.close()
-        transaction.commit()
-        # transaction.rollback()
+        transaction.rollback()
         connection.close()
 
 

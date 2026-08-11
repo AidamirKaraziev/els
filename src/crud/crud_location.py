@@ -1,4 +1,3 @@
-from distutils.command.check import check
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -8,25 +7,15 @@ from src.models import Location
 from src.schemas.location import LocationCreate, LocationUpdate
 
 
-
 class CrudLocation(CRUDBase[Location, LocationCreate, LocationUpdate]):
-    def get_location_by_id(
-        self,
-        db: Session, *,
-        id: int
-    ):
-        """ Получить город по id."""
+    def get_location_by_id(self, db: Session, *, id: int):
+        """Получить город по id."""
         location = db.query(Location).filter(Location.id == id).first()
         if location is None:
             return None, -101, None
         return location, 0, None
 
-
-    def check_name(
-        self,
-        db: Session, *,
-        name: str
-    ):
+    def check_name(self, db: Session, *, name: str):
         """Проверка есть ли такое название города в БД."""
         res = db.query(Location).filter(Location.name == name).first()
         if res is not None:
@@ -35,10 +24,7 @@ class CrudLocation(CRUDBase[Location, LocationCreate, LocationUpdate]):
             return True, 0, None
 
     def update_location(
-        self,
-        db: Session, *,
-        location: Optional[LocationUpdate],
-        location_id: int
+        self, db: Session, *, location: Optional[LocationUpdate], location_id: int
     ):
         # проверить есть ли город с таким id
         exist_location, code, indexes = self.get_location_by_id(db=db, id=location_id)
@@ -56,13 +42,12 @@ class CrudLocation(CRUDBase[Location, LocationCreate, LocationUpdate]):
         db_obj = super().update(db=db, db_obj=this_location, obj_in=location)
         return db_obj, 0, None
 
-    def create_location(
-        self,
-        db: Session, *,
-        new_data: Optional[LocationCreate]
-    ):
+    def create_location(self, db: Session, *, new_data: Optional[LocationCreate]):
         # проверить есть ли с таким названием
-        if db.query(Location).filter(Location.name == new_data.name).first() is not None:
+        if (
+            db.query(Location).filter(Location.name == new_data.name).first()
+            is not None
+        ):
             return None, -1061, None
 
         good_name, code, indexes = self.check_name(db=db, name=new_data.name)
