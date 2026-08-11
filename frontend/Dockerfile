@@ -31,6 +31,6 @@ FROM nginx:alpine
 
 COPY --from=build /app/build/web /usr/share/nginx/html
 
-# Конфиг не копируем, а монтируем из infra/nginx.conf — правка проксирования
+# Конфиг не копируем, а монтируем из infra/nginx/ — правка проксирования
 # не требует пересборки образа.
 EXPOSE 80
