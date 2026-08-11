@@ -28,6 +28,16 @@ int newScreensObject = 1;
 
 //getAllListOfObjects
 /// Список всех обьектов ========
+///
+/// Заполняет `getAllObject` — его читает карта (`helper/my_map/my_map.dart`).
+/// Постраничный список для таблицы наливает `MyObjectBloc`.
+///
+/// Здесь НЕЛЬЗЯ вызывать `MyObjectBloc().add(ObjectGetEvent())`. Раньше вызов
+/// стоял, и получалась бесконечная рекурсия: блок в конце `_getObject` зовёт
+/// `getAllListOfObjects()`, а та звала блок обратно. Приложение молотило по
+/// два запроса к `/all-objects/` без остановки и на каждом витке оставляло
+/// незакрытый экземпляр блока. Связь оставлена односторонней: событие блока
+/// обновляет оба списка, а эта функция — только свой.
 getAllListOfObjects() async {
   final res = await http.get(
       Uri.parse('${ApiConfig.base}/all-objects/'),
@@ -38,7 +48,6 @@ getAllListOfObjects() async {
       });
   var vova = jsonDecode(utf8.decode(res.bodyBytes));
   getAllObject = vova['data'];
-  MyObjectBloc().add(ObjectGetEvent());
   myStream.add(IntTest.indexScreens);
   // dataObject = getObject;
   // print(getAllObject.length);

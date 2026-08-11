@@ -27,6 +27,9 @@ class MyObjectBloc extends Bloc<MyObjectEvent, MyObjectState> {
         });
     var getObjectListBlock = jsonDecode(utf8.decode(res.bodyBytes));
     dataObject = getObjectListBlock['data'];
+    // Обновляем и полный список для карты. Обратного вызова быть не должно:
+    // `getAllListOfObjects()` не имеет права звать это событие, иначе снова
+    // получится бесконечный круг запросов — см. комментарий в object_screen.dart.
     getAllListOfObjects();
     // print(dataObject[0]);
     // print('Механик ======================================');
