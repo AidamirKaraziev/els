@@ -411,6 +411,13 @@
       "filename"
     ]
   },
+  "GET /api/v1/statistics/breakdowns": {
+    "required_body": [],
+    "required_params": [
+      "month",
+      "year"
+    ]
+  },
   "GET /api/v1/statuses/": {
     "required_body": [],
     "required_params": []

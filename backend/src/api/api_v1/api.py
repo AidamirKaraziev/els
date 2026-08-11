@@ -23,6 +23,7 @@ from src.api.api_v1.endpoints import (
     planned_to,
     reason_fault,
     role,
+    statistics,
     status,
     step,
     sub_step,
@@ -66,3 +67,4 @@ api_router.include_router(sub_step.router)
 api_router.include_router(step.router)
 api_router.include_router(order_photo.router)
 api_router.include_router(order.router)
+api_router.include_router(statistics.router)

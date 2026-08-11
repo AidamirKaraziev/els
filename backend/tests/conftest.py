@@ -95,6 +95,10 @@ def migrated_test_db():
         "types_contracts",
         "types_acts",
         "cost_types",
+        # Суперадмин создаётся с явным id=1 (см. init_db.create_super_admin),
+        # поэтому sequence остаётся на единице и первый же тест, заводящий
+        # пользователя, падает на duplicate key.
+        "universal_users",
     ]
 
     with _engine.begin() as conn:

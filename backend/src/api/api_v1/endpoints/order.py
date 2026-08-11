@@ -23,7 +23,13 @@ router = APIRouter()
     "/order/statistics/top-breakdowns",
     response_model=ListOfEntityResponse[TopBreakdownItem],
     name="top_breakdowns_statistics",
+    deprecated=True,
+    summary="Топ поломок (устарел)",
     description=(
+        "**Устарел, используйте `GET /statistics/breakdowns`.**\n\n"
+        "Считает все заявки подряд, включая плановые ТО, ПТО, капремонт и "
+        "ложные вызовы, поэтому числа здесь завышены. Ручка оставлена живой "
+        "ради клиентов, которые уже на неё ходят, и не меняется.\n\n"
         "Топ поломок по объектам за выбранный месяц и год: число заявок (order) "
         "по дате создания, группировка по объекту, сортировка по убыванию счётчика."
     ),
