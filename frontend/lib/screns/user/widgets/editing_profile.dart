@@ -175,7 +175,7 @@ class _EditingProfileState extends State<EditingProfile> {
                           height: 100.0,
                           width: 100.0,
                           child: Image.network(
-                              'http://${userProfile[0]['photo']}'),
+                              '${ApiConfig.scheme}://${userProfile[0]['photo']}'),
                         ),
                         const SizedBox(width: 20.0),
                         const Text(

@@ -7,6 +7,7 @@ import '../../home_page/home_page.dart';
 import '../../object/view/object_page.dart';
 import '../../user/user_contact.dart';
 import '../widget/editing_tesk.dart';
+import 'package:els/helper/api_config.dart';
 
 /// Выбранная Задача
 
@@ -530,7 +531,7 @@ class _TaskPageState extends State<TaskPage> {
                                                 builder: (context) =>
                                                     AlertDialog(
                                                       content: Stack(children: [
-                                                        Image.network('http://$onePhotoSelectedTaskId',fit: BoxFit.cover),
+                                                        Image.network('${ApiConfig.scheme}://$onePhotoSelectedTaskId',fit: BoxFit.cover),
                                                         Positioned(
                                                           top: 0,
                                                             right: 0,
@@ -544,7 +545,7 @@ class _TaskPageState extends State<TaskPage> {
                                             padding: const EdgeInsets.only(right: 20.0),
                                             width: 230,
                                             height: 230,
-                                            child: Image.network('http://${photoTask['photo']}',fit: BoxFit.cover)
+                                            child: Image.network('${ApiConfig.scheme}://${photoTask['photo']}',fit: BoxFit.cover)
                                         ),
                                       );
                                     },

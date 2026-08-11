@@ -443,8 +443,8 @@ class _EmployeesScreenForemanState extends State<EmployeesScreenForeman> {
                                                   builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
                                                     return CircleAvatar(
                                                       foregroundImage:
-                                                      // newPhotoSelectEmployee != '' ? NetworkImage('http://$newPhotoSelectEmployee') :
-                                                      NetworkImage('http://${dataEmployeeForeman[index]['photo']}'),
+                                                      // newPhotoSelectEmployee != '' ? NetworkImage('${ApiConfig.scheme}://$newPhotoSelectEmployee') :
+                                                      NetworkImage('${ApiConfig.scheme}://${dataEmployeeForeman[index]['photo']}'),
                                                       backgroundImage: const AssetImage('assets/user.png'),
                                                     );
                                                   },

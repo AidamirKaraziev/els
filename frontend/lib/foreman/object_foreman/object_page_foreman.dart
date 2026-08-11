@@ -8,6 +8,7 @@ import '../user_page_foreman.dart';
 import 'act_foreman.dart';
 import 'letter_of_appointment_foreman.dart';
 import 'object_screen_foreman.dart';
+import 'package:els/helper/api_config.dart';
 
 /// Окно выбранного обьекта
 
@@ -461,7 +462,7 @@ class _ObjectPageForemanState extends State<ObjectPageForeman> {
                                                                         10.0),
                                                                     child: CircleAvatar(
                                                                         backgroundImage: const NetworkImage('assets/user.png'),
-                                                                        foregroundImage: NetworkImage('http://${viewObjectPage['foreman_id']['photo']},'))),
+                                                                        foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['foreman_id']['photo']}'))),
                                                                 Expanded(
                                                                     child: Text(
                                                                         '${viewObjectPage['foreman_id']['name']}',
@@ -535,7 +536,7 @@ class _ObjectPageForemanState extends State<ObjectPageForeman> {
                                                                         10.0),
                                                                     child: CircleAvatar(
                                                                         backgroundImage: const NetworkImage('assets/user.png'),
-                                                                        foregroundImage: NetworkImage('http://${viewObjectPage['mechanic_id']['photo']}'))),
+                                                                        foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['mechanic_id']['photo']}'))),
                                                                 Expanded(child:
                                                                 Text('${viewObjectPage['mechanic_id']['name']}',
                                                                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),

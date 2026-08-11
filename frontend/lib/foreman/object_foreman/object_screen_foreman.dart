@@ -411,7 +411,7 @@ class _ObjectScreenForemanState extends State<ObjectScreenForeman> {
                                                     child: Row(
                                                       children: [
                                                         CircleAvatar(
-                                                            foregroundImage:  NetworkImage(dataObjectScreen['company_id'] == null ? '' : 'http://${dataObjectScreen['company_id']['photo'].toString()}'),
+                                                            foregroundImage:  NetworkImage(dataObjectScreen['company_id'] == null ? '' : '${ApiConfig.scheme}://${dataObjectScreen['company_id']['photo'].toString()}'),
                                                             backgroundImage: const AssetImage('assets/comp.jpeg')),
                                                         const SizedBox(width: 10.0),
                                                         dataObjectScreen['company_id'] == null ? const Text('') :

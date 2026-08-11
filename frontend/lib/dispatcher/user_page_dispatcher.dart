@@ -7,6 +7,7 @@ import '../../../helper/class_colors.dart';
 import 'package:http/http.dart' as http;
 import '../../screns/home_page/home_page.dart';
 import '../screns/user/user_contact.dart';
+import 'package:els/helper/api_config.dart';
 
 /// Окно User
 
@@ -252,7 +253,7 @@ class _OpenViewUserDispatcherState extends State<OpenViewUserDispatcher> {
                                         CircleAvatar(
                                             radius: 70.0,
                                             backgroundImage: const AssetImage('assets/user.png'),
-                                            foregroundImage: NetworkImage('http://${viewEmployeeList['photo']}')),
+                                            foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeList['photo']}')),
                                         const SizedBox(height: 10.0),
                                         /// Имя сотрудника
                                         Center(
@@ -715,7 +716,7 @@ class _OpenViewUserDispatcherState extends State<OpenViewUserDispatcher> {
                                               ),
                                             ),
                                           )
-                                              : Image.network('http://${viewEmployeeList['identity_card']}'),
+                                              : Image.network('${ApiConfig.scheme}://${viewEmployeeList['identity_card']}'),
                                         ),
                                       ),
                                       const SizedBox(width: 20.0),
@@ -768,7 +769,7 @@ class _OpenViewUserDispatcherState extends State<OpenViewUserDispatcher> {
                                                 AsyncSnapshot<dynamic>
                                                 snapshot) {
                                               return Image.network(
-                                                  'http://${viewEmployeeList['qualification_file']}');
+                                                  '${ApiConfig.scheme}://${viewEmployeeList['qualification_file']}');
                                             },
                                           ),
                                         ),
@@ -823,7 +824,7 @@ class _MyUserDispatcherState extends State<MyUserDispatcher> {
                 radius: 20.0,
                 backgroundColor: Colors.transparent,
                 backgroundImage: const AssetImage('assets/user.png'),
-                foregroundImage:  NetworkImage('http://${userProfile[0]['photo']}'),
+                foregroundImage:  NetworkImage('${ApiConfig.scheme}://${userProfile[0]['photo']}'),
               );
             },
           )

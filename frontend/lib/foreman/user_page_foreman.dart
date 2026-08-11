@@ -440,7 +440,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                             child: CircleAvatar(
                                                 radius: 70.0,
                                                 backgroundImage: const AssetImage('assets/user.png'),
-                                                foregroundImage: NetworkImage('http://${viewEmployeeList['photo']}'))),
+                                                foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeList['photo']}'))),
                                         const SizedBox(height: 10.0),
                                         /// Имя сотрудника
                                         Center(
@@ -546,7 +546,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                                 child: CircleAvatar(
                                                   radius: 70.0,
                                                   backgroundImage: const AssetImage('assets/user.png'),
-                                                  foregroundImage: NetworkImage('http://${viewEmployeeList['photo']}'),
+                                                  foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeList['photo']}'),
                                                   backgroundColor: ColorApp.myColorGray,
                                                 )),
                                             const SizedBox(height: 10.0),
@@ -1016,7 +1016,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                                     ),
                                                   ),
                                                 )
-                                                    : Image.network('http://${viewEmployeeList['identity_card']}'),
+                                                    : Image.network('${ApiConfig.scheme}://${viewEmployeeList['identity_card']}'),
                                               ),
                                             ),
                                             const SizedBox(width: 20.0),
@@ -1069,7 +1069,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                                       AsyncSnapshot<dynamic>
                                                       snapshot) {
                                                     return Image.network(
-                                                        'http://${viewEmployeeList['qualification_file']}');
+                                                        '${ApiConfig.scheme}://${viewEmployeeList['qualification_file']}');
                                                   },
                                                 ),
                                               ),
@@ -1192,7 +1192,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
 //                       color: Colors.green,
 //                       size: 40.0,
 //                     ))
-//                 : Image.network('http://${listSelectedEmployeeForeman['data']['identity_card']}'),
+//                 : Image.network('${ApiConfig.scheme}://${listSelectedEmployeeForeman['data']['identity_card']}'),
 //           ],
 //         ));
 //   }
@@ -1282,7 +1282,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
 //             ),
 //             Image.network(
 //                 fit: BoxFit.cover,
-//                 'http://${listSelectedEmployeeForeman['data']['qualification_file']}'),
+//                 '${ApiConfig.scheme}://${listSelectedEmployeeForeman['data']['qualification_file']}'),
 //           ],
 //         ));
 //   }
@@ -1320,7 +1320,7 @@ class _MyUserForemanState extends State<MyUserForeman> {
                 radius: size.width > 350 ? 29.0 : 20.0,
                 backgroundColor: Colors.transparent,
                 backgroundImage: const AssetImage('assets/user.png'),
-                foregroundImage:  NetworkImage('http://${userProfile[0]['photo']}'),
+                foregroundImage:  NetworkImage('${ApiConfig.scheme}://${userProfile[0]['photo']}'),
               );
             },
           )

@@ -8,6 +8,7 @@ import '../../../screns/companies/widgets/AddObjectSelectedCompany.dart';
 import '../../../screns/companies/widgets/ContactFaces.dart';
 import '../../../screns/home_page/home_page.dart';
 import '../../user_page_foreman.dart';
+import 'package:els/helper/api_config.dart';
 
 /// Окно выбранной компании Архив
 
@@ -173,7 +174,7 @@ class _CompanyPageArchiveForemanState extends State<CompanyPageArchiveForeman> {
                                           child: CircleAvatar(
                                             backgroundColor: Colors.grey.shade200,
                                             backgroundImage: const AssetImage('assets/comp.jpeg'),
-                                            foregroundImage: NetworkImage('http://${viewCompanyListArchive['photo']}'),
+                                            foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewCompanyListArchive['photo']}'),
                                           ),
                                         ),
                                       ),
@@ -786,7 +787,7 @@ class _CompanyPageArchiveForemanState extends State<CompanyPageArchiveForeman> {
                                                               children: [
                                                                 CircleAvatar(
                                                                     minRadius: 25.0,
-                                                                    foregroundImage: NetworkImage('http://${listTest['photo']}'),
+                                                                    foregroundImage: NetworkImage('${ApiConfig.scheme}://${listTest['photo']}'),
                                                                     backgroundImage: const AssetImage('assets/user.png')
                                                                 ),
                                                                 const SizedBox(width: 20.0),

@@ -321,7 +321,7 @@ class _CompaniesScreenForemanState extends State<CompaniesScreenForeman> {
                                                   child: CircleAvatar(
                                                     backgroundColor: Colors.grey.shade200,
                                                     backgroundImage: const AssetImage('assets/comp.jpeg'),
-                                                    foregroundImage: NetworkImage('http://${company['photo']}'),
+                                                    foregroundImage: NetworkImage('${ApiConfig.scheme}://${company['photo']}'),
                                                   ),
                                                 ),
                                                 Expanded(

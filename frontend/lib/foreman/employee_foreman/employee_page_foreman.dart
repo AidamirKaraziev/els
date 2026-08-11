@@ -408,7 +408,7 @@ class _OpenViewEmployeeForemanState extends State<OpenViewEmployeeForeman> {
                                             child: CircleAvatar(
                                                 radius: 70.0,
                                                 backgroundImage: const AssetImage('assets/user.png'),
-                                                foregroundImage: NetworkImage('http://${viewEmployeeList['photo']}'))),
+                                                foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeList['photo']}'))),
                                         const SizedBox(height: 10.0),
                                         /// Имя сотрудника
                                         Center(
@@ -514,7 +514,7 @@ class _OpenViewEmployeeForemanState extends State<OpenViewEmployeeForeman> {
                                                 child: CircleAvatar(
                                                   radius: 70.0,
                                                   backgroundImage: const AssetImage('assets/user.png'),
-                                                  foregroundImage: NetworkImage('http://${viewEmployeeList['photo']}'),
+                                                  foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeList['photo']}'),
                                                   backgroundColor: ColorApp.myColorGray,
                                                 )),
                                             const SizedBox(height: 10.0),
@@ -991,7 +991,7 @@ class _OpenViewEmployeeForemanState extends State<OpenViewEmployeeForeman> {
                                                     ),
                                                   ),
                                                 )
-                                                    : Image.network('http://${viewEmployeeList['identity_card']}'),
+                                                    : Image.network('${ApiConfig.scheme}://${viewEmployeeList['identity_card']}'),
                                               ),
                                             ),
                                             const SizedBox(width: 20.0),
@@ -1044,7 +1044,7 @@ class _OpenViewEmployeeForemanState extends State<OpenViewEmployeeForeman> {
                                                       AsyncSnapshot<dynamic>
                                                       snapshot) {
                                                     return Image.network(
-                                                        'http://${viewEmployeeList['qualification_file']}');
+                                                        '${ApiConfig.scheme}://${viewEmployeeList['qualification_file']}');
                                                   },
                                                 ),
                                               ),
@@ -1167,7 +1167,7 @@ class _WorksPhotoDocUdoState extends State<WorksPhotoDocUdo> {
                       color: Colors.green,
                       size: 40.0,
                     ))
-                : Image.network('http://${listSelectedEmployeeForeman['data']['identity_card']}'),
+                : Image.network('${ApiConfig.scheme}://${listSelectedEmployeeForeman['data']['identity_card']}'),
           ],
         ));
   }
@@ -1258,7 +1258,7 @@ class _WorksPhotoDocState extends State<WorksPhotoDoc> {
             ),
             Image.network(
                 fit: BoxFit.cover,
-                'http://${listSelectedEmployeeForeman['data']['qualification_file']}'),
+                '${ApiConfig.scheme}://${listSelectedEmployeeForeman['data']['qualification_file']}'),
           ],
         ));
   }

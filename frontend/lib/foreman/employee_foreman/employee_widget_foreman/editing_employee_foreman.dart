@@ -197,7 +197,7 @@ class _EditingEmployeeForemanState extends State<EditingEmployeeForeman> {
                     //                       size: const Size.fromRadius(48),
                     //                       // Image radius
                     //                       child: Image.network(
-                    //                           'http://${listSelectedEmployeeForeman['photo']}',
+                    //                           '${ApiConfig.scheme}://${listSelectedEmployeeForeman['photo']}',
                     //                           fit: BoxFit.cover)))
                     //               : Image.asset('assets/user.png')),
                     //       const SizedBox(width: 20.0),

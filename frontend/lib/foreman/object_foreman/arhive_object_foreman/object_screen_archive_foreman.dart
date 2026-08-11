@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../../../screns/home_page/home_page.dart';
 import '../../user_page_foreman.dart';
 import '../object_screen_foreman.dart';
+import 'package:els/helper/api_config.dart';
 
 ///ОБЬЕКТЫ Архив
 
@@ -310,7 +311,7 @@ class _ObjectScreenArchiveForemanState extends State<ObjectScreenArchiveForeman>
                                                     child: Row(
                                                       children: [
                                                         CircleAvatar(
-                                                            foregroundImage:  NetworkImage(dataObjectScreen['company_id'] == null ? '' : 'http://${dataObjectScreen['company_id']['photo'].toString()}'),
+                                                            foregroundImage:  NetworkImage(dataObjectScreen['company_id'] == null ? '' : '${ApiConfig.scheme}://${dataObjectScreen['company_id']['photo'].toString()}'),
                                                             backgroundImage: const AssetImage('assets/comp.jpeg')),
                                                         const SizedBox(width: 10.0),
                                                         dataObjectScreen['company_id'] == null ? const Text('') :

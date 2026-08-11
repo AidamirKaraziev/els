@@ -129,9 +129,9 @@ class _UserProfileState extends State<UserProfile> {
                             radius: 70.0,
                             backgroundImage: const AssetImage('assets/user.png'),
                             foregroundImage: newPhoto != ''
-                                ? NetworkImage('http://$newPhoto')
+                                ? NetworkImage('${ApiConfig.scheme}://$newPhoto')
                                 : NetworkImage(
-                                    'http://${userProfile[0]['photo']}'),
+                                    '${ApiConfig.scheme}://${userProfile[0]['photo']}'),
                           )),
                       const SizedBox(height: 10.0),
                       /// Имя сотрудника

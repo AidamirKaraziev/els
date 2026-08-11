@@ -291,7 +291,7 @@ class _CompanyPageState extends State<CompanyPage> {
                                         backgroundColor: Colors.grey.shade200,
                                         backgroundImage: const AssetImage('assets/comp.jpeg'),
                                         foregroundImage: NetworkImage(
-                                            'http://${viewCompanyList['photo']}'),
+                                            '${ApiConfig.scheme}://${viewCompanyList['photo']}'),
                                       ),
                                     ),
                                   )
@@ -317,7 +317,7 @@ class _CompanyPageState extends State<CompanyPage> {
                                             backgroundColor: Colors.grey.shade200,
                                             backgroundImage: const AssetImage('assets/comp.jpeg'),
                                             foregroundImage: NetworkImage(
-                                                'http://${viewCompanyList['photo']}'),
+                                                '${ApiConfig.scheme}://${viewCompanyList['photo']}'),
                                           ),
                                         ),
                                       ),

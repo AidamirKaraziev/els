@@ -17,6 +17,7 @@ import '../../screns/object/view/object_screen.dart';
 import '../../screns/schedule/schedule_page.dart';
 import '../../screns/schedule/schedule_screen.dart';
 import '../user_page_foreman.dart';
+import 'package:els/helper/api_config.dart';
 
 /// Окно выбранного Графика
 
@@ -416,7 +417,7 @@ class _SchedulePageForemanState extends State<SchedulePageForeman> {
                                                     Padding(padding: const EdgeInsets.symmetric(horizontal: 10.0),
                                                         child: CircleAvatar(
                                                             backgroundImage: const NetworkImage('assets/user.png'),
-                                                            foregroundImage: NetworkImage('http://${viewObjectPage['foreman_id']['photo']},'))),
+                                                            foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['foreman_id']['photo']}'))),
                                                     viewObjectPage['foreman_id'] == null ? const Expanded(child: Text('')) :
                                                     Expanded(
                                                         child: Text('${viewObjectPage['foreman_id']['name']}',
@@ -489,7 +490,7 @@ class _SchedulePageForemanState extends State<SchedulePageForeman> {
                                                         child:
                                                         CircleAvatar(
                                                             backgroundImage: const NetworkImage('assets/user.png'),
-                                                            foregroundImage: NetworkImage('http://${viewObjectPage['mechanic_id']['photo']}'))),
+                                                            foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['mechanic_id']['photo']}'))),
                                                     viewObjectPage['mechanic_id'] == null ? const Expanded(child: Text('')) :
                                                     Expanded(
                                                       child: Text('${viewObjectPage['mechanic_id']['name']}',

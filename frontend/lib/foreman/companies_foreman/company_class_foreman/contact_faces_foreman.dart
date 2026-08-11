@@ -179,7 +179,7 @@ class _ContactFacesForemanState extends State<ContactFacesForeman> {
                                               children: [
                                                 CircleAvatar(
                                                   minRadius: 25.0,
-                                                    foregroundImage: NetworkImage('http://${listTest['photo']}'),
+                                                    foregroundImage: NetworkImage('${ApiConfig.scheme}://${listTest['photo']}'),
                                                     backgroundImage: const AssetImage('assets/user.png')
                                                 ),
                                                 const SizedBox(width: 20.0),
@@ -285,7 +285,7 @@ class _ViewContactPersonForemanState extends State<ViewContactPersonForeman> {
                   CircleAvatar(
                     radius: 50.0,
                     backgroundImage: const AssetImage('assets/user.png'),
-                    foregroundImage: NetworkImage('http://${dataAccount['photo']}'),
+                    foregroundImage: NetworkImage('${ApiConfig.scheme}://${dataAccount['photo']}'),
                   ),
                   const SizedBox(width: 50.0),
                   /// Имя Телефон Адресс
@@ -417,7 +417,7 @@ class _EditingContactPersonForemanState extends State<EditingContactPersonForema
           CircleAvatar(
             radius: 50.0,
             backgroundImage: const AssetImage('assets/user.png'),
-            foregroundImage: NetworkImage('http://${selectedContactFacesForeman['data']['photo']}'),
+            foregroundImage: NetworkImage('${ApiConfig.scheme}://${selectedContactFacesForeman['data']['photo']}'),
           ),
           const Gap(20.0),
           /// ФИО

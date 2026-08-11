@@ -234,7 +234,7 @@ class _CompanyPageForemanState extends State<CompanyPageForeman> {
                                         backgroundColor: Colors.grey.shade200,
                                         backgroundImage: const AssetImage('assets/comp.jpeg'),
                                         foregroundImage: NetworkImage(
-                                            'http://${viewCompanyList['photo']}'),
+                                            '${ApiConfig.scheme}://${viewCompanyList['photo']}'),
                                       ),
                                     ),
                                   )
@@ -260,7 +260,7 @@ class _CompanyPageForemanState extends State<CompanyPageForeman> {
                                             backgroundColor: Colors.grey.shade200,
                                             backgroundImage: const AssetImage('assets/comp.jpeg'),
                                             foregroundImage: NetworkImage(
-                                                'http://${viewCompanyList['photo']}'),
+                                                '${ApiConfig.scheme}://${viewCompanyList['photo']}'),
                                           ),
                                         ),
                                       ),

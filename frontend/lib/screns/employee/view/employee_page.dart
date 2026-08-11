@@ -471,7 +471,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
                                             child: CircleAvatar(
                                                 radius: 70.0,
                                                 backgroundImage: const AssetImage('assets/user.png'),
-                                                foregroundImage: NetworkImage('http://${listSelectedEmployee['data']['photo']}'))),
+                                                foregroundImage: NetworkImage('${ApiConfig.scheme}://${listSelectedEmployee['data']['photo']}'))),
                                         const SizedBox(height: 10.0),
                                         /// Имя сотрудника
                                         Center(
@@ -577,7 +577,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
                                                 child: CircleAvatar(
                                                   radius: 70.0,
                                                   backgroundImage: const AssetImage('assets/user.png'),
-                                                  foregroundImage: NetworkImage('http://${viewEmployeeList['photo']}'),
+                                                  foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeList['photo']}'),
                                                   backgroundColor: ColorApp.myColorGray,
                                                 )),
                                             const SizedBox(height: 10.0),
@@ -1037,7 +1037,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
                                                                   IconButton(onPressed: (){Navigator.pop(context);},icon: const Icon(Icons.close,color: Colors.red)),
                                                                 ],
                                                               ),
-                                                              content: Image.network('http://${viewEmployeeList['identity_card']}',fit: BoxFit.cover),
+                                                              content: Image.network('${ApiConfig.scheme}://${viewEmployeeList['identity_card']}',fit: BoxFit.cover),
                                                             ));
                                                   });
 
@@ -1071,7 +1071,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
                                                     ),
                                                   ),
                                                 )
-                                                    : Image.network('http://${viewEmployeeList['identity_card']}'),
+                                                    : Image.network('${ApiConfig.scheme}://${viewEmployeeList['identity_card']}'),
                                               ),
                                             ),
                                             const SizedBox(width: 20.0),
@@ -1097,7 +1097,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
                                                                   IconButton(onPressed: (){Navigator.pop(context);},icon: const Icon(Icons.close,color: Colors.red)),
                                                                 ],
                                                               ),
-                                                              content: Image.network('http://${viewEmployeeList['qualification_file']}',fit: BoxFit.cover),
+                                                              content: Image.network('${ApiConfig.scheme}://${viewEmployeeList['qualification_file']}',fit: BoxFit.cover),
                                                             ));
                                                   });
 
@@ -1133,7 +1133,7 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
                                                       AsyncSnapshot<dynamic>
                                                       snapshot) {
                                                     return Image.network(
-                                                        'http://${viewEmployeeList['qualification_file']}');
+                                                        '${ApiConfig.scheme}://${viewEmployeeList['qualification_file']}');
                                                   },
                                                 ),
                                               ),
@@ -1256,7 +1256,7 @@ class _WorksPhotoDocUdoState extends State<WorksPhotoDocUdo> {
                       color: Colors.green,
                       size: 40.0,
                     ))
-                : Image.network('http://${listSelectedEmployee['data']['identity_card']}'),
+                : Image.network('${ApiConfig.scheme}://${listSelectedEmployee['data']['identity_card']}'),
           ],
         ));
   }
@@ -1346,7 +1346,7 @@ class _WorksPhotoDocState extends State<WorksPhotoDoc> {
             ),
             Image.network(
                 fit: BoxFit.cover,
-                'http://${listSelectedEmployee['data']['qualification_file']}'),
+                '${ApiConfig.scheme}://${listSelectedEmployee['data']['qualification_file']}'),
           ],
         ));
   }

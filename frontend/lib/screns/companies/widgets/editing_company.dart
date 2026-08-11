@@ -198,7 +198,7 @@ class _EditingCompanyState extends State<EditingCompany> {
                         backgroundColor: Colors.grey.shade200,
                         backgroundImage: const AssetImage('assets/comp.jpeg'),
                         foregroundImage: NetworkImage(
-                            'http://${listSelectedCompany['data']['photo']}'),
+                            '${ApiConfig.scheme}://${listSelectedCompany['data']['photo']}'),
                       ),
                       const SizedBox(width: 20.0),
                       const Text(

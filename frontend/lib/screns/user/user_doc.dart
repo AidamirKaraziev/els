@@ -3,6 +3,7 @@ import 'package:els/screns/user/user_contact.dart';
 import 'package:flutter/material.dart';
 import '../../helper/class_colors.dart';
 import '../home_page/home_page.dart';
+import 'package:els/helper/api_config.dart';
 
 ///Блок User Doc
 
@@ -81,7 +82,7 @@ class UserDoc extends StatelessWidget {
                             ),
                           ),
                         )
-                            : Image.network('http://${userProfile[0]['identity_card']}'),
+                            : Image.network('${ApiConfig.scheme}://${userProfile[0]['identity_card']}'),
                       ),
                     ),
                     const SizedBox(width: 20.0),
@@ -135,7 +136,7 @@ class UserDoc extends StatelessWidget {
                               AsyncSnapshot<dynamic>
                               snapshot) {
                             return Image.network(
-                                'http://${userProfile[0]['qualification_file']}');
+                                '${ApiConfig.scheme}://${userProfile[0]['qualification_file']}');
                           },
                         ),
                       ),

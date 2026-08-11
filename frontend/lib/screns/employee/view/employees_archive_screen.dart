@@ -492,8 +492,8 @@ class _EmployeesArchiveScreenState extends State<EmployeesArchiveScreen> {
                                                 builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
                                                   return CircleAvatar(
                                                     foregroundImage:
-                                                    // newPhotoSelectEmployee != '' ? NetworkImage('http://$newPhotoSelectEmployee') :
-                                                    NetworkImage('http://${employeeArchived['photo']}'),
+                                                    // newPhotoSelectEmployee != '' ? NetworkImage('${ApiConfig.scheme}://$newPhotoSelectEmployee') :
+                                                    NetworkImage('${ApiConfig.scheme}://${employeeArchived['photo']}'),
                                                     backgroundImage: const AssetImage('assets/user.png'),
                                                   );
                                                 },

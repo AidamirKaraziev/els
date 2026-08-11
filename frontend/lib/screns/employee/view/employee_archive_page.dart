@@ -302,7 +302,7 @@ class _OpenViewEmployeeArchiveState extends State<OpenViewEmployeeArchive> {
                                             CircleAvatar(
                                               radius: 70.0,
                                               backgroundImage: const AssetImage('assets/user.png'),
-                                              foregroundImage: NetworkImage('http://${viewEmployeeListArchived['photo']}'),
+                                              foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeListArchived['photo']}'),
                                               backgroundColor: ColorApp.myColorGray,
                                             ),
                                             const SizedBox(height: 10.0),
@@ -772,7 +772,7 @@ class _OpenViewEmployeeArchiveState extends State<OpenViewEmployeeArchive> {
                                                     ),
                                                   ),
                                                 )
-                                                    : Image.network('http://${viewEmployeeListArchived['identity_card']}'),
+                                                    : Image.network('${ApiConfig.scheme}://${viewEmployeeListArchived['identity_card']}'),
                                               ),
                                             ),
                                             const SizedBox(width: 20.0),
@@ -812,7 +812,7 @@ class _OpenViewEmployeeArchiveState extends State<OpenViewEmployeeArchive> {
                                                       AsyncSnapshot<dynamic>
                                                       snapshot) {
                                                     return Image.network(
-                                                        'http://${viewEmployeeListArchived['qualification_file']}');
+                                                        '${ApiConfig.scheme}://${viewEmployeeListArchived['qualification_file']}');
                                                   },
                                                 ),
                                               ),
@@ -935,7 +935,7 @@ class _WorksPhotoDocUdoState extends State<WorksPhotoDocUdo> {
                   color: Colors.green,
                   size: 40.0,
                 ))
-                : Image.network('http://${listSelectedEmployee['data']['identity_card']}'),
+                : Image.network('${ApiConfig.scheme}://${listSelectedEmployee['data']['identity_card']}'),
           ],
         ));
   }
@@ -1026,7 +1026,7 @@ class _WorksPhotoDocState extends State<WorksPhotoDoc> {
             ),
             Image.network(
                 fit: BoxFit.cover,
-                'http://${listSelectedEmployee['data']['qualification_file']}'),
+                '${ApiConfig.scheme}://${listSelectedEmployee['data']['qualification_file']}'),
           ],
         ));
   }

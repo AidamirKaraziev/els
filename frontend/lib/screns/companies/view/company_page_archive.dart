@@ -199,7 +199,7 @@ class _CompanyPageArchiveState extends State<CompanyPageArchive> {
                                           child: CircleAvatar(
                                             backgroundColor: Colors.grey.shade200,
                                             backgroundImage: const AssetImage('assets/comp.jpeg'),
-                                            foregroundImage: NetworkImage('http://${viewCompanyListArchive['photo']}'),
+                                            foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewCompanyListArchive['photo']}'),
                                           ),
                                         ),
                                       ),
@@ -816,7 +816,7 @@ class _CompanyPageArchiveState extends State<CompanyPageArchive> {
                                                               children: [
                                                                 CircleAvatar(
                                                                     minRadius: 25.0,
-                                                                    foregroundImage: NetworkImage('http://${listTest['photo']}'),
+                                                                    foregroundImage: NetworkImage('${ApiConfig.scheme}://${listTest['photo']}'),
                                                                     backgroundImage: const AssetImage('assets/user.png')
                                                                 ),
                                                                 const SizedBox(width: 20.0),

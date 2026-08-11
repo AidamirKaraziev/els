@@ -470,7 +470,7 @@ class _ViewSelectedObjectForemanState extends State<ViewSelectedObjectForeman> {
                                                 Padding(padding: const EdgeInsets.symmetric(horizontal: 10.0),
                                                     child: CircleAvatar(
                                                         backgroundImage: const NetworkImage('assets/user.png'),
-                                                        foregroundImage: NetworkImage('http://${viewObjectPage['foreman_id']['photo']},'))),
+                                                        foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['foreman_id']['photo']}'))),
                                                 viewObjectPage['foreman_id'] == null ? const Expanded(child: Text('')) :
                                                 Expanded(
                                                     child: Text('${viewObjectPage['foreman_id']['name']}',
@@ -541,7 +541,7 @@ class _ViewSelectedObjectForemanState extends State<ViewSelectedObjectForeman> {
                                                     child:
                                                     CircleAvatar(
                                                         backgroundImage: const NetworkImage('assets/user.png'),
-                                                        foregroundImage: NetworkImage('http://${viewObjectPage['mechanic_id']['photo']}'))),
+                                                        foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['mechanic_id']['photo']}'))),
                                                 viewObjectPage['mechanic_id'] == null ? const Expanded(child: Text('')) :
                                                 Expanded(
                                                   child: Text('${viewObjectPage['mechanic_id']['name']}',
