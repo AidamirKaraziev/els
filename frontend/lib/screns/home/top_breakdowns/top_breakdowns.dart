@@ -5,8 +5,10 @@ import '../../../helper/calendar/month_picker.dart';
 import '../../../helper/class_colors.dart';
 import '../../responsive_screens/responsive.dart';
 import 'bloc/breakdowns_bloc.dart';
+import 'breakdowns_details_screen.dart';
 import 'models/breakdowns_report.dart';
 import 'widgets/breakdown_row.dart';
+import 'widgets/object_orders_sheet.dart';
 import 'widgets/severity_chips.dart';
 
 /// Топ поломок ============================================
@@ -16,14 +18,7 @@ import 'widgets/severity_chips.dart';
 /// Теперь карточка ходит в `GET /api/v1/statistics/breakdowns` за выбранный
 /// месяц и умеет показывать загрузку, ошибку и пустой месяц.
 class TopBreakdowns extends StatelessWidget {
-  const TopBreakdowns({Key? key, this.onShowAll, this.onObjectTap})
-      : super(key: key);
-
-  /// Переход на экран подробностей. Появится вместе с самим экраном.
-  final VoidCallback? onShowAll;
-
-  /// Переход к заявкам объекта за выбранный месяц.
-  final void Function(BreakdownObject item, DateTime month)? onObjectTap;
+  const TopBreakdowns({Key? key}) : super(key: key);
 
   /// Сколько строк помещается в карточку на главной.
   static const int rowsOnHome = 5;
@@ -33,20 +28,35 @@ class TopBreakdowns extends StatelessWidget {
     return BlocProvider<BreakdownsBloc>(
       create: (_) => BreakdownsBloc()
         ..add(BreakdownsRequested(month: DateTime.now(), limit: rowsOnHome)),
-      child: _TopBreakdownsView(
-        onShowAll: onShowAll,
-        onObjectTap: onObjectTap,
-      ),
+      child: const _TopBreakdownsView(),
     );
   }
 }
 
 class _TopBreakdownsView extends StatelessWidget {
-  const _TopBreakdownsView({Key? key, this.onShowAll, this.onObjectTap})
-      : super(key: key);
+  const _TopBreakdownsView({Key? key}) : super(key: key);
 
-  final VoidCallback? onShowAll;
-  final void Function(BreakdownObject item, DateTime month)? onObjectTap;
+  /// Открыть экран подробностей за тот же месяц, что показан в карточке.
+  ///
+  /// `Navigator.push`, а не подмена `IntTest.indexScreens`: это ветка вглубь
+  /// от главной, а не пункт меню. Возврат кнопкой «назад», состояние главной
+  /// при этом сохраняется.
+  void _openDetails(BuildContext context, DateTime month) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => BreakdownsDetailsScreen(month: month),
+      ),
+    );
+  }
+
+  void _openOrders(BuildContext context, BreakdownObject item, DateTime month) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ObjectOrdersSheet(item: item, month: month),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,8 +85,9 @@ class _TopBreakdownsView extends StatelessWidget {
           ),
           state: state,
           showMechanic: showMechanic,
-          onShowAll: onShowAll,
-          onObjectTap: onObjectTap,
+          onShowAll: () => _openDetails(context, month),
+          onObjectTap: (BreakdownObject item, DateTime value) =>
+              _openOrders(context, item, value),
           month: month,
         );
 
@@ -324,34 +335,39 @@ class _Report extends StatelessWidget {
 
         if (bounded) Expanded(child: list) else list,
 
-        /// «Показано 5 из 23»
-        if (report.hiddenObjects > 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: Text(
-                    'Показано ${report.items.length} из ${report.objectsAffected}',
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12.0,
-                      color: ColorApp.myColorGrayText,
-                    ),
+        /// «Показано 5 из 23» и переход на подробности.
+        ///
+        /// Кнопка есть всегда, а не только когда объекты не поместились:
+        /// на экране подробностей живут фильтры, сортировка, время реакции
+        /// и сравнение с прошлым месяцем — этого в карточке нет никогда.
+        Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Text(
+                  report.hiddenObjects > 0
+                      ? 'Показано ${report.items.length} из ${report.objectsAffected}'
+                      : 'Объектов с поломками: ${report.objectsAffected}',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12.0,
+                    color: ColorApp.myColorGrayText,
                   ),
                 ),
-                if (onShowAll != null)
-                  TextButton(
-                    onPressed: onShowAll,
-                    child: const Text(
-                      'Подробнее',
-                      style: TextStyle(color: ColorApp.myColorGreenAuth),
-                    ),
+              ),
+              if (onShowAll != null)
+                TextButton(
+                  onPressed: onShowAll,
+                  child: const Text(
+                    'Подробнее',
+                    style: TextStyle(color: ColorApp.myColorGreenAuth),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
+        ),
       ],
     );
   }

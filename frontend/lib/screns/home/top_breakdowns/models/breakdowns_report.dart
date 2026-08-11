@@ -187,10 +187,79 @@ class BreakdownsReport {
   }
 }
 
+/// Элемент справочника для фильтров: участок или организация.
+class NamedRef {
+  const NamedRef({required this.id, required this.title});
+
+  final int id;
+  final String title;
+
+  static List<NamedRef> listFrom(dynamic data, List<String> titleKeys) {
+    final List<NamedRef> result = <NamedRef>[];
+    for (final Map<String, dynamic> row in _asList(data)) {
+      final int? id = _asInt(row['id']);
+      if (id == null) continue;
+      String? title;
+      for (final String key in titleKeys) {
+        title ??= _blankToNull(_asString(row[key]));
+      }
+      result.add(NamedRef(id: id, title: title ?? '№$id'));
+    }
+    return result;
+  }
+}
+
+/// Заявка в разборе по объекту — то, что открывается кликом по строке.
+class BreakdownOrder {
+  const BreakdownOrder({
+    required this.id,
+    required this.taskText,
+    required this.categoryName,
+    required this.categoryCode,
+    required this.statusName,
+    required this.createdAt,
+    required this.executor,
+  });
+
+  final int id;
+  final String? taskText;
+  final String? categoryName;
+  final String? categoryCode;
+  final String? statusName;
+  final DateTime? createdAt;
+  final String? executor;
+
+  factory BreakdownOrder.fromJson(Map<String, dynamic> json) {
+    // Вложенные справочники приходят объектами, а не идентификаторами:
+    // `fault_category_id` — это {id, name, code}, а не число.
+    final Map<String, dynamic> category = _asMap(json['fault_category_id']);
+    final Map<String, dynamic> status = _asMap(json['status_id']);
+    final Map<String, dynamic> executor = _asMap(json['executor_id']);
+
+    return BreakdownOrder(
+      id: _asInt(json['id']) ?? 0,
+      taskText: _blankToNull(_asString(json['task_text'])),
+      categoryName: _blankToNull(_asString(category['name'])),
+      categoryCode: _blankToNull(_asString(category['code'])),
+      statusName: _blankToNull(_asString(status['name'])),
+      // Бэкенд отдаёт метки времени в секундах (`utils/time_stamp.py`),
+      // а Dart ждёт миллисекунды.
+      createdAt: _asSecondsTimestamp(json['created_at']),
+      executor: _blankToNull(_asString(executor['name'])),
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Разбор JSON. Бэкенд типы соблюдает, но пустой отчёт, null в необязательных
 // полях и int вместо double от json_decode — штатные случаи, а не аварии.
 // ---------------------------------------------------------------------------
+
+DateTime? _asSecondsTimestamp(dynamic value) {
+  final int? seconds = _asInt(value);
+  if (seconds == null) return null;
+  return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+}
 
 int? _asInt(dynamic value) {
   if (value is int) return value;

@@ -28,6 +28,14 @@ class BreakdownsBloc extends Bloc<BreakdownsEvent, BreakdownsState> {
   /// выбор человека.
   DateTime? _lastMonth;
 
+  /// Номер последнего запроса.
+  ///
+  /// Отсекает ответы, которые уже никому не нужны: человек переключил месяц
+  /// или фильтр, а старый ответ пришёл после нового и перезаписал бы его.
+  /// Сравнивать по месяцу здесь мало — на экране подробностей меняются ещё
+  /// участок и клиент, а месяц при этом остаётся прежним.
+  int _requestId = 0;
+
   DateTime get month => _lastMonth ?? DateTime.now();
 
   Future<void> _onRequested(
@@ -35,6 +43,7 @@ class BreakdownsBloc extends Bloc<BreakdownsEvent, BreakdownsState> {
     Emitter<BreakdownsState> emit,
   ) async {
     _lastMonth = event.month;
+    final int requestId = ++_requestId;
     emit(BreakdownsLoading(month: event.month));
 
     try {
@@ -42,15 +51,16 @@ class BreakdownsBloc extends Bloc<BreakdownsEvent, BreakdownsState> {
         year: event.month.year,
         month: event.month.month,
         limit: event.limit,
+        divisionId: event.divisionId,
+        organizationId: event.organizationId,
+        withPrevious: event.withPrevious,
       );
 
-      // Пока ждали ответ, человек мог переключить месяц. Показывать данные
-      // за апрель под заголовком «Май» нельзя.
-      if (_lastMonth != event.month) return;
+      if (requestId != _requestId) return;
 
       emit(BreakdownsLoaded(month: event.month, report: report));
     } on BreakdownsException catch (error) {
-      if (_lastMonth != event.month) return;
+      if (requestId != _requestId) return;
       emit(BreakdownsFailure(month: event.month, message: error.message));
     }
   }

@@ -86,4 +86,79 @@ class BreakdownsRepository {
       throw const BreakdownsException('Не удалось прочитать ответ сервера');
     }
   }
+
+  /// Заявки одного объекта за месяц — то, что открывается кликом по строке.
+  ///
+  /// `only_breakdowns` обязателен: без него список покажет ещё и плановые ТО,
+  /// и длина не сойдётся со счётчиком в строке. Человек решит, что виджет врёт.
+  Future<List<BreakdownOrder>> fetchObjectOrders({
+    required int objectId,
+    required int year,
+    required int month,
+  }) async {
+    final dynamic data = await _get(
+      '/order/all',
+      <String, String>{
+        'object_id': '$objectId',
+        'year': '$year',
+        'month': '$month',
+        'only_breakdowns': 'true',
+        'page': '1',
+      },
+    );
+    if (data is! List) return const <BreakdownOrder>[];
+    return data
+        .whereType<Map>()
+        .map((Map row) => BreakdownOrder.fromJson(row.cast<String, dynamic>()))
+        .toList(growable: false);
+  }
+
+  /// Справочник участков для фильтра.
+  Future<List<NamedRef>> fetchDivisions() async {
+    return NamedRef.listFrom(
+      await _get('/divisions/', <String, String>{'page': '1'}),
+      <String>['title', 'name'],
+    );
+  }
+
+  /// Справочник организаций (клиентов) для фильтра.
+  Future<List<NamedRef>> fetchOrganizations() async {
+    return NamedRef.listFrom(
+      await _get('/all-organization/', <String, String>{'page': '1'}),
+      <String>['title', 'name'],
+    );
+  }
+
+  /// Общая часть GET-запроса: заголовки, таймаут, разбор конверта ответа.
+  Future<dynamic> _get(String path, Map<String, String> query) async {
+    final Uri uri =
+        Uri.parse('${ApiConfig.base}$path').replace(queryParameters: query);
+
+    http.Response response;
+    try {
+      response = await http.get(
+        uri,
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${IntTest.token}',
+        },
+      ).timeout(timeout);
+    } catch (_) {
+      throw const BreakdownsException('Не удалось связаться с сервером');
+    }
+
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      throw const BreakdownsException('Недостаточно прав или истёк вход');
+    }
+    if (response.statusCode != 200) {
+      throw BreakdownsException('Сервер ответил ошибкой ${response.statusCode}');
+    }
+
+    try {
+      final dynamic decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      return decoded is Map ? decoded['data'] : null;
+    } catch (_) {
+      throw const BreakdownsException('Не удалось прочитать ответ сервера');
+    }
+  }
 }
