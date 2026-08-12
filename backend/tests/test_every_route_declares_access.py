@@ -24,9 +24,6 @@ PUBLIC = {
     # «Забыли пароль»: человек как раз не может войти.
     ("POST", "/api/v1/auth/password/reset-request"),
     ("POST", "/api/v1/auth/password/reset-confirm"),
-    # Файлы. Закрываются на этапе 6 вместе с проверкой доступа к объекту и
-    # одноразовыми ссылками — до тех пор фронт грузит по ним фото.
-    ("GET", "/api/v1/static/{filename:path}"),
     # Служебное, добавляется самим FastAPI.
     ("GET", "/api/v1/openapi.json"),
     ("GET", "/docs"),
@@ -57,7 +54,10 @@ def _declares_access(route) -> bool:
     while stack:
         dependency = stack.pop()
         call = dependency.call
-        if call is deps.get_current_user:
+        if call in (deps.get_current_user, deps.get_link_requester):
+            # `get_link_requester` — тот же вход, но умеющий ещё и
+            # короткоживущий токен в адресе: заголовок нельзя послать ни из
+            # `<img src>`, ни при переходе по ссылке на скачивание.
             return True
         if id(call) in seen:
             continue

@@ -5,7 +5,7 @@
 
 from typing import Generator, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,7 @@ from src.core.permissions import Permission, permissions_for
 from src.core.security import (
     InvalidTokenError,
     decode_access_token,
+    decode_file_token,
     token_matches_password,
 )
 from src.crud.users.crud_universal_user import crud_universal_users
@@ -134,6 +135,70 @@ def get_write_scope(
     current_user: UniversalUser = Depends(get_current_user),
 ) -> AccessScope:
     return write_scope(current_user)
+
+
+def get_link_requester(
+    request: Request,
+    token: Optional[str] = Query(
+        None,
+        title="Короткоживущий токен на этот файл",
+        description=(
+            "Альтернатива заголовку `Authorization` для случаев, когда его "
+            "отправить нельзя: `<img src>` и переход по ссылке на скачивание. "
+            "Выдаётся ручкой `POST /api/v1/files/link`."
+        ),
+    ),
+    db: Session = Depends(get_db),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+) -> UniversalUser:
+    """Пользователь по заголовку либо по короткоживущему токену в адресе.
+
+    Ставится на ручки, которые нужно уметь открыть в новой вкладке: отдача
+    загруженного файла и выгрузка отчёта в PDF.
+
+    Заголовок — основной путь, он же единственный безопасный. Токен в адресе
+    существует потому, что браузер физически не может послать заголовок при
+    загрузке картинки или переходе по ссылке; он привязан к одному пути и
+    живёт минуту (`core.security.create_file_token`).
+
+    Порядок важен: сначала заголовок. Иначе запрос с обоими способами сразу
+    проверялся бы по более слабому.
+    """
+    if credentials is not None:
+        return get_current_user(db=db, credentials=credentials)
+
+    invalid = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Не удалось проверить токен доступа",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if not token:
+        raise invalid
+
+    # Путь берём из самого запроса: токен выдан на конкретный адрес, и
+    # сверять его надо с тем, что человек запрашивает сейчас, иначе одна
+    # ссылка открывала бы любой файл.
+    try:
+        payload = decode_file_token(token, path=request.url.path)
+    except InvalidTokenError:
+        raise invalid from None
+
+    user = crud_universal_users.get(db, id=int(payload["sub"]))
+    if user is None or user.is_active is False:
+        raise invalid
+    return user
+
+
+def get_link_scope(
+    current_user: UniversalUser = Depends(get_link_requester),
+) -> AccessScope:
+    """Область видимости для запроса по ссылке с токеном.
+
+    Отдельная от `get_read_scope` только источником пользователя: тот берёт
+    его из заголовка, а к файлу можно прийти и с токеном в адресе. Правила
+    области дальше те же самые.
+    """
+    return read_scope(current_user)
 
 
 def forbid_out_of_scope(detail: str = "Нет доступа к этой записи") -> HTTPException:

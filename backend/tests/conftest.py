@@ -218,7 +218,12 @@ def as_role(app, db_session):
         db_session.add(user)
         db_session.flush()
         app.dependency_overrides[deps.get_current_user] = lambda: user
+        # Ручки, которые можно открыть по ссылке с токеном (отдача файла,
+        # выгрузка PDF), опознают человека своей зависимостью — подменяем и её,
+        # иначе такие ручки отвечали бы 401 в обход подмены.
+        app.dependency_overrides[deps.get_link_requester] = lambda: user
         return user
 
     yield _login
     app.dependency_overrides.pop(deps.get_current_user, None)
+    app.dependency_overrides.pop(deps.get_link_requester, None)

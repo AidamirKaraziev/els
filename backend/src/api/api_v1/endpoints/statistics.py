@@ -8,11 +8,11 @@ import logging
 from io import BytesIO
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
 from src.api import deps
-from src.core.permissions import Permission
+from src.core.permissions import Permission, permissions_for
 from src.core.response import SingleEntityResponse
 from src.crud.crud_statistics import crud_statistics, month_period, previous_month
 from src.getters.statistics import get_breakdowns_report
@@ -88,21 +88,33 @@ def get_breakdowns_statistics(
         "Тот же отчёт, что и `/statistics/breakdowns`, но файлом.\n\n"
         "Выгружаются все объекты периода, а не первая страница: отчёт печатают "
         "и отправляют заказчику целиком. Сравнение с прошлым месяцем включено "
-        "всегда — в бумажном отчёте колонка динамики самая ценная."
+        "всегда — в бумажном отчёте колонка динамики самая ценная.\n\n"
+        "Принимает и заголовок `Authorization`, и короткоживущий `?token=` из "
+        "`POST /api/v1/files/export-link` — по нему кнопку «Скачать» можно "
+        "сделать обычной ссылкой в новой вкладке."
     ),
     response_class=StreamingResponse,
     tags=["Статистика"],
 )
 def export_breakdowns_statistics(
     session=Depends(deps.get_db),
-    current_user=Depends(deps.require(Permission.STATISTICS_READ)),
+    # Не `require(...)`, а `get_link_requester`: файл открывают в новой
+    # вкладке, где заголовок `Authorization` не отправить. Право проверяется
+    # ниже вручную — зависимость умеет только опознать человека.
+    current_user=Depends(deps.get_link_requester),
     year: int = Query(..., ge=1990, le=2100, title="Год отчёта"),
     month: int = Query(..., ge=1, le=12, title="Месяц отчёта (1–12)"),
     division_id: int = Query(None, title="Только объекты этого участка"),
     organization_id: int = Query(None, title="Только объекты этой организации"),
     company_id: int = Query(None, title="Только объекты этой компании"),
-    scope=Depends(deps.get_read_scope),
+    scope=Depends(deps.get_link_scope),
 ):
+    if Permission.STATISTICS_READ not in permissions_for(current_user.role_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав для этого действия",
+        )
+
     report = _collect_report(
         session=session,
         scope=scope,

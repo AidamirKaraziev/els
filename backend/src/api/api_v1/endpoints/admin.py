@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
 from fastapi.params import Path
 
 from src.api import deps
+from src.core.files import parse_owner, resolve_static_path
 from src.core.permissions import Permission
 from src.core.response import SingleEntityResponse
 from src.core.roles import ADMIN, CLIENT_ID, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
@@ -23,6 +24,7 @@ from src.schemas.universal_user import (
     UniversalUserGet,
     UniversalUserUpdate,
 )
+from src.services.file_access import can_download
 from src.templates_raise import get_raise
 
 PATH_MODEL = "universal_user"
@@ -41,17 +43,50 @@ router = APIRouter()
 
 
 @router.get(
-    "/static/{filename:path}", name="Получить статический файл", tags=["Инструменты"]
+    "/static/{filename:path}",
+    name="Получить загруженный файл",
+    description=(
+        "Фото заявок, сканы, акты и PDF.\n\n"
+        "Требует токена: либо заголовок `Authorization`, либо короткоживущий "
+        "`?token=` из `POST /api/v1/files/link` — его можно открыть в новой "
+        "вкладке и подставить в `<img src>`.\n\n"
+        "Файл наследует доступ от своей записи: фото заявки видит тот, кто "
+        "видит заявку. Чужой файл отвечает `403`."
+    ),
+    tags=["Инструменты"],
 )
-async def get_site(filename):
-    filename = "static/" + filename
-    if not isfile(filename):
+def get_static_file(
+    filename: str = Path(..., title="Путь к файлу внутри static"),
+    session=Depends(deps.get_db),
+    current_user=Depends(deps.get_link_requester),
+    scope=Depends(deps.get_link_scope),
+):
+    # Склейка через `resolve_static_path`, а не `"static/" + filename`: путь
+    # приходит как `{filename:path}`, то есть вместе со слэшами, и раньше
+    # `../.env` уводил чтение за пределы каталога с загрузками.
+    resolved = resolve_static_path(filename)
+    if resolved is None or not isfile(resolved.path):
         return Response(status_code=404)
 
-    with open(filename, "rb") as f:
+    # Владелец берётся из раскрытого пути, а не из присланной строки: иначе
+    # `objects/1/act_pto/../../../.env` проверялся бы как файл объекта №1.
+    if not can_download(
+        db=session,
+        owner=parse_owner(resolved.relative),
+        user=current_user,
+        scope=scope,
+    ):
+        raise InaccessibleEntity(
+            message="Нет доступа к этому файлу",
+            num=136,
+            description="Файл относится к записи, которая вам не видна",
+            path="$.path",
+        )
+
+    with open(resolved.path, "rb") as f:
         content = f.read()
 
-    content_type, _ = guess_type(filename)
+    content_type, _ = guess_type(str(resolved.path))
     return Response(content, media_type=content_type)
 
 

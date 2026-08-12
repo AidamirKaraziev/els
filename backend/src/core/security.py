@@ -28,6 +28,7 @@ ALGORITHM = "HS256"
 
 ACCESS_TOKEN_TYPE = "access"
 PASSWORD_RESET_TOKEN_TYPE = "password_reset"
+FILE_TOKEN_TYPE = "file"
 
 # Столько байт случайности в refresh-токене. 48 байт — 64 символа в
 # url-safe base64, перебору не поддаётся.
@@ -196,6 +197,60 @@ def decode_password_reset_token(token: str) -> dict:
         raise InvalidTokenError("Ожидался токен сброса пароля")
     if payload.get("sub") is None:
         raise InvalidTokenError("В токене нет идентификатора пользователя")
+    return payload
+
+
+# --- токен на скачивание файла --------------------------------------------
+
+
+def create_file_token(user_id: int, path: str) -> str:
+    """Токен для ссылки, которую можно открыть в новой вкладке.
+
+    `path` — полный путь запроса (`/api/v1/static/objects/12/...` или
+    `/api/v1/statistics/breakdowns/export`), а не только имя файла: тогда одна
+    и та же ссылка работает и для загруженных файлов, и для собираемых на
+    лету выгрузок.
+
+    Нужен потому, что заголовок `Authorization` браузер отправить не может ни
+    в `<img src>`, ни при переходе по ссылке на скачивание. Токен кладётся в
+    адрес — со всеми вытекающими: он попадёт в журнал доступа nginx, в историю
+    браузера и в `Referer`. Отсюда два ограничения.
+
+    **Он привязан к одному пути.** Утёкшая ссылка открывает ровно этот файл,
+    а не всю систему: боевым токеном доступа она не является и другие ручки ей
+    не открыть.
+
+    **Он живёт секунды.** К моменту, когда журнал кто-то прочитает, токен уже
+    мёртв. Строго одноразовым его не делаем: одноразовость требует состояния
+    на сервере (таблица использованных токенов плюс её чистка), а против
+    журнала помогает ровно так же, как короткий срок.
+    """
+    now = datetime.utcnow()
+    payload = {
+        "sub": str(user_id),
+        "type": FILE_TOKEN_TYPE,
+        "path": path,
+        "iat": now,
+        "exp": now + timedelta(seconds=settings.FILE_TOKEN_EXPIRE_SECONDS),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_file_token(token: str, path: str) -> dict:
+    """Разбирает токен и сверяет, что он выдан **на этот** путь запроса."""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError as exc:
+        raise InvalidTokenError(str(exc)) from exc
+
+    if payload.get("type") != FILE_TOKEN_TYPE:
+        # Иначе боевым токеном доступа можно было бы ходить по адресам с
+        # `?token=`, то есть светить его в журналах и в истории браузера.
+        raise InvalidTokenError("Ожидался токен на скачивание файла")
+    if payload.get("sub") is None:
+        raise InvalidTokenError("В токене нет идентификатора пользователя")
+    if payload.get("path") != path:
+        raise InvalidTokenError("Токен выдан на другой файл")
     return payload
 
 

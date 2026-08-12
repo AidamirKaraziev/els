@@ -63,7 +63,7 @@ def _declares_scope(route) -> bool:
     while stack:
         dependency = stack.pop()
         call = dependency.call
-        if call in (deps.get_read_scope, deps.get_write_scope):
+        if call in (deps.get_read_scope, deps.get_write_scope, deps.get_link_scope):
             return True
         if id(call) in seen:
             continue

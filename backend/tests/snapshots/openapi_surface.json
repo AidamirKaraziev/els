@@ -639,6 +639,18 @@
     ],
     "required_params": []
   },
+  "POST /api/v1/files/export-link": {
+    "required_body": [
+      "export"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/files/link": {
+    "required_body": [
+      "path"
+    ],
+    "required_params": []
+  },
   "POST /api/v1/locations/": {
     "required_body": [
       "name"
