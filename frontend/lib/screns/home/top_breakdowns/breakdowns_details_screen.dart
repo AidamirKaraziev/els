@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -6,6 +8,7 @@ import '../../../helper/class_colors.dart';
 import 'bloc/breakdowns_bloc.dart';
 import 'models/breakdowns_report.dart';
 import 'repository/breakdowns_repository.dart';
+import 'widgets/export_report_button.dart';
 import 'widgets/object_orders_sheet.dart';
 import 'widgets/severity_chips.dart';
 
@@ -354,7 +357,7 @@ class _Dropdown extends StatelessWidget {
   }
 }
 
-class _Table extends StatelessWidget {
+class _Table extends StatefulWidget {
   const _Table({
     Key? key,
     required this.report,
@@ -372,78 +375,151 @@ class _Table extends StatelessWidget {
   final ValueChanged<_SortColumn> onSort;
   final ValueChanged<BreakdownObject> onTap;
 
+  /// Ниже этой ширины десять колонок превращаются в кашу из переносов.
+  /// Уже — таблица едет вбок, шире — растягивается на всю карточку.
+  static const double minWidth = 1000.0;
+
+  @override
+  State<_Table> createState() => _TableState();
+}
+
+class _TableState extends State<_Table> {
+  /// Свой контроллер нужен полосе прокрутки: без него `Scrollbar` не знает,
+  /// за каким списком следить, и на вебе колонки справа просто обрезаются
+  /// без единого намёка, что таблицу можно сдвинуть.
+  final ScrollController _horizontal = ScrollController();
+
+  @override
+  void dispose() {
+    _horizontal.dispose();
+    super.dispose();
+  }
+
+  BreakdownsReport get report => widget.report;
+
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(20.0),
       children: [
-        /// Свод и итог
-        Wrap(
-          spacing: 16.0,
-          runSpacing: 8.0,
-          crossAxisAlignment: WrapCrossAlignment.center,
+        /// Свод, итог и выгрузка
+        Row(
           children: [
-            Text(
-              'Поломок ${report.totalBreakdowns} на ${report.objectsAffected} объектах',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            Expanded(
+              child: Wrap(
+                spacing: 16.0,
+                runSpacing: 8.0,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Поломок ${report.totalBreakdowns} на ${report.objectsAffected} объектах',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  SeverityChips(items: report.severitySummary),
+                ],
+              ),
             ),
-            SeverityChips(items: report.severitySummary),
+            const SizedBox(width: 12.0),
+            const ExportReportButton(),
           ],
         ),
         const SizedBox(height: 16.0),
 
-        /// Горизонтальная прокрутка: колонок много, на планшете и телефоне
-        /// они не помещаются. Пусть таблица едет вбок, а не сжимается в кашу.
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 1000.0),
-            child: DataTable(
-              headingRowColor: MaterialStateProperty.all(Colors.white),
-              sortColumnIndex: _sortIndex,
-              sortAscending: !descending,
-              columns: [
-                DataColumn(
-                  label: const Text('Объект'),
-                  onSort: (_, __) => onSort(_SortColumn.object),
+        /// Таблица карточкой, как виджеты на главной: до этого она лежала
+        /// белыми строками прямо на сером фоне и выглядела недоделанной.
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15.0),
+            boxShadow: const [
+              BoxShadow(color: ColorApp.myColorGrayBorder, blurRadius: 6.0),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              /// Горизонтальная прокрутка: колонок много, на планшете и
+              /// телефоне они не помещаются. Пусть таблица едет вбок, а не
+              /// сжимается в кашу. На широком мониторе, наоборот, тянем её на
+              /// всю ширину — иначе справа остаётся пустая полоса в треть
+              /// экрана.
+              final double width =
+                  math.max(_Table.minWidth, constraints.maxWidth);
+
+              return Scrollbar(
+                controller: _horizontal,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _horizontal,
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: width),
+                    // Полоса прокрутки лежит поверх содержимого, и без этого
+                    // отступа она перечёркивает последнюю строку таблицы.
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: _dataTable(context),
+                    ),
+                  ),
                 ),
-                const DataColumn(label: Text('Адрес')),
-                DataColumn(
-                  label: const Text('Клиент'),
-                  onSort: (_, __) => onSort(_SortColumn.client),
-                ),
-                const DataColumn(label: Text('Участок')),
-                const DataColumn(label: Text('Модель')),
-                const DataColumn(label: Text('Механик')),
-                DataColumn(
-                  label: const Text('Поломок'),
-                  numeric: true,
-                  onSort: (_, __) => onSort(_SortColumn.count),
-                ),
-                const DataColumn(label: Text('По тяжести')),
-                DataColumn(
-                  label: const Text('Реакция'),
-                  numeric: true,
-                  onSort: (_, __) => onSort(_SortColumn.reaction),
-                ),
-                DataColumn(
-                  label: const Text('К прошлому'),
-                  numeric: true,
-                  onSort: (_, __) => onSort(_SortColumn.delta),
-                ),
-              ],
-              rows: items
-                  .map((BreakdownObject item) => _row(context, item))
-                  .toList(growable: false),
-            ),
+              );
+            },
           ),
         ),
       ],
     );
   }
 
+  Widget _dataTable(BuildContext context) {
+    final List<BreakdownObject> items = widget.items;
+    final ValueChanged<_SortColumn> onSort = widget.onSort;
+
+    return DataTable(
+      headingRowColor: MaterialStateProperty.all(Colors.white),
+      // Строку выбирать нечем и незачем: клик по ней открывает заявки
+      // объекта. Без этого флага DataTable рисует слева колонку с
+      // чекбоксами, которые ничего не выделяют.
+      showCheckboxColumn: false,
+      sortColumnIndex: _sortIndex,
+      sortAscending: !widget.descending,
+      columns: [
+        DataColumn(
+          label: const Text('Объект'),
+          onSort: (_, __) => onSort(_SortColumn.object),
+        ),
+        const DataColumn(label: Text('Адрес')),
+        DataColumn(
+          label: const Text('Клиент'),
+          onSort: (_, __) => onSort(_SortColumn.client),
+        ),
+        const DataColumn(label: Text('Участок')),
+        const DataColumn(label: Text('Модель')),
+        const DataColumn(label: Text('Механик')),
+        DataColumn(
+          label: const Text('Поломок'),
+          numeric: true,
+          onSort: (_, __) => onSort(_SortColumn.count),
+        ),
+        const DataColumn(label: Text('По тяжести')),
+        DataColumn(
+          label: const Text('Реакция'),
+          numeric: true,
+          onSort: (_, __) => onSort(_SortColumn.reaction),
+        ),
+        DataColumn(
+          label: const Text('К прошлому'),
+          numeric: true,
+          onSort: (_, __) => onSort(_SortColumn.delta),
+        ),
+      ],
+      rows: items
+          .map((BreakdownObject item) => _row(context, item))
+          .toList(growable: false),
+    );
+  }
+
   int get _sortIndex {
-    switch (sort) {
+    switch (widget.sort) {
       case _SortColumn.object:
         return 0;
       case _SortColumn.client:
@@ -459,7 +535,7 @@ class _Table extends StatelessWidget {
 
   DataRow _row(BuildContext context, BreakdownObject item) {
     return DataRow(
-      onSelectChanged: (_) => onTap(item),
+      onSelectChanged: (_) => widget.onTap(item),
       cells: [
         DataCell(
           Column(
