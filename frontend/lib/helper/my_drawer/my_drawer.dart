@@ -14,6 +14,7 @@ import '../../screns/task/bloc_task/task_bloc.dart';
 import '../../screns/task/view/task_screen.dart';
 import '../button/side_menu_button.dart';
 import '../class_colors.dart';
+import '../session.dart';
 
 /// MyDrawer =====================================
 class MyDrawer extends StatefulWidget {
@@ -337,6 +338,15 @@ class _MyDrawerState extends State<MyDrawer> {
                     //       ? ColorApp.myColorGreenLine
                     //       : Colors.transparent,
                     // ),
+                    const SizedBox(height: 10.0),
+
+                    ///Выход
+                    MenuButton(
+                      myIcons: Icons.logout,
+                      title: 'Выйти',
+                      press: () => signOut(),
+                      colorButton: Colors.transparent,
+                    ),
                     const SizedBox(height: 10.0),
                   ],
                 ),

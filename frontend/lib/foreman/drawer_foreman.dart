@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../screns/home_page/home_page.dart';
 import '../helper/button/side_menu_button.dart';
 import '../helper/class_colors.dart';
+import '../helper/session.dart';
 import 'companies_foreman/companies_screen_foreman.dart';
 import 'employee_foreman/employees_screen_foreman.dart';
 import 'object_foreman/object_screen_foreman.dart';
@@ -157,6 +158,14 @@ class _DrawerForemanState extends State<DrawerForeman> {
                 colorButton: IntTest.indexScreensForeman == 5
                     ? ColorApp.myColorGreenLine
                     : Colors.transparent,
+              ),
+
+              /// Выход
+              MenuButton(
+                myIcons: Icons.logout,
+                title: 'Выйти',
+                press: () => signOut(),
+                colorButton: Colors.transparent,
               ),
             ],
           ),

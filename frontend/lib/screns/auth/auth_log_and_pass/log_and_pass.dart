@@ -1,14 +1,11 @@
 // ignore_for_file: use_build_context_synchronously
 
-import 'dart:convert';
-import 'package:els/helper/api_config.dart';
-import 'package:els/helper/splash_screen.dart';
-import 'package:email_validator/email_validator.dart';
+import 'package:els/helper/api_client.dart';
+import 'package:els/helper/session.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../../bloc/user_bloc/user_bloc.dart';
-import '../../../helper/button/my_button.dart';
 import 'package:http/http.dart' as http;
+
+import '../../../helper/button/my_button.dart';
 import '../../../helper/class_colors.dart';
 import 'auth_widget.dart';
 
@@ -17,7 +14,6 @@ import 'auth_widget.dart';
 var singleCheckBox = false;
 
 bool openPassword = true;
-
 
 class LogAndPass extends StatefulWidget {
   const LogAndPass({Key? key}) : super(key: key);
@@ -32,65 +28,95 @@ class _LogAndPassState extends State<LogAndPass> {
   TextEditingController log = TextEditingController();
   TextEditingController pass = TextEditingController();
 
+  /// Идёт ли сейчас вход. Нужен, чтобы двойное нажатие не заводило две
+  /// сессии: каждая выдаёт свою пару токенов, и вторая гасит первую.
+  bool busy = false;
+
+  /// Что показать человеку под формой. Тексты приходят от бэкенда: там они
+  /// согласованы и различают «неверный пароль» и «вход заблокирован».
+  String? errorText;
+
+  @override
+  void dispose() {
+    log.dispose();
+    pass.dispose();
+    super.dispose();
+  }
+
+  /// Вход: пара токенов, профиль, экран по роли.
+  ///
+  /// Прежняя версия слала на удалённую ручку `/cp/sign-in/` зашитые в код
+  /// `email: '1'` и `password: '1'` — введённые логин и пароль в запрос
+  /// не попадали вовсе.
+  Future<void> auth() async {
+    if (busy) return;
+
+    final String email = log.text.trim();
+    final String password = pass.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => errorText = 'Введите почту и пароль');
+      return;
+    }
+
+    setState(() {
+      busy = true;
+      errorText = null;
+    });
+
+    http.Response response;
+    try {
+      response = await Api.login(email: email, password: password);
+    } catch (_) {
+      setState(() {
+        busy = false;
+        errorText = 'Сервер недоступен. Проверьте соединение.';
+      });
+      return;
+    }
+
+    if (response.statusCode != 200) {
+      // Пять неудачных попыток блокируют вход на 15 минут, пароль короче
+      // восьми знаков не принимается — про это бэкенд пишет текстом, и
+      // показать надо именно его: иначе человек будет долбить форму
+      // правильным паролем и не поймёт, почему тот не подходит.
+      setState(() {
+        busy = false;
+        errorText = ApiError.messageOf(
+          response,
+          fallback: 'Не удалось войти. Попробуйте ещё раз.',
+        );
+      });
+      return;
+    }
+
+    // Токены уже сохранены клиентом. Дальше нужен профиль: без него неизвестна
+    // роль, а значит и экран.
+    final bool profileLoaded = await loadProfile();
+    if (!profileLoaded) {
+      await Api.logout();
+      setState(() {
+        busy = false;
+        errorText = 'Вход выполнен, но профиль не загрузился. Повторите попытку.';
+      });
+      return;
+    }
+
+    markSignedIn();
+    if (!mounted) return;
+    primeData(context);
+
+    setState(() => busy = false);
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => homeScreenForRole(idUserTest)),
+      (Route<dynamic> route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
-
-
-    bool progressTest = true;
-    funTest(){
-      print('worksssss');
-    }
-
-    // Future<void> sendOptionsRequest() async {
-    //   var client = HttpClient();
-    //   var url = Uri.parse('${ApiConfig.base}/cp/sign-in/');
-    //
-    //   var request = await client.openUrl('OPTIONS', url);
-    //   request.headers.set('Content-Type', 'application/json');
-    //   request.headers.set('Authorization', 'Bearer ${IntTest.token}');
-    //
-    //   var response = await request.close();
-    //   var responseBody = await response.transform(utf8.decoder).join();
-    //
-    //   print(response.statusCode);
-    //   print(responseBody);
-    //   print('отработала');
-    // }
-
-    /// Проверка Логин и Пароль получение токен ===========
-    auth() async {
-
-      SharedPreferences preferences = await SharedPreferences.getInstance();
-      var response = await http.post(Uri.parse('${ApiConfig.base}/cp/sign-in/'),
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
-          },
-          body: json.encode({
-            'email': '1',//log.text,
-            'password': '1',//pass.text,
-          }));
-      var ress = jsonDecode(response.body);
-      /// pr@mail.ru 1111 прораб
-      /// d@mail.ru 1111 Дипетчер
-      /// tex@plk-krd.ru 0000 Виталик прораб
-      /// owner@mail.ru 1111 собственик
-      // print(ress);
-      IntTest.token = ress['data']['token'];
-      await preferences.setString('token', ress['data']['token']);
-      // print(IntTest.token);
-      if (IntTest.token != null) {
-        UserBloc().add(UserGetEvent());
-        Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const SplashScreen()));
-        // if(idUserTest == 1) {
-        //   Navigator.of(context).push(
-        //     MaterialPageRoute(builder: (context) => const HomePage()));
-        // }
-      }
-    }
-    /// ===================================================
-
 
     return Container(
       padding: EdgeInsets.all(size.width > 550 ? 70.0 : 20.0),
@@ -132,10 +158,7 @@ class _LogAndPassState extends State<LogAndPass> {
                     labelText: 'Почта',
                     labelStyle: TextStyle(color: ColorApp.myColorGray)),
                 keyboardType: TextInputType.emailAddress,
-                validator: (email) =>
-                    email != null && !EmailValidator.validate(email)
-                        ? 'Не корректный email'
-                        : null,
+                onFieldSubmitted: (_) => auth(),
               ),
             ),
             SizedBox(height: size.height > 650 ? 16.0 : 10.0),
@@ -143,6 +166,7 @@ class _LogAndPassState extends State<LogAndPass> {
               cursorColor: ColorApp.myColorGray,
               controller: pass,
               obscureText: openPassword,
+              onFieldSubmitted: (_) => auth(),
               decoration: InputDecoration(
                   suffixIcon: IconButton(
                     onPressed: () {
@@ -165,6 +189,14 @@ class _LogAndPassState extends State<LogAndPass> {
                   labelText: 'Пароль',
                   labelStyle: const TextStyle(color: ColorApp.myColorGray)),
             ),
+            if (errorText != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12.0),
+                child: Text(
+                  errorText!,
+                  style: const TextStyle(color: ColorApp.myColorRed),
+                ),
+              ),
             SizedBox(height: size.height > 650 ? 20.0 : 10.0),
             Row(
               children: [
@@ -182,21 +214,19 @@ class _LogAndPassState extends State<LogAndPass> {
               ],
             ),
             SizedBox(height: size.height > 650 ? 30.0 : 20.0),
-            MainButtonApp(
-              textButton: 'ВОЙТИ',
-              press: () async {
-                await auth();
-                // if(userProfile[0]['role_id']['id'] == 5){
-                //   getListApplication();
-                //   Navigator.of(context).push(
-                //       MaterialPageRoute(builder: (context) => const HomePageDispatcher()));
-                // }
-                // else if (userProfile[0]['role_id']['id'] == 1){
-                //   Navigator.of(context).push(
-                //       MaterialPageRoute(builder: (context) => const HomePage()));
-                // }
-              },
-            ),
+            busy
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16.0),
+                      child: CircularProgressIndicator(
+                        color: ColorApp.myColorGreenAuth,
+                      ),
+                    ),
+                  )
+                : MainButtonApp(
+                    textButton: 'ВОЙТИ',
+                    press: auth,
+                  ),
             const SizedBox(height: 10.0),
             size.width > 380.0
                 ? Row(
@@ -217,5 +247,3 @@ class _LogAndPassState extends State<LogAndPass> {
     );
   }
 }
-
-

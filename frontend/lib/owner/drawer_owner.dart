@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../screns/home_page/home_page.dart';
 import '../helper/button/side_menu_button.dart';
 import '../helper/class_colors.dart';
+import '../helper/session.dart';
 
 /// MyDrawer собственик ========================
 
@@ -71,6 +72,14 @@ class _DrawerOwnerState extends State<DrawerOwner> {
                 colorButton: IntTest.indexScreensOwner == 4
                     ? ColorApp.myColorGreenLine
                     : Colors.transparent,
+              ),
+
+              /// Выход
+              MenuButton(
+                myIcons: Icons.logout,
+                title: 'Выйти',
+                press: () => signOut(),
+                colorButton: Colors.transparent,
               ),
             ],
           ),
