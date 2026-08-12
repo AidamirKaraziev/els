@@ -24,7 +24,7 @@ class ForemanBase(BaseModel):
     division_id: Optional[str]
     # company_id: Optional[int]  # переделать в CompanyGet
     qualification_file: Optional[str]
-    is_actual: Optional[bool]
+    is_active: Optional[bool]
 
 
 # # хз надо посмотреть для чего это, и почему не подходит ForemanUpdate
@@ -73,7 +73,7 @@ class ForemanGet(BaseModel):
     division_id: Optional[DivisionGet]
     # company_id: Optional[int]  # переделать в CompanyGet
     qualification_file: Optional[str]
-    is_actual: Optional[bool]
+    is_active: Optional[bool]
 
 
 # Загрузить фото

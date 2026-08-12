@@ -26,7 +26,7 @@ class UniversalUserBase(BaseModel):
     division_id: Optional[DivisionGet]
     qualification_file: Optional[str]
     date_of_employment: Optional[Date]
-    is_actual: Optional[bool]
+    is_active: Optional[bool]
 
 
 # хз надо посмотреть для чего это, и почему не подходит UniversalUserUpdate
@@ -62,7 +62,7 @@ class UniversalUserCreate(BaseModel):
     division_id: Optional[int]
     date_of_employment: Optional[int]
     # qualification_file: Optional[str]
-    # is_actual: Optional[bool]
+    # is_active: Optional[bool]
 
 
 # Изменение юзера
@@ -81,7 +81,7 @@ class UniversalUserUpdate(BaseModel):
     # company_id: Optional[CompanyGet]
     # division_id: Optional[int]
     date_of_employment: Optional[int]
-    # is_actual: Optional[bool]
+    # is_active: Optional[bool]
 
 
 # вывод юзера
@@ -100,7 +100,7 @@ class UniversalUserGet(BaseModel):
     company_id: Optional[CompanyGet]
     division_id: Optional[DivisionGet]
     date_of_employment: Optional[int]
-    is_actual: Optional[bool]
+    is_active: Optional[bool]
 
 
 # Загрузить фото
@@ -135,7 +135,7 @@ class EmployeeCreate(BaseModel):
     division_id: Optional[int]
     date_of_employment: Optional[int]
     # qualification_file: Optional[str]
-    # is_actual: Optional[bool]
+    # is_active: Optional[bool]
 
 
 class ClientCreate(BaseModel):
@@ -154,7 +154,7 @@ class ClientCreate(BaseModel):
 
     # division_id: Optional[int]
     # qualification_file: Optional[str]
-    # is_actual: Optional[bool]
+    # is_active: Optional[bool]
 
 
 # изменить участок
@@ -166,5 +166,5 @@ class UniversalUserCompany(BaseModel):
     company_id: int
 
 
-class UniversalUserIsActual(BaseModel):
-    is_actual: bool
+class UniversalUserIsActive(BaseModel):
+    is_active: bool

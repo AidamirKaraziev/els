@@ -2,10 +2,12 @@ from sqlalchemy import (
     Boolean,
     Column,
     Date,
+    DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
-    UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import relationship
 
@@ -21,8 +23,8 @@ class UniversalUser(Base):
     __tablename__ = "universal_users"
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    email = Column(String)
-    password = Column(String)  # hex-password
+    email = Column(String, nullable=False)
+    hashed_password = Column(String)
     contact_phone = Column(String)
     birthday = Column(Date)
     photo = Column(String)
@@ -32,20 +34,41 @@ class UniversalUser(Base):
         Integer, ForeignKey("working_specialty.id", ondelete="SET NULL")
     )
     identity_card = Column(String)
+    # Основной участок. Полный список участков — в `divisions` ниже: сотрудник
+    # может вести несколько, и проверки доступа смотрят именно туда.
     division_id = Column(Integer, ForeignKey("divisions.id", ondelete="SET NULL"))
     company_id = Column(Integer, ForeignKey("company.id", ondelete="SET NULL"))
     qualification_file = Column(String)
     date_of_employment = Column(Date)
-    is_actual = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)
+
+    # Гасит access-токены, выданные до смены пароля: сравниваем с `iat` токена.
+    password_changed_at = Column(DateTime)
+    # Защита от перебора пароля.
+    failed_login_attempts = Column(Integer, nullable=False, server_default="0")
+    locked_until = Column(DateTime)
 
     working_specialty = relationship(WorkingSpecialty)
     location = relationship(Location)
     role = relationship(Role)
     company = relationship(Company)
     division = relationship(Division)
+    divisions = relationship(
+        Division,
+        secondary="user_divisions",
+        order_by="Division.id",
+        viewonly=False,
+    )
 
     __table_args__ = (
-        UniqueConstraint("email", "is_actual", name="_email_is_actual_uc"),
+        # Уникальность по нижнему регистру, а не по строке как есть. Прежнее
+        # ограничение `(email, is_actual)` уникальности не давало вовсе: NULL в
+        # булевом поле обходил его, а два адреса, различающиеся регистром,
+        # считались разными — при этом вход искал по точному совпадению, и
+        # человек, набравший адрес строчными, просто не заходил.
+        Index(
+            "uq_universal_users_email_lower",
+            func.lower(email),
+            unique=True,
+        ),
     )
-    # acts_fact_of_mechanic = relationship('ActFactOfMechanic', back_populates='mechanic', cascade="all, delete")
-    # devices = relationship('Device', back_populates='universal_user', cascade="all, delete", passive_deletes=True)

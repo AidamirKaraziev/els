@@ -1,6 +1,10 @@
+import logging
+
 from sqlalchemy.orm import Session
 
-from src.core.security import get_password_hash
+from src.config import settings
+from src.core.roles import ADMIN
+from src.core.security import get_password_hash, validate_password_strength
 from src.crud.users import crud_universal_user
 from src.models import (
     CostType,
@@ -12,26 +16,55 @@ from src.models import (
     TypeAct,
     TypeContract,
     TypeObject,
+    UniversalUser,
 )
 from src.schemas.universal_user import UniversalUserCreate
 from src.session import get_session
 
+_log = logging.getLogger(__name__)
+
+
+_DEFAULT_SUPERUSER_EMAIL = "users@example.com"
+_DEFAULT_SUPERUSER_PASSWORD = "supersecretpassword"
+
 
 def create_super_admin() -> None:
-    for db in get_session():
-        user, code, indexes = crud_universal_user.crud_universal_users.get_user_by_id(
-            db=db, user_id=1
+    """Заводит первого администратора, если админов в базе нет вообще.
+
+    Раньше здесь создавался пользователь с email «1» и паролем «1», причём
+    условием было отсутствие записи именно с `id=1`. Аккаунт пересоздавался при
+    каждом старте приложения и открывал систему с полными правами.
+
+    Теперь данные берутся из `.env`, дефолтные значения приложение не пускает,
+    а проверка идёт по наличию хотя бы одного администратора — id тут ни при
+    чём.
+    """
+    email = settings.FIRST_SUPERUSER
+    password = settings.FIRST_SUPERUSER_PASSWORD
+
+    if email == _DEFAULT_SUPERUSER_EMAIL or password == _DEFAULT_SUPERUSER_PASSWORD:
+        raise RuntimeError(
+            "FIRST_SUPERUSER и FIRST_SUPERUSER_PASSWORD не заданы в .env. "
+            "Дефолтные значения использовать нельзя: это открытый вход в "
+            "систему с правами администратора."
         )
-        if not user:
-            hashed_password = get_password_hash("1")
+    validate_password_strength(password)
+
+    for db in get_session():
+        crud = crud_universal_user.crud_universal_users
+        has_admin = (
+            db.query(UniversalUser).filter(UniversalUser.role_id == ADMIN).first()
+            is not None
+        )
+        if not has_admin:
             user_in = UniversalUserCreate(
-                id=1,
                 name="Супер Админ",
-                email="1",
-                password=hashed_password,
-                role_id=1,
+                email=email,
+                password=get_password_hash(password),
+                role_id=ADMIN,
             )
-            crud_universal_user.crud_universal_users.create(db=db, obj_in=user_in)
+            crud.create(db=db, obj_in=user_in)
+            _log.info("Создан первый администратор: %s", email)
         db.commit()
         db.close()
 
@@ -386,7 +419,9 @@ def create_initial_data():
         create_cost_type()
     except Exception as ex:
         print(f"НЕ СОЗДАЛ В БАЗЕ ДАННЫХ ТИПЫ ЦЕН: {ex}")
-    try:
-        create_super_admin()
-    except Exception as ex:
-        print(f"НЕ СОЗДАЛ В БАЗЕ ДАННЫХ ТИПЫ ЦЕН: {ex}")
+    # Намеренно без `try`: остальные сидеры наполняют справочники и их сбой
+    # переживаем, а невозможность завести администратора — это неверная
+    # конфигурация, и узнать о ней надо при старте, а не когда никто не сможет
+    # войти. Раньше исключение отсюда глоталось, да ещё и с чужим текстом про
+    # типы цен.
+    create_super_admin()

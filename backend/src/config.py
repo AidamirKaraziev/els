@@ -1,4 +1,3 @@
-import secrets
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -24,7 +23,12 @@ class Settings(BaseSettings):
 
     API_V1_STR: str = "/api/v1"
     APP_PORT: str = "8000"
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+
+    # Обязателен, дефолта нет намеренно. Раньше здесь стоял
+    # `secrets.token_urlsafe(32)`: без переменной в `.env` ключ получался новый
+    # на каждый рестарт процесса, все токены протухали молча, а в нескольких
+    # воркерах uvicorn ключи были ещё и разные у каждого.
+    SECRET_KEY: str
 
     DB_HOST: str
     DB_PORT: int
@@ -36,9 +40,20 @@ class Settings(BaseSettings):
     def DB_URL(self):
         return f"postgresql://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
-    TOKEN_CLAIMS_EXTRA_FIELDS = ["exp", "nbf", "iat", "jti"]
-    TOKEN_CHECKS = ["nbf"]
+    # Access живёт минутами: отозвать его нечем, поэтому единственная защита —
+    # короткий срок. Долгую сессию держит refresh-токен, он лежит в базе и
+    # гасится по требованию.
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+
+    # Требований к составу пароля нет: длина защищает лучше, чем обязательная
+    # цифра, а механику вводить пароль с телефона в машинном отделении.
+    PASSWORD_MIN_LENGTH: int = 8
+
+    # Защита от перебора. Состояние — в самой таблице пользователей, Redis в
+    # проекте нет.
+    LOGIN_MAX_FAILED_ATTEMPTS: int = 5
+    LOGIN_LOCKOUT_MINUTES: int = 15
 
     SERVER_NAME: str = "default_server_name"
     SERVER_HOST: AnyHttpUrl = "http://localhost"

@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from src.config import settings
 from src.exceptions import InaccessibleEntity, UnfoundEntity, UnprocessableEntity
 
 email_already_have = -100
@@ -96,6 +97,8 @@ defective_act_not_found = -1340
 defective_act_photo_not_found = -1341
 defective_act_photo_file_is_none = -1342
 defective_act_invalid_month = -1343
+
+password_too_weak = -135
 
 
 def get_raise(code: Any):
@@ -513,6 +516,16 @@ def get_raise(code: Any):
             message="Некорректный месяц (1–12)",
             num=1343,
             description="Укажите месяц в диапазоне 1–12",
+            path="$.body",
+        )
+    if code == -135:
+        raise UnprocessableEntity(
+            message=f"Пароль короче {settings.PASSWORD_MIN_LENGTH} символов",
+            num=135,
+            description=(
+                f"Задайте пароль длиной не менее {settings.PASSWORD_MIN_LENGTH} "
+                "символов"
+            ),
             path="$.body",
         )
     if code != 0:

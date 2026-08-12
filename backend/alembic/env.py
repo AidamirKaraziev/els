@@ -14,8 +14,10 @@ fileConfig(config.config_file_name)
 
 from src.models.location import Location
 from src.models.role import Role
-from src.models.universal_user import UniversalUser
 from src.models.division import Division
+from src.models.user_division import UserDivision
+from src.models.universal_user import UniversalUser
+from src.models.refresh_session import RefreshSession
 from src.models.type_object import TypeObject
 from src.models.object import Object
 from src.models.company import Company

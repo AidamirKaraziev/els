@@ -2,15 +2,21 @@ import glob
 import os
 import shutil
 import uuid
+from datetime import datetime
 from typing import Any, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
 
 from fastapi import UploadFile
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from src.core.response import Paginator
-from src.core.security import get_password_hash, verify_password
+from src.core.security import (
+    WeakPasswordError,
+    get_password_hash,
+    validate_password_strength,
+)
 from src.crud.crud_location import crud_location
 from src.exceptions import UnfoundEntity, UnprocessableEntity
 from src.models import (
@@ -26,7 +32,6 @@ from src.schemas.client import ClientCreate
 from src.schemas.universal_user import (
     EmployeeCreate,
     UniversalUserDivision,
-    UniversalUserEntrance,
     UniversalUserUpdate,
 )
 from src.session import Base
@@ -53,31 +58,10 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def get(self, db: Session, id: Any) -> Optional[ModelType]:
         return db.query(self.model).filter(self.model.id == id).first()
 
-    def get_universal_user(self, db: Session, *, universal_user: UniversalUserEntrance):
-        getting_universal_user = (
-            db.query(UniversalUser)
-            .filter(UniversalUser.email == universal_user.email)
-            .first()
-        )
-        if getting_universal_user is None or not verify_password(
-            plain_password=universal_user.password,
-            hashed_password=getting_universal_user.password,
-        ):
-            raise UnprocessableEntity(
-                message="Неверный логин или пароль",
-                num=1,
-                description="Неверный логи или пароль",
-                path="$.body",
-            )
-        if getting_universal_user.is_actual is None:
-            raise UnprocessableEntity(
-                message="Вам отказано в доступе",
-                num=1,
-                description="Администратор ограничил вам доступ",
-                path="$.body",
-            )
-
-        return getting_universal_user
+    # Здесь был второй вход в систему, `get_universal_user`. Он никем не
+    # вызывался, но выглядел рабочим и проверял доступ так: `is_actual is None`
+    # — то есть заблокированный пользователь с `False` проходил насквозь.
+    # Вход теперь один, в `crud_universal_users.authenticate`.
 
     # def get_multi(
     #     self, db: Session, *, skip: int = 0, limit: int = 100
@@ -101,12 +85,39 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return pagination.get_page(query, page)
 
     def create(self, db: Session, obj_in: CreateSchemaType) -> ModelType:
-        obj_in_data = jsonable_encoder(obj_in)
-        db_obj = self.model(**obj_in_data)  # type: ignore
+        db_obj = self._build_user(obj_in)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
         return db_obj
+
+    def _build_user(self, obj_in: Any) -> ModelType:
+        """Собирает строку пользователя из схемы создания.
+
+        Схемы принимают поле `password`, а в таблице колонка называется
+        `hashed_password` — просто разложить схему по модели через `**` больше
+        нельзя. Заодно проставляется `password_changed_at`: по нему гасятся
+        access-токены, выданные до смены пароля.
+
+        Значение приходит **уже захешированным** — хеширует вызывающий код,
+        потому что он же проверяет пароль на длину и умеет вернуть код ошибки.
+        """
+        obj_in_data = jsonable_encoder(obj_in)
+        hashed_password = obj_in_data.pop("password", None)
+        db_obj = self.model(**obj_in_data)  # type: ignore
+        if hashed_password is not None:
+            db_obj.hashed_password = hashed_password
+            db_obj.password_changed_at = datetime.utcnow()
+        return db_obj
+
+    @staticmethod
+    def _hash_new_password(raw_password: str) -> Tuple[Optional[str], int]:
+        """Проверяет пароль на длину и хеширует. Возвращает `(хеш, код)`."""
+        try:
+            validate_password_strength(raw_password)
+        except WeakPasswordError:
+            return None, -135
+        return get_password_hash(password=raw_password), 0
 
     # КЛИЕНТЫ КОМПАНИИ
     def get_multi_client_by_company(
@@ -170,14 +181,19 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db.query(self.model).filter(self.model.name == name).first()
 
     def create_employee(self, db: Session, new_data: EmployeeCreate):
+        # Без учёта регистра: уникальный индекс в базе построен по
+        # `lower(email)`, и точное сравнение просто уронило бы вставку
+        # ошибкой базы вместо понятного ответа.
         email = (
             db.query(UniversalUser)
-            .filter(UniversalUser.email == new_data.email)
+            .filter(func.lower(UniversalUser.email) == func.lower(new_data.email))
             .first()
         )
         if email is not None:
             return None, -100, None  # have email in db
-        psw = get_password_hash(password=new_data.password)
+        psw, code = self._hash_new_password(new_data.password)
+        if code != 0:
+            return None, code, None
         new_data.password = psw
         # Проверить дату дня рождения
         if new_data.birthday is not None:
@@ -213,22 +229,26 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             if div is None:
                 return None, -104, None
 
-        obj_in_data = jsonable_encoder(new_data)
-        db_obj = self.model(**obj_in_data)  # type: ignore
+        db_obj = self._build_user(new_data)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
         return db_obj, 0, None
 
     def create_admin(self, db: Session, new_data: AdminCreate):
+        # Без учёта регистра: уникальный индекс в базе построен по
+        # `lower(email)`, и точное сравнение просто уронило бы вставку
+        # ошибкой базы вместо понятного ответа.
         email = (
             db.query(UniversalUser)
-            .filter(UniversalUser.email == new_data.email)
+            .filter(func.lower(UniversalUser.email) == func.lower(new_data.email))
             .first()
         )
         if email is not None:
             return None, -100, None  # have email in db
-        psw = get_password_hash(password=new_data.password)
+        psw, code = self._hash_new_password(new_data.password)
+        if code != 0:
+            return None, code, None
         new_data.password = psw
         # Проверить дату дня рождения
         if new_data.birthday is not None:
@@ -254,22 +274,26 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             if spec is None:
                 return None, -103, None
 
-        obj_in_data = jsonable_encoder(new_data)
-        db_obj = self.model(**obj_in_data)  # type: ignore
+        db_obj = self._build_user(new_data)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
         return db_obj, 0, None
 
     def create_client(self, db: Session, new_data: ClientCreate):
+        # Без учёта регистра: уникальный индекс в базе построен по
+        # `lower(email)`, и точное сравнение просто уронило бы вставку
+        # ошибкой базы вместо понятного ответа.
         email = (
             db.query(UniversalUser)
-            .filter(UniversalUser.email == new_data.email)
+            .filter(func.lower(UniversalUser.email) == func.lower(new_data.email))
             .first()
         )
         if email is not None:
             return None, -100, None  # have email in db
-        psw = get_password_hash(password=new_data.password)
+        psw, code = self._hash_new_password(new_data.password)
+        if code != 0:
+            return None, code, None
         new_data.password = psw
         # Проверить дату дня рождения
         if new_data.birthday is not None:
@@ -291,8 +315,7 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             if div is None:
                 return None, -106, None
 
-        obj_in_data = jsonable_encoder(new_data)
-        db_obj = self.model(**obj_in_data)  # type: ignore
+        db_obj = self._build_user(new_data)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
@@ -306,7 +329,7 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if user is None:
             return None, -105, None
         # проверка актуальный ли он
-        if user.is_actual is False:
+        if user.is_active is False:
             return None, -107, None
         return user, 0, None
 
@@ -389,15 +412,17 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return {path_type: path_for_db}
 
     def archiving(self, db: Session, *, db_obj: ModelType):
+        # Только для пользователя: у остальных сущностей поле осталось
+        # `is_actual`, переименовали лишь у `universal_users`.
         db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update(
-            {"is_actual": False}
+            {"is_active": False}
         )
         db.commit()
         return db_obj, 0, None
 
     def unzipping(self, db: Session, *, db_obj: ModelType):
         db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update(
-            {"is_actual": True}
+            {"is_active": True}
         )
         db.commit()
         return db_obj, 0, None

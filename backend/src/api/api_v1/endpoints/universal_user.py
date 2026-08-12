@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.api import deps
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
-from src.core.security import create_token_universal_user
+from src.core.security import create_access_token
 from src.crud.crud_company import crud_company
 from src.crud.crud_role import crud_role
 from src.crud.users.crud_universal_user import crud_universal_users
@@ -42,10 +42,10 @@ def entrance(
     entrance_data: UniversalUserEntrance,
     session: Session = Depends(deps.get_db),
 ):
-    db_obj = crud_universal_users.entrance_universal_user(
-        db=session, entrance_data=entrance_data
-    )
-    token = create_token_universal_user(subject=db_obj.id)
+    db_obj = crud_universal_users.authenticate(db=session, entrance_data=entrance_data)
+    # Временно: ручка уезжает в /auth/login на этапе 3, там же появится
+    # refresh-токен. Пока отдаём только access, чтобы фронт не встал.
+    token = create_access_token(user_id=db_obj.id)
     return SingleEntityResponse(data=TokenBase(token=token))
 
 

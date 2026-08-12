@@ -49,7 +49,7 @@ def _responsible_name_for_division(db: Session, division_id: int) -> Optional[st
         .filter(
             UniversalUser.division_id == division_id,
             UniversalUser.role_id == FOREMAN,
-            UniversalUser.is_actual.is_(True),
+            UniversalUser.is_active.is_(True),
         )
         .order_by(UniversalUser.id)
         .first()

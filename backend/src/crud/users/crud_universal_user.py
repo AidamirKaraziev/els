@@ -1,9 +1,12 @@
+from datetime import datetime, timedelta
 from typing import Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from src.config import settings
 from src.core.roles import ADMIN, CLIENT_ID
-from src.core.security import get_password_hash, verify_password
+from src.core.security import verify_password
 from src.crud.base_user import CRUDBaseUser
 from src.exceptions import UnprocessableEntity
 from src.models import Division, Location, UniversalUser, WorkingSpecialty
@@ -35,15 +38,11 @@ class CrudUniversalUser(
         if current_user.role_id != 1:
             return None, -2, None
         # проверка есть ли такой email in db
-        email = (
-            db.query(UniversalUser)
-            .filter(UniversalUser.email == new_data.email)
-            .first()
-        )
-        if email is not None:
+        if self.get_by_email(db=db, email=new_data.email) is not None:
             return None, -3, None  # have email in db
-        # проверять хеш пароль
-        psw = get_password_hash(password=new_data.password)
+        psw, code = self._hash_new_password(new_data.password)
+        if code != 0:
+            return None, code, None
         new_data.password = psw
 
         # Проверить дату дня рождения
@@ -74,24 +73,45 @@ class CrudUniversalUser(
         db_obj = super().create(db=db, obj_in=new_data)
         return db_obj, 0, None
 
-    def entrance_universal_user(
+    def authenticate(
         self, *, db: Session, entrance_data: UniversalUserEntrance
-    ):
-        current_user = (
-            db.query(UniversalUser)
-            .filter(UniversalUser.email == entrance_data.email)
-            .first()
+    ) -> UniversalUser:
+        """Проверяет логин и пароль. Единственный вход в систему.
+
+        Раньше здесь была ещё и вторая копия в `CRUDBaseUser`, причём с другой
+        проверкой доступа. Осталась одна.
+        """
+        user = self.get_by_email(db=db, email=entrance_data.email)
+
+        if user is not None and self._is_locked(user):
+            raise UnprocessableEntity(
+                message="Слишком много попыток входа",
+                num=1,
+                description=(
+                    "Вход временно заблокирован. Попробуйте через "
+                    f"{settings.LOGIN_LOCKOUT_MINUTES} минут."
+                ),
+                path="$.body",
+            )
+
+        password_ok = user is not None and verify_password(
+            plain_password=entrance_data.password,
+            hashed_password=user.hashed_password,
         )
-        if current_user is None or not verify_password(
-            plain_password=entrance_data.password, hashed_password=current_user.password
-        ):
+        if not password_ok:
+            if user is not None:
+                self._register_failed_attempt(db=db, user=user)
+            # Один и тот же текст на «нет такого email» и «неверный пароль»:
+            # иначе форма входа превращается в способ узнать, кто заведён
+            # в системе.
             raise UnprocessableEntity(
                 message="Неверный логин или пароль",
                 num=1,
-                description="Неверный логи или пароль",
+                description="Неверный логин или пароль",
                 path="$.body",
             )
-        if current_user.is_actual is False:
+
+        if user.is_active is False:
             raise UnprocessableEntity(
                 message="Вам отказано в доступе",
                 num=1,
@@ -99,10 +119,41 @@ class CrudUniversalUser(
                 path="$.body",
             )
 
-        return current_user
+        self._reset_failed_attempts(db=db, user=user)
+        return user
 
-    def get_by_email(self, db: Session, *, email: str):
-        return db.query(UniversalUser).filter(UniversalUser.email == email).first()
+    def _is_locked(self, user: UniversalUser) -> bool:
+        return user.locked_until is not None and user.locked_until > datetime.utcnow()
+
+    def _register_failed_attempt(self, *, db: Session, user: UniversalUser) -> None:
+        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+        if user.failed_login_attempts >= settings.LOGIN_MAX_FAILED_ATTEMPTS:
+            user.locked_until = datetime.utcnow() + timedelta(
+                minutes=settings.LOGIN_LOCKOUT_MINUTES
+            )
+            user.failed_login_attempts = 0
+        db.add(user)
+        db.commit()
+
+    def _reset_failed_attempts(self, *, db: Session, user: UniversalUser) -> None:
+        if user.failed_login_attempts or user.locked_until:
+            user.failed_login_attempts = 0
+            user.locked_until = None
+            db.add(user)
+            db.commit()
+
+    def get_by_email(self, db: Session, *, email: str) -> Optional[UniversalUser]:
+        """Ищет по email без учёта регистра.
+
+        В базе есть адреса вида `Голдобин@mail.ru` и `Zarja@rambler.ru`.
+        Поиск по точному совпадению строки означал, что человек, набравший
+        свой адрес строчными буквами, просто не мог войти.
+        """
+        return (
+            db.query(UniversalUser)
+            .filter(func.lower(UniversalUser.email) == func.lower(email))
+            .first()
+        )
 
     def get_user_by_id(self, db: Session, *, user_id: int):
         user = db.query(UniversalUser).filter(UniversalUser.id == user_id).first()

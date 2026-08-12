@@ -23,7 +23,7 @@ class ClientBase(BaseModel):
     working_specialty_id: Optional[WorkingSpecialtyGet]
     identity_card: Optional[str]
     company_id: Optional[int]
-    is_actual: Optional[bool]
+    is_active: Optional[bool]
 
 
 class ClientCreate(BaseModel):
@@ -56,4 +56,4 @@ class ClientGet(BaseModel):
     working_specialty_id: Optional[WorkingSpecialtyGet]
     identity_card: Optional[str]
     company_id: Optional[CompanyGet]
-    is_actual: Optional[bool]
+    is_active: Optional[bool]

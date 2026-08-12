@@ -66,5 +66,5 @@ def get_universal_user(
         if universal_user.division is not None
         else None,
         date_of_employment=universal_user.date_of_employment,
-        is_actual=universal_user.is_actual,
+        is_active=universal_user.is_active,
     )

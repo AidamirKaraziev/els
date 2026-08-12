@@ -41,5 +41,5 @@ def get_client(
         company_id=getting_company(company=client.company, request=request)
         if client.company is not None
         else None,
-        is_actual=client.is_actual,
+        is_active=client.is_active,
     )
