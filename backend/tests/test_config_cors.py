@@ -25,8 +25,10 @@ from src.config import Settings
         # Один домен без запятых.
         ("https://els23.ru", ["https://els23.ru"]),
         # JSON — в этой форме написаны шаблоны в backend/envs/.
-        ('["https://els23.ru","https://www.els23.ru"]',
-         ["https://els23.ru", "https://www.els23.ru"]),
+        (
+            '["https://els23.ru","https://www.els23.ru"]',
+            ["https://els23.ru", "https://www.els23.ru"],
+        ),
         ("[]", []),
         # Пустое значение: API остаётся открытым для всех, но не падает.
         ("", []),

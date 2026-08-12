@@ -24,7 +24,6 @@ from src.core.security import (
 )
 from src.exceptions import UnprocessableEntity
 
-
 # --- пароли ---------------------------------------------------------------
 
 

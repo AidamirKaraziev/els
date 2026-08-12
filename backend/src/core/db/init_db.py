@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from src.config import settings
 from src.core.roles import ADMIN
+from src.core.roles import Role as RoleEnum
 from src.core.security import get_password_hash, validate_password_strength
 from src.crud.users import crud_universal_user
 from src.models import (
@@ -70,19 +71,27 @@ def create_super_admin() -> None:
 
 
 def check_roles(db: Session):
-    check_list = [
-        Role(id=1, name="Админ"),
-        Role(id=2, name="Прораб"),
-        Role(id=3, name="Механик"),
-        Role(id=4, name="Инженер наладчик"),
-        Role(id=5, name="Диспетчер"),
-        Role(id=6, name="Клиент"),
-    ]
+    """Роли, которых в таблице ещё нет.
+
+    Раньше отбор шёл по паре `(id, name)`: стоило переименовать роль в базе, и
+    сидер считал её отсутствующей, пытался вставить строку с занятым id и
+    падал на первичном ключе — а исключение глоталось общим `except` с
+    печатью в консоль. Теперь ищем по id, имя только сверяем.
+    """
     creation_list = []
-    for obj in check_list:
-        query = db.query(Role).filter(Role.id == obj.id, Role.name == obj.name).first()
-        if query is None:
-            creation_list.append(obj)
+    for role in RoleEnum:
+        existing = db.query(Role).filter(Role.id == role.value).first()
+        if existing is None:
+            creation_list.append(Role(id=role.value, name=role.title))
+        elif existing.name != role.title:
+            # Название могли поменять осознанно — оно живёт только в интерфейсе.
+            # Права привязаны к id, поэтому просто сообщаем и не трогаем.
+            _log.info(
+                "Роль %s в базе называется «%s», в коде — «%s»",
+                role.value,
+                existing.name,
+                role.title,
+            )
     return creation_list
 
 
@@ -91,6 +100,19 @@ def create_roles():
         creation_list = check_roles(db)
         [db.add(obj) for obj in creation_list]
         db.commit()
+
+        # Роль, которой нет в перечне, не получит вообще никаких прав: её
+        # обладатели войдут в систему и увидят пустоту. Молча такое оставлять
+        # нельзя.
+        known = {role.value for role in RoleEnum}
+        unknown = [row.id for row in db.query(Role).all() if row.id not in known]
+        if unknown:
+            _log.warning(
+                "В таблице roles есть роли, которых нет в src/core/roles.py: %s. "
+                "Права для них не описаны, пользователи с такой ролью не смогут "
+                "работать.",
+                ", ".join(str(i) for i in unknown),
+            )
         db.close()
 
 

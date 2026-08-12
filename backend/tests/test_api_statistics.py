@@ -89,7 +89,9 @@ def _get(client, **params):
 class TestAccess:
     @pytest.mark.integration
     def test_requires_authentication(self, client_with_db):
-        assert _get(client_with_db).status_code == 403
+        # 401, а не 403: отсутствие токена и нехватка прав — разные
+        # ситуации, и перехватчик на фронте обновляет токен именно по 401.
+        assert _get(client_with_db).status_code == 401
 
     @pytest.mark.integration
     def test_client_role_is_rejected(self, client_with_db, as_role):
