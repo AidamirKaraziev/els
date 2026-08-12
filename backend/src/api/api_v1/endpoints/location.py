@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, Path, Query
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.crud.crud_location import crud_location
 from src.exceptions import UnfoundEntity, UnprocessableEntity
@@ -21,7 +22,9 @@ router = APIRouter()
     tags=["Мобильное приложение / Города"],
 )
 def get_data(
-    session=Depends(deps.get_db), page: int = Query(1, title="Номер страницы")
+    session=Depends(deps.get_db),
+    page: int = Query(1, title="Номер страницы"),
+    current_user=Depends(deps.require(Permission.DIRECTORY_READ)),
 ):
     logging.info(crud_location.get_multi(db=session, page=None))
 
@@ -42,7 +45,7 @@ def get_data(
 )
 def create_locations(
     new_data: LocationCreate,
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_WRITE)),
     session=Depends(deps.get_db),
 ):
     obj = crud_location.get_by_name_old(db=session, name=new_data.name)
@@ -68,7 +71,7 @@ def create_locations(
 )
 def delete_location(
     location_id: int = Path(..., title="Id проекта"),
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_READ)),
     session=Depends(deps.get_db),
 ):
     if crud_location.get(db=session, id=location_id) is None:
@@ -93,6 +96,7 @@ def update_location(
     name: LocationUpdate,
     location_id: int = Path(..., title="Id проекта"),
     session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.DIRECTORY_WRITE)),
 ):
     location, code, indexes = crud_location.update_location(
         db=session, location=name, location_id=location_id

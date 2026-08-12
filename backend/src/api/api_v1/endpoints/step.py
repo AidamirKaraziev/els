@@ -3,10 +3,10 @@ import logging
 from fastapi import APIRouter, Depends, Path, Query, Request
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, FOREMAN
 from src.crud.crud_step import crud_step
-from src.crud.users.crud_universal_user import crud_universal_users
 from src.getters.step import get_step
 from src.schemas.step import StepCreate, StepUpdate
 from src.templates_raise import get_raise
@@ -24,7 +24,7 @@ ROLES_ELIGIBLE_ADMIN_FOREMAN = [ADMIN, FOREMAN]
     tags=["Админ панель / Название Этапов"],
 )
 def get_data(
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.ACT_READ)),
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
 ):
@@ -48,13 +48,9 @@ def get_data(
 def create_steps(
     request: Request,
     new_data: StepCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_WRITE)),
     session=Depends(deps.get_db),
 ):
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE_ADMIN_FOREMAN
-    )
-    get_raise(code=code)
 
     obj, code, index = crud_step.create_steps(db=session, new_data=new_data)
     get_raise(code=code)
@@ -72,15 +68,11 @@ def create_steps(
 def update_steps(
     request: Request,
     new_data: StepUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_WRITE)),
     step_id: int = Path(..., title="Id этапа"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE_ADMIN_FOREMAN
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_step.update_steps(
         db=session, new_data=new_data, step_id=step_id
@@ -99,13 +91,9 @@ def update_steps(
 )
 def delete_step(
     step_id: int = Path(..., title="Id этапа"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.ACT_READ)),
     session=Depends(deps.get_db),
 ):
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE_ADMIN_FOREMAN
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_step.get_step(db=session, step_id=step_id)
     get_raise(code=code)

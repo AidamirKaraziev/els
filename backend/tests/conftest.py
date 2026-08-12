@@ -193,3 +193,32 @@ def client_with_db(app, db_session):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.pop(deps.get_db, None)
+
+
+@pytest.fixture
+def as_role(app, db_session):
+    """Подменяет текущего пользователя, минуя JWT: проверяем ручку, а не логин.
+
+    Подменяется `get_current_user` — от него зависит и `require(...)`, так что
+    проверка прав продолжает работать по-настоящему, а вход не нужен.
+    """
+    import uuid
+
+    from src.api import deps
+    from src.models import UniversalUser
+
+    def _login(role_id: int, **fields):
+        user = UniversalUser(
+            name=f"Тестовый {role_id}",
+            email=f"role-{uuid.uuid4().hex[:8]}@test",
+            role_id=role_id,
+            is_active=True,
+            **fields,
+        )
+        db_session.add(user)
+        db_session.flush()
+        app.dependency_overrides[deps.get_current_user] = lambda: user
+        return user
+
+    yield _login
+    app.dependency_overrides.pop(deps.get_current_user, None)

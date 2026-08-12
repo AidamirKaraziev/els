@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import SingleEntityResponse
 from src.core.roles import ADMIN, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
 from src.crud.crud_statistics import crud_statistics, month_period, previous_month
@@ -44,7 +45,7 @@ router = APIRouter()
 )
 def get_breakdowns_statistics(
     session=Depends(deps.get_db),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.STATISTICS_READ)),
     year: int = Query(..., ge=1990, le=2100, title="Год отчёта"),
     month: int = Query(..., ge=1, le=12, title="Месяц отчёта (1–12)"),
     limit: int = Query(
@@ -64,6 +65,10 @@ def get_breakdowns_statistics(
         description="Стоит денег ещё одного запроса, поэтому по умолчанию выключено.",
     ),
 ):
+    # Временно: клиента до статистики не пускаем. По договорённости он должен
+    # видеть цифры по своей компании, но фильтрация выдачи по области
+    # видимости делается этапом 5 — до тех пор ручка отдала бы ему сводку по
+    # всем компаниям сразу. Проверка снимается вместе с появлением фильтра.
     code = crud_universal_users.check_role_list(
         current_user=current_user, role_list=ALL_EMPLOYER
     )
@@ -99,13 +104,17 @@ def get_breakdowns_statistics(
 )
 def export_breakdowns_statistics(
     session=Depends(deps.get_db),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.STATISTICS_READ)),
     year: int = Query(..., ge=1990, le=2100, title="Год отчёта"),
     month: int = Query(..., ge=1, le=12, title="Месяц отчёта (1–12)"),
     division_id: int = Query(None, title="Только объекты этого участка"),
     organization_id: int = Query(None, title="Только объекты этой организации"),
     company_id: int = Query(None, title="Только объекты этой компании"),
 ):
+    # Временно: клиента до статистики не пускаем. По договорённости он должен
+    # видеть цифры по своей компании, но фильтрация выдачи по области
+    # видимости делается этапом 5 — до тех пор ручка отдала бы ему сводку по
+    # всем компаниям сразу. Проверка снимается вместе с появлением фильтра.
     code = crud_universal_users.check_role_list(
         current_user=current_user, role_list=ALL_EMPLOYER
     )

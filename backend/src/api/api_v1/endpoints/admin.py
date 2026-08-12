@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
 from fastapi.params import Path
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import SingleEntityResponse
 from src.core.roles import ADMIN, CLIENT_ID, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
 from src.crud.crud_admin import crud_admin
@@ -65,7 +66,7 @@ async def get_site(filename):
 def create_employee_person(
     request: Request,
     new_data: EmployeeCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_CREATE)),
     session=Depends(deps.get_db),
 ):
     db_obj, code, index = crud_admin.create_user_employee(
@@ -144,7 +145,7 @@ def create_employee_person(
 def create_admin_person(
     request: Request,
     new_data: AdminCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_CREATE)),
     session=Depends(deps.get_db),
 ):
     db_obj, code, index = crud_admin.create_user_admin(
@@ -219,7 +220,7 @@ def create_admin_person(
 def create_client_person(
     request: Request,
     new_data: ClientCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_CREATE)),
     session=Depends(deps.get_db),
 ):
     db_obj, code, index = crud_admin.create_user_client(
@@ -242,7 +243,7 @@ def update_dvision_for_employee(
     request: Request,
     new_data: UniversalUserDivision,
     employee_id: int = Path(..., title="Id пользователя"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_UPDATE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_admin.change_division_for_employee(
@@ -269,7 +270,7 @@ def update_dvision_for_employee(
 def archiving_users(
     request: Request,
     id_user: int = Path(..., title="Id пользователя"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_ARCHIVE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_admin.archiving_user(
@@ -295,7 +296,7 @@ def archiving_users(
 def unzipping_users(
     request: Request,
     id_user: int = Path(..., title="Id пользователя"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_ARCHIVE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_admin.unzipping_user(
@@ -322,7 +323,7 @@ def update_company_for_client(
     request: Request,
     new_data: UniversalUserCompany,
     client_id: int = Path(..., title="Id клиента"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_UPDATE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_admin.change_company_for_client(
@@ -350,7 +351,7 @@ def update_user(
     request: Request,
     new_data: UniversalUserUpdate,
     user_id: int = Path(..., title="Id пользователя"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_UPDATE)),
     session=Depends(deps.get_db),
 ):
 
@@ -380,7 +381,7 @@ def create_upload_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
     user_id: int = Path(..., title="Id пользователя"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_UPDATE)),
     session=Depends(deps.get_db),
 ):
 
@@ -421,7 +422,7 @@ def create_upload_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
     user_id: int = Path(..., title="Id пользователя"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_UPDATE)),
     session=Depends(deps.get_db),
 ):
 
@@ -462,7 +463,7 @@ def create_upload_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
     user_id: int = Path(..., title="Id пользователя"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_UPDATE)),
     session=Depends(deps.get_db),
 ):
 
@@ -501,7 +502,7 @@ def create_upload_file(
 async def delete_universal_user(
     request: Request,
     user_id: int,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_DELETE)),
     session=Depends(deps.get_db),
 ):
     response, code, indexes = crud_universal_users.delete_user_by_id(

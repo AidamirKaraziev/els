@@ -15,6 +15,7 @@ import uuid
 import pytest
 
 from src.config import settings
+from src.core.roles import Role
 from src.models import Object, Order
 
 URL = f"{settings.API_V1_STR}/order/all"
@@ -69,6 +70,15 @@ def _ids(response):
 
 
 class TestFilters:
+    @pytest.fixture(autouse=True)
+    def logged_in(self, as_role):
+        """Ручка требует прав на чтение заявок: входим админом.
+
+        Фильтры и разбор периода к правам отношения не имеют, проверяем их —
+        а не вход.
+        """
+        return as_role(Role.ADMIN)
+
     @pytest.mark.integration
     def test_by_object(self, client_with_db, make_object, make_order):
         mine = make_object()
@@ -139,6 +149,15 @@ class TestFilters:
 
 
 class TestBackwardCompatibility:
+    @pytest.fixture(autouse=True)
+    def logged_in(self, as_role):
+        """Ручка требует прав на чтение заявок: входим админом.
+
+        Фильтры и разбор периода к правам отношения не имеют, проверяем их —
+        а не вход.
+        """
+        return as_role(Role.ADMIN)
+
     @pytest.mark.integration
     def test_without_filters_returns_everything(
         self, client_with_db, make_object, make_order
@@ -152,13 +171,17 @@ class TestBackwardCompatibility:
         assert response.status_code == 200
         assert len(_ids(response)) == 2, "без фильтров ручка ничего не отсекает"
 
-    @pytest.mark.integration
-    def test_still_open_without_token(self, client_with_db):
-        """Авторизации у ручки не было и не появилось — контракт не менялся."""
-        assert client_with_db.get(URL).status_code == 200
-
 
 class TestValidation:
+    @pytest.fixture(autouse=True)
+    def logged_in(self, as_role):
+        """Ручка требует прав на чтение заявок: входим админом.
+
+        Фильтры и разбор периода к правам отношения не имеют, проверяем их —
+        а не вход.
+        """
+        return as_role(Role.ADMIN)
+
     @pytest.mark.integration
     @pytest.mark.parametrize("params", [{"year": 2026}, {"month": 5}])
     def test_year_and_month_only_together(self, client_with_db, params):
@@ -173,3 +196,14 @@ class TestValidation:
     )
     def test_invalid_period_is_rejected(self, client_with_db, params):
         assert client_with_db.get(URL, params=params).status_code == 400
+
+
+class TestAccess:
+    @pytest.mark.integration
+    def test_requires_authentication(self, client_with_db):
+        """Раньше список заявок отдавался кому угодно без токена.
+
+        Это была утечка: `/order/all` возвращает заявки по всем объектам всех
+        компаний, включая чужие.
+        """
+        assert client_with_db.get(URL).status_code == 401

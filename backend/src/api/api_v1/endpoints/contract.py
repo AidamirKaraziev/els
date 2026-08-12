@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.params import Path
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, CLIENT_ID, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
 from src.crud.crud_company import crud_company
 from src.crud.crud_contract import crud_contracts
-from src.crud.users.crud_universal_user import crud_universal_users
 from src.exceptions import UnfoundEntity
 from src.getters.contract import get_contract
 from src.schemas.contract import ContractCreate, ContractGet, ContractUpdate
@@ -39,7 +39,7 @@ router = APIRouter()
 def create_contract(
     request: Request,
     new_data: ContractCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
 
@@ -63,7 +63,7 @@ def create_contract(
 def get_contract_by_company_id(
     request: Request,
     company_id: int = Path(..., title="ID модели техники"),
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
 ):
@@ -94,7 +94,7 @@ def get_contract_by_company_id(
 def get_data(
     request: Request,
     session=Depends(deps.get_db),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
     page: int = Query(1, title="Номер страницы"),
 ):
     logging.info(crud_contracts.get_multi(db=session, page=None))
@@ -118,7 +118,7 @@ def get_data(
 def get_data(
     request: Request,
     contract_id: int = Path(..., title="ID Договора"),
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_contracts.get(db=session, id=contract_id)
@@ -137,15 +137,11 @@ def get_data(
 def update_contract(
     request: Request,
     new_data: ContractUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     contract_id: int = Path(..., title="Id договора"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLE_ADMIN
-    )
-    get_raise(code=code)
 
     contract, code, indexes = crud_contracts.update_contract(
         db=session, new_data=new_data, contract_id=contract_id
@@ -166,15 +162,11 @@ def update_contract(
 def create_upload_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     contract_id: int = Path(..., title="Id Договора"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLE_ADMIN
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_contracts.get(db=session, id=contract_id)
     get_raise(code=code)
@@ -202,7 +194,7 @@ def create_upload_file(
 def archiving_contracts(
     request: Request,
     contract_id: int = Path(..., title="Id Договора"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_contracts.archiving_contract(
@@ -227,7 +219,7 @@ def archiving_contracts(
 def unzipping_contracts(
     request: Request,
     contract_id: int = Path(..., title="Id Договора"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_contracts.unzipping_contract(

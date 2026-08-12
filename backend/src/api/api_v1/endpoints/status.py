@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, Query
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta
 from src.crud.crud_status import crud_status
 from src.getters.status import get_statuses
@@ -19,7 +20,7 @@ router = APIRouter()
     tags=["Админ панель / Статусы"],
 )
 def get_data(
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_READ)),
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
 ):

@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.params import Path
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, FOREMAN, MECHANIC
 from src.crud.crud_defective_act import crud_defective_act
-from src.crud.users.crud_universal_user import crud_universal_users
 from src.getters.defective_act import getting_defective_act
 from src.schemas.defective_act import (
     DefectiveActCreate,
@@ -37,6 +37,7 @@ def get_defective_acts(
     request: Request,
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
+    current_user=Depends(deps.require(Permission.ACT_READ)),
 ):
     logging.info(crud_defective_act.get_multi(db=session, page=None))
     data, paginator = crud_defective_act.get_multi(db=session, page=page)
@@ -58,6 +59,7 @@ def get_defective_acts_by_planned_to(
     session=Depends(deps.get_db),
     planned_to_id: int = Path(..., title="ID planned_to"),
     month: int = Query(0, ge=0, le=12, title="Месяц (1–12), 0 = без фильтра"),
+    current_user=Depends(deps.require(Permission.ACT_READ)),
 ):
     data_q, code, _ = crud_defective_act.get_by_planned_to_id(
         db=session, planned_to_id=planned_to_id, month=month
@@ -80,6 +82,7 @@ def get_defective_act_by_id(
     request: Request,
     session=Depends(deps.get_db),
     defective_act_id: int = Path(..., title="ID defective act"),
+    current_user=Depends(deps.require(Permission.ACT_READ)),
 ):
     obj, code, _ = crud_defective_act.get_defective_act_by_id(
         db=session, defective_act_id=defective_act_id
@@ -98,13 +101,9 @@ def get_defective_act_by_id(
 def create_defective_act(
     request: Request,
     new_data: DefectiveActCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.ACT_CREATE)),
     session=Depends(deps.get_db),
 ):
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_CREATE
-    )
-    get_raise(code=code)
 
     obj, code, _ = crud_defective_act.create_defective_act(
         db=session, new_data=new_data, current_user=current_user
@@ -123,14 +122,10 @@ def create_defective_act(
 def update_defective_act(
     request: Request,
     update_data: DefectiveActUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.ACT_UPDATE)),
     defective_act_id: int = Path(..., title="ID defective act"),
     session=Depends(deps.get_db),
 ):
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ADMIN_ONLY
-    )
-    get_raise(code=code)
 
     obj, code, _ = crud_defective_act.update_defective_act(
         db=session, defective_act_id=defective_act_id, update_data=update_data
@@ -149,14 +144,10 @@ def update_defective_act(
 def update_defective_act_status(
     request: Request,
     new_data: DefectiveActStatusUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.ACT_UPDATE)),
     defective_act_id: int = Path(..., title="ID defective act"),
     session=Depends(deps.get_db),
 ):
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_UPDATE_STATUS
-    )
-    get_raise(code=code)
 
     obj, code, _ = crud_defective_act.update_status(
         db=session, defective_act_id=defective_act_id, new_data=new_data
@@ -174,14 +165,10 @@ def update_defective_act_status(
 )
 def generate_defective_act_pdf(
     request: Request,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.ACT_READ)),
     defective_act_id: int = Path(..., title="ID defective act"),
     session=Depends(deps.get_db),
 ):
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ADMIN_FOREMAN
-    )
-    get_raise(code=code)
 
     obj, code, _ = crud_defective_act.generate_pdf(
         db=session, defective_act_id=defective_act_id

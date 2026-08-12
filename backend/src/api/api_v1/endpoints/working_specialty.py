@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, Path, Query
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.crud.crud_working_specialty import crud_working_specialty
 from src.exceptions import UnfoundEntity, UnprocessableEntity
@@ -21,7 +22,9 @@ router = APIRouter()
     tags=["Админ панель / Специальности"],
 )
 def get_data(
-    session=Depends(deps.get_db), page: int = Query(1, title="Номер страницы")
+    session=Depends(deps.get_db),
+    page: int = Query(1, title="Номер страницы"),
+    current_user=Depends(deps.require(Permission.DIRECTORY_READ)),
 ):
     logging.info(crud_working_specialty.get_multi(db=session, page=None))
 
@@ -43,8 +46,8 @@ def get_data(
 )
 def create_working_specialty(
     new_data: WorkingSpecialtyCreate,
-    # current_user=Depends(deps.get_current_user_by_bearer),
     session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.DIRECTORY_WRITE)),
 ):
     obj = crud_working_specialty.get_by_name_old(db=session, name=new_data.name)
     if obj is not None:
@@ -71,8 +74,8 @@ def create_working_specialty(
 )
 def delete_working_specialty(
     working_specialty_id: int = Path(..., title="Id проекта"),
-    # current_user=Depends(deps.get_current_user_by_bearer),
     session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.DIRECTORY_READ)),
 ):
     if crud_working_specialty.get(db=session, id=working_specialty_id) is None:
         raise UnfoundEntity(
@@ -97,8 +100,8 @@ def delete_working_specialty(
 def update_working_specialty(
     name: WorkingSpecialtyUpdate,
     working_specialty_id: int = Path(..., title="Id проекта"),
-    # current_user=Depends(deps.get_current_user_by_bearer),
     session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.DIRECTORY_WRITE)),
 ):
     working_specialty, code, indexes = crud_working_specialty.update_working_specialty(
         db=session, working_specialty=name, working_specialty_id=working_specialty_id

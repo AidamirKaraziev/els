@@ -4,11 +4,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Path, Query, Request, UploadFile
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, CLIENT_ID, FOREMAN
 from src.crud.crud_company import crud_company
 from src.crud.crud_contact_person import crud_contact_person
-from src.crud.users.crud_universal_user import crud_universal_users
 from src.exceptions import InaccessibleEntity, UnfoundEntity, UnprocessableEntity
 from src.getters.contact_person import get_contact_person
 from src.schemas.contact_person import (
@@ -37,7 +37,7 @@ router = APIRouter()
 def get_data(
     request: Request,
     session=Depends(deps.get_db),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
     page: int = Query(1, title="Номер страницы"),
 ):
     logging.info(crud_company.get_multi(db=session, page=None))
@@ -59,7 +59,7 @@ def get_data(
 def get_contact_person_by_company_id(
     request: Request,
     company_id: int = Path(..., title="ID модели техники"),
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
 ):
@@ -87,7 +87,7 @@ def get_contact_person_by_company_id(
 def create_contact_person(
     request: Request,
     new_data: ContactPersonCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
     contact_person, code, index = crud_contact_person.create_contact_person(
@@ -132,6 +132,7 @@ def get_data(
     request: Request,
     contact_person_id: int = Path(..., title="ID контактного лица"),
     session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
 ):
     return SingleEntityResponse(
         data=get_contact_person(
@@ -151,7 +152,7 @@ def get_data(
 def update_contact_person(
     request: Request,
     new_data: ContactPersonUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     contact_person_id: int = Path(..., title="Id"),
     session=Depends(deps.get_db),
 ):
@@ -206,19 +207,9 @@ def create_upload_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
     contact_person_id: int = Path(..., title="Id проекта"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ADMIN_FOREMAN_ROLE
-    )
-    if code == -1023:
-        raise InaccessibleEntity(
-            message="Вы не обладаете правами!",
-            num=2,
-            description="Пользователь не обладает правами!",
-            path="$.body",
-        )
     obj = crud_contact_person.get(db=session, id=contact_person_id)
 
     save_path = crud_contact_person.adding_file(
@@ -249,15 +240,11 @@ def create_upload_file(
 def create_upload_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     contact_person_id: int = Path(..., title="Id Договора"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLE_ADMIN_FOREMAN_CLIENT
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_contact_person.get(db=session, id=contact_person_id)
     get_raise(code=code)
@@ -285,7 +272,7 @@ def create_upload_file(
 def archiving_contracts(
     request: Request,
     contact_person_id: int = Path(..., title="Id Контактное лицо"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_contact_person.archiving_contact_person(
@@ -309,7 +296,7 @@ def archiving_contracts(
 def unzipping_contracts(
     request: Request,
     contact_person_id: int = Path(..., title="Id Контактное лицо"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_contact_person.unzipping_contact_person(

@@ -3,10 +3,10 @@ import logging
 from fastapi import APIRouter, Depends, Path, Query, Request
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, FOREMAN
 from src.crud.crud_reason_fault import crud_reason_fault
-from src.crud.users.crud_universal_user import crud_universal_users
 from src.getters.reason_fault import getting_reason_fault
 from src.schemas.reason_fault import ReasonFaultCreate, ReasonFaultUpdate
 from src.templates_raise import get_raise
@@ -27,6 +27,7 @@ def get_reasons_faults(
     request: Request,
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
+    current_user=Depends(deps.require(Permission.DIRECTORY_READ)),
 ):
     logging.info(crud_reason_fault.get_multi(db=session, page=None))
     data, paginator = crud_reason_fault.get_multi(db=session, page=page)
@@ -43,7 +44,11 @@ def get_reasons_faults(
     description="Вывод причины неисправности по идентификатору",
     tags=["Админ панель / Причины неисправности"],
 )
-def get_reason_fault(reason_fault_id: int, session=Depends(deps.get_db)):
+def get_reason_fault(
+    reason_fault_id: int,
+    session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.DIRECTORY_READ)),
+):
     obj, code, indexes = crud_reason_fault.get_fault_by_id(
         db=session, fault_id=reason_fault_id
     )
@@ -62,13 +67,9 @@ def get_reason_fault(reason_fault_id: int, session=Depends(deps.get_db)):
 def create_reason_fault(
     request: Request,
     new_data: ReasonFaultCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_WRITE)),
     session=Depends(deps.get_db),
 ):
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLE_ADMIN_FOREMAN
-    )
-    get_raise(code=code)
 
     db_obj, code, index = crud_reason_fault.create_new(db=session, new_data=new_data)
     get_raise(code=code)
@@ -87,14 +88,10 @@ def update_reason_fault(
     request: Request,
     new_data: ReasonFaultUpdate,
     reason_fault_id: int = Path(..., title="Id причины неисправности"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_WRITE)),
     session=Depends(deps.get_db),
 ):
     # проверку на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLE_ADMIN_FOREMAN
-    )
-    get_raise(code=code)
 
     db_obj, code, index = crud_reason_fault.update(
         db=session, new_data=new_data, obj_id=reason_fault_id

@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.params import Path
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, FOREMAN
 from src.crud.crud_object import crud_objects
 from src.crud.crud_planned_to import crud_planned_to
-from src.crud.users.crud_universal_user import crud_universal_users
 from src.getters.planned_to import get_planned_to
 from src.schemas.planned_to import (
     PlannedTOCreate,
@@ -38,6 +38,7 @@ def get_schedule_execution_stats(
     session=Depends(deps.get_db),
     year: int = Query(..., ge=2000, le=2100, title="Отчётный год"),
     month: int = Query(..., ge=1, le=12, title="Отчётный месяц (1–12)"),
+    current_user=Depends(deps.require(Permission.STATISTICS_READ)),
 ):
     data = crud_planned_to.get_schedule_execution_stats(
         db=session, year=year, month=month
@@ -56,6 +57,7 @@ def get_all_planned_to(
     request: Request,
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
+    current_user=Depends(deps.require(Permission.PLANNED_TO_READ)),
 ):
     logging.info(crud_planned_to.get_multi(db=session, page=None))
 
@@ -78,7 +80,7 @@ def get_planned_to_by_id(
     request: Request,
     session=Depends(deps.get_db),
     planned_to_id: int = Path(..., title="ID planned TO"),
-    # current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_universal_user=Depends(deps.require(Permission.PLANNED_TO_READ)),
 ):
     obj, code, indexes = crud_planned_to.get_planed_to_by_id(
         db=session, planned_to_id=planned_to_id
@@ -99,7 +101,7 @@ def get_planned_to_by_obj_id(
     session=Depends(deps.get_db),
     object_id: int = Path(..., title="ID объекта"),
     page: int = Query(1, title="Номер страницы"),
-    # current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_universal_user=Depends(deps.require(Permission.PLANNED_TO_READ)),
 ):
     cur_object, object_code, indexes = crud_objects.get_object_by_id(
         db=session, object_id=object_id
@@ -131,14 +133,10 @@ def get_planned_to_by_obj_id(
 def create_planned_to(
     request: Request,
     new_data: PlannedTOCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.PLANNED_TO_WRITE)),
     session=Depends(deps.get_db),
 ):
     # сделать проверку на роль Администратора и Прораба
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     obj, code, index = crud_planned_to.create_planned_to(db=session, new_data=new_data)
     get_raise(code=code)
@@ -156,15 +154,11 @@ def create_planned_to(
 def update_planned_to(
     request: Request,
     new_data: PlannedTOUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.PLANNED_TO_WRITE)),
     planned_to_id: int = Path(..., title="Id планового ТО"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_planned_to.update_planned_to(
         db=session, new_data=new_data, planned_to_id=planned_to_id

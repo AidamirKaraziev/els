@@ -4,10 +4,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Path, Query, Request, UploadFile
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, CLIENT_ID
 from src.crud.crud_organization import crud_organizations
-from src.crud.users.crud_universal_user import crud_universal_users
 from src.exceptions import UnfoundEntity
 from src.getters.organization import get_organization
 from src.schemas.organization import (
@@ -37,7 +37,7 @@ router = APIRouter()
 def get_data(
     request: Request,
     session=Depends(deps.get_db),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
     page: int = Query(1, title="Номер страницы"),
 ):
     logging.info(crud_organizations.get_multi(db=session, page=None))
@@ -61,7 +61,7 @@ def get_data(
 def get_data(
     request: Request,
     organization_id: int = Path(..., title="ID организации"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_organizations.get_org(
@@ -84,14 +84,10 @@ def get_data(
 def create_organization(
     request: Request,
     new_data: OrganizationCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
     # сделать проверку на роль Администратора
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     organization, code, index = crud_organizations.create_organization(
         db=session, new_data=new_data
@@ -113,15 +109,11 @@ def create_organization(
 def update_organization(
     request: Request,
     new_data: OrganizationUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     organization_id: int = Path(..., title="Id организации"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     organization, code, indexes = crud_organizations.update_organization(
         db=session, organization=new_data, organization_id=organization_id
@@ -143,15 +135,11 @@ def update_organization(
 def create_upload_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     organization_id: int = Path(..., title="Id организации"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_organizations.get_org(
         db=session, organization_id=organization_id
@@ -181,7 +169,7 @@ def create_upload_file(
 def archiving_organizations(
     request: Request,
     organization_id: int = Path(..., title="Id ОРГАНИЗАЦИИ"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_organizations.archiving_organization(
@@ -205,7 +193,7 @@ def archiving_organizations(
 def unzipping_organizations(
     request: Request,
     organization_id: int = Path(..., title="Id ОРГАНИЗАЦИИ"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_organizations.unzipping_organization(

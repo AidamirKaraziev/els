@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.params import Path
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
 from src.crud.crud_order_photo import crud_order_photo
@@ -31,6 +32,7 @@ def get_order_photo(
     request: Request,
     session=Depends(deps.get_db),
     page: int = Query(default=1, title="Номер страницы"),
+    current_user=Depends(deps.require(Permission.ORDER_READ)),
 ):
     logging.info(crud_order_photo.get_multi(db=session, page=None))
 
@@ -55,6 +57,7 @@ def get_photo_by_order_id(
     session=Depends(deps.get_db),
     order_id: int = Path(..., title="Id задачи"),
     page: int = Query(1, title="Номер страницы"),
+    current_user=Depends(deps.require(Permission.ORDER_READ)),
 ):
     logging.info(crud_order_photo.get_photo_by_order_id(db=session, order_id=order_id))
 
@@ -79,7 +82,7 @@ def get_order_photo_by_id(
     request: Request,
     session=Depends(deps.get_db),
     order_photo_id: int = Path(default=..., title="ID order_photo"),
-    # current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
 ):
     obj, code, indexes = crud_order_photo.get_photo_by_id(
         db=session, order_photo_id=order_photo_id
@@ -100,7 +103,7 @@ def get_order_photo_by_id(
 def add_photo(
     request: Request,
     file: Optional[UploadFile] = File(None),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.FILE_UPLOAD)),
     order_id: int = Path(default=..., title="Id задачи"),
     session=Depends(deps.get_db),
 ):
@@ -150,7 +153,7 @@ def add_photo(
 def delete_order_photo_by_id(
     session=Depends(deps.get_db),
     order_photo_id: int = Path(default=..., title="ID order_photo"),
-    # current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_universal_user=Depends(deps.require(Permission.ORDER_DELETE)),
 ):
     text, code, indexes = crud_order_photo.delete_photo_by_photo_id(
         db=session, id=order_photo_id

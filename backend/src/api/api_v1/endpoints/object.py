@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.params import Path
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, FOREMAN
 from src.crud.crud_company import crud_company
@@ -37,6 +38,7 @@ def get_data(
     request: Request,
     session=Depends(deps.get_db),
     page: int = Query(None, title="Номер страницы"),
+    current_user=Depends(deps.require(Permission.OBJECT_READ)),
 ):
     logging.info(crud_objects.get_multi(db=session, page=None))
 
@@ -60,7 +62,7 @@ def get_data(
 def get_objects_by_foreman(
     request: Request,
     foreman_id: int,
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.OBJECT_READ)),
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
 ):
@@ -91,7 +93,7 @@ def get_objects_by_foreman(
 def get_objects_by_mechanic(
     request: Request,
     mechanic_id: int,
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.OBJECT_READ)),
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
 ):
@@ -131,7 +133,7 @@ def get_objects_by_mechanic(
 def get_objects_by_mechanic(
     request: Request,
     client_id: int,
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.OBJECT_READ)),
     session=Depends(deps.get_db),
     page: int = Query(default=1, title="Номер страницы"),
 ):
@@ -156,7 +158,7 @@ def get_objects_by_mechanic(
 def get_objects_by_company_id(
     request: Request,
     company_id: int = Path(..., title="ID модели техники"),
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.OBJECT_READ)),
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
 ):
@@ -185,7 +187,7 @@ def get_data(
     request: Request,
     session=Depends(deps.get_db),
     object_id: int = Path(..., title="ID object"),
-    # current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_universal_user=Depends(deps.require(Permission.OBJECT_READ)),
 ):
     obj, code, indexes = crud_objects.get_object_by_id(db=session, object_id=object_id)
     get_raise(code=code)
@@ -203,14 +205,10 @@ def get_data(
 def create_object(
     request: Request,
     new_data: ObjectCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.OBJECT_CREATE)),
     session=Depends(deps.get_db),
 ):
     # сделать проверку на роль Администратора и Прораба
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     obj, code, index = crud_objects.create_object(db=session, new_data=new_data)
     get_raise(code=code)
@@ -228,15 +226,11 @@ def create_object(
 def update_object(
     request: Request,
     new_data: ObjectUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     object_id: int = Path(..., title="Id объекта"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_objects.update_object(
         db=session, new_data=new_data, object_id=object_id
@@ -257,15 +251,11 @@ def update_object(
 def create_letter_of_appointment_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     object_id: int = Path(..., title="Id объекта"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_objects.get_object_by_id(db=session, object_id=object_id)
     get_raise(code=code)
@@ -293,15 +283,11 @@ def create_letter_of_appointment_file(
 def create_acceptance_certificate_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     object_id: int = Path(..., title="Id объекта"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_objects.get_object_by_id(db=session, object_id=object_id)
     get_raise(code=code)
@@ -329,15 +315,11 @@ def create_acceptance_certificate_file(
 def create_act_pto_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     object_id: int = Path(..., title="Id объекта"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_objects.get_object_by_id(db=session, object_id=object_id)
     get_raise(code=code)
@@ -365,7 +347,7 @@ def create_act_pto_file(
 def archiving_objects(
     request: Request,
     object_id: int = Path(..., title="Id объекта"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_objects.archiving_object(
@@ -389,7 +371,7 @@ def archiving_objects(
 def unzipping_objects(
     request: Request,
     object_id: int = Path(..., title="Id объекта"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_objects.unzipping_object(

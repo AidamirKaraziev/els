@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.params import Path
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
 from src.crud.crud_order import _object_display_label, crud_orders
-from src.crud.users.crud_universal_user import crud_universal_users
 from src.exceptions import UnprocessableEntity
 from src.getters.order import getting_order
 from src.schemas.order import OrderCreate, OrderGet, OrderUpdate
@@ -38,14 +38,10 @@ router = APIRouter()
 )
 def get_top_breakdowns_statistics(
     session=Depends(deps.get_db),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.STATISTICS_READ)),
     year: int = Query(..., ge=1990, le=2100, title="Год отчёта"),
     month: int = Query(..., ge=1, le=12, title="Месяц отчёта (1–12)"),
 ):
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ALL_EMPLOYER
-    )
-    get_raise(code=code)
 
     rows = crud_orders.get_top_breakdowns_by_month(db=session, year=year, month=month)
     data = [
@@ -91,7 +87,7 @@ def get_orders(
             "отбор, что в статистике."
         ),
     ),
-    # current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
 ):
     # Год и месяц описывают один период, поодиночке они бессмысленны.
     # Молча игнорировать половину фильтра нельзя: человек увидит не тот
@@ -131,7 +127,7 @@ def get_order_by_id(
     request: Request,
     session=Depends(deps.get_db),
     order_id: int = Path(..., title="ID order"),
-    current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
 ):
     obj, code, indexes = crud_orders.get_order_by_id(db=session, order_id=order_id)
     get_raise(code=code)
@@ -149,14 +145,10 @@ def get_order_by_id(
 def create_order(
     request: Request,
     new_data: OrderCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.ORDER_CREATE)),
     session=Depends(deps.get_db),
 ):
     # сделать проверку на роль Администратора и Прораба
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     obj, code, index = crud_orders.create_order(
         db=session, new_data=new_data, current_user=current_user
@@ -176,15 +168,11 @@ def create_order(
 def update_order(
     request: Request,
     new_data: OrderUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.ORDER_UPDATE)),
     order_id: int = Path(..., title="Id задачи"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ALL_EMPLOYER
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_orders.update_order(
         db=session, new_data=new_data, order_id=order_id
@@ -205,7 +193,7 @@ def update_order(
 def get_orders_for_me(
     request: Request,
     session=Depends(deps.get_db),
-    current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
 ):
     data, code, indexes = crud_orders.get_orders_for_me(
         db=session, executor_id=current_universal_user.id
@@ -227,7 +215,7 @@ def get_orders_for_me(
 def get_my_orders(
     request: Request,
     session=Depends(deps.get_db),
-    current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
 ):
     data, code, indexes = crud_orders.get_my_orders(
         db=session, creator_id=current_universal_user.id

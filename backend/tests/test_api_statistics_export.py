@@ -10,10 +10,9 @@ import uuid
 
 import pytest
 
-from src.api import deps
 from src.config import settings
 from src.core.roles import ADMIN, CLIENT_ID
-from src.models import Object, Order, UniversalUser
+from src.models import Object, Order
 
 URL = f"{settings.API_V1_STR}/statistics/breakdowns/export"
 REPORT_URL = f"{settings.API_V1_STR}/statistics/breakdowns"
@@ -57,25 +56,6 @@ def make_order(db_session):
         return order
 
     return _make
-
-
-@pytest.fixture
-def as_role(app, db_session):
-    def _login(role_id: int):
-        user = UniversalUser(
-            name=f"Тестовый {role_id}",
-            email=f"pdf-{uuid.uuid4().hex[:8]}@test",
-            role_id=role_id,
-        )
-        db_session.add(user)
-        db_session.flush()
-        app.dependency_overrides[deps.get_current_universal_user_by_bearer] = lambda: (
-            user
-        )
-        return user
-
-    yield _login
-    app.dependency_overrides.pop(deps.get_current_universal_user_by_bearer, None)
 
 
 def _get(client, **params):

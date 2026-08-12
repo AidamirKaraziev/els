@@ -3,11 +3,11 @@ import logging
 from fastapi import APIRouter, Depends, Path, Query, Request
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, FOREMAN
 from src.crud.crud_factory_model import crud_factory_models
 from src.crud.crud_type_object import crud_type_object
-from src.crud.users.crud_universal_user import crud_universal_users
 from src.getters.factory_model import get_factory_model
 from src.schemas.factory_model import FactoryModelCreate, FactoryModelUpdate
 from src.templates_raise import get_raise
@@ -30,7 +30,7 @@ router = APIRouter()
 def get_data(
     request: Request,
     session=Depends(deps.get_db),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_READ)),
     page: int = Query(1, title="Номер страницы"),
 ):
     logging.info(crud_factory_models.get_multi(db=session, page=None))
@@ -54,7 +54,7 @@ def get_data(
 def get_data(
     request: Request,
     factory_model_id: int = Path(..., title="ID модели техники"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_READ)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_factory_models.get_mod(
@@ -75,7 +75,7 @@ def get_data(
 def get_factory_model_by_type_object_id(
     request: Request,
     type_object_id: int = Path(..., title="ID модели техники"),
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_READ)),
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
 ):
@@ -105,14 +105,10 @@ def get_factory_model_by_type_object_id(
 def create_factory_models(
     request: Request,
     new_data: FactoryModelCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_WRITE)),
     session=Depends(deps.get_db),
 ):
     # сделать проверку на роль Администратора
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE_ADMIN_FOREMAN
-    )
-    get_raise(code=code)
 
     factory_model, code, index = crud_factory_models.create_factory_model(
         db=session, new_data=new_data
@@ -132,15 +128,11 @@ def create_factory_models(
 def update_factory_models(
     request: Request,
     new_data: FactoryModelUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.DIRECTORY_WRITE)),
     factory_model_id: int = Path(..., title="Id модели"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE_ADMIN_FOREMAN
-    )
-    get_raise(code=code)
 
     factory_model, code, indexes = crud_factory_models.update_factory_model(
         db=session, new_data=new_data, factory_model_id=factory_model_id

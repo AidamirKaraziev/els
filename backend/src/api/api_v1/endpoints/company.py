@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Path, Query, Request, UploadFile
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, CLIENT_ID
 from src.crud.crud_company import crud_company
@@ -33,7 +34,7 @@ router = APIRouter()
 def get_data(
     request: Request,
     session=Depends(deps.get_db),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
     page: int = Query(1, title="Номер страницы"),
 ):
     logging.info(crud_company.get_multi(db=session, page=None))
@@ -57,14 +58,10 @@ def get_data(
 def create_company(
     request: Request,
     new_data: CompanyCreate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
     # сделать проверку на роль Администратора
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE
-    )
-    get_raise(code=code)
 
     company, code, index = crud_company.create_company(db=session, new_data=new_data)
     get_raise(code=code)
@@ -82,7 +79,7 @@ def create_company(
 def get_data(
     request: Request,
     company_id: int = Path(..., title="ID компании"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_company.get_company_by_id(
@@ -103,15 +100,11 @@ def get_data(
 def update_company(
     request: Request,
     new_data: CompanyUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     company_id: int = Path(..., title="Id проекта"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE_ADMIN_CLIENT
-    )
-    get_raise(code=code)
 
     company, code, indexes = crud_company.update_company(
         db=session, company=new_data, company_id=company_id
@@ -132,15 +125,11 @@ def update_company(
 def create_upload_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     company_id: int = Path(..., title="Id компании"),
     session=Depends(deps.get_db),
 ):
     # проверка на роли
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ROLES_ELIGIBLE_ADMIN_CLIENT
-    )
-    get_raise(code=code)
 
     obj, code, indexes = crud_company.get_company_by_id(
         db=session, company_id=company_id
@@ -169,7 +158,7 @@ def create_upload_file(
 def archiving_companies(
     request: Request,
     company_id: int = Path(..., title="Id КОМПАНИИ"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_company.archiving_company(
@@ -195,7 +184,7 @@ def archiving_companies(
 def unzipping_companies(
     request: Request,
     company_id: int = Path(..., title="Id КОМПАНИИ"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_WRITE)),
     session=Depends(deps.get_db),
 ):
     obj, code, indexes = crud_company.unzipping_company(
@@ -230,7 +219,7 @@ def unzipping_companies(
 def get_clients_by_company_id(
     request: Request,
     company_id: int,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
     session=Depends(deps.get_db),
 ):
     logging.info(

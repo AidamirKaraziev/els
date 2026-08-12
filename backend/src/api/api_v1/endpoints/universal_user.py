@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.params import Path
 
 from src.api import deps
+from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.crud.crud_company import crud_company
 from src.crud.crud_role import crud_role
@@ -36,6 +37,7 @@ def get_data(
     request: Request,
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
+    current_user=Depends(deps.require(Permission.USER_READ)),
 ):
     logging.info(crud_universal_users.get_multi(db=session, page=None))
 
@@ -57,7 +59,7 @@ def get_data(
 def get_users_by_role_id(
     request: Request,
     role_id: int = Path(..., title="ID модели техники"),
-    # current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_READ)),
     session=Depends(deps.get_db),
     page: Optional[int] = Query(None, title="Номер страницы"),
 ):
@@ -84,6 +86,7 @@ def get_data(
     request: Request,
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
+    current_user=Depends(deps.require(Permission.USER_READ)),
 ):
     logging.info(crud_universal_users.get_multi_employee(db=session, page=None))
 
@@ -106,7 +109,7 @@ def get_data(
     request: Request,
     session=Depends(deps.get_db),
     company_id: int = Path(..., title="ID user"),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_READ)),
     page: int = Query(1, title="Номер страницы"),
 ):
     # проверка компании
@@ -141,7 +144,7 @@ def get_data(
 def get_data(
     request: Request,
     session=Depends(deps.get_db),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.require(Permission.USER_READ)),
     page: int = Query(1, title="Номер страницы"),
 ):
     # проверка компании
@@ -170,7 +173,7 @@ def get_data(
     request: Request,
     session=Depends(deps.get_db),
     user_id: int = Path(..., title="ID user"),
-    current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_universal_user=Depends(deps.require(Permission.USER_READ)),
 ):
     user = crud_universal_users.get(db=session, id=user_id)
     if user is None:
@@ -193,7 +196,7 @@ def get_data(
 def update_user(
     request: Request,
     new_data: UniversalUserUpdate,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.get_current_user),
     session=Depends(deps.get_db),
 ):
     role_list = [current_user.role_id]
@@ -221,7 +224,7 @@ def update_user(
 def create_upload_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.get_current_user),
     session=Depends(deps.get_db),
 ):
     save_path = crud_universal_users.adding_file(
@@ -251,7 +254,7 @@ def create_upload_file(
 def create_upload_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.get_current_user),
     session=Depends(deps.get_db),
 ):
     save_path = crud_universal_users.adding_file(
@@ -281,7 +284,7 @@ def create_upload_file(
 def create_upload_file(
     request: Request,
     file: Optional[UploadFile] = File(None),
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.get_current_user),
     session=Depends(deps.get_db),
 ):
     save_path = crud_universal_users.adding_file(

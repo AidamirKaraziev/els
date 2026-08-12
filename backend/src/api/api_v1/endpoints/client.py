@@ -22,7 +22,7 @@ router = APIRouter()
 )
 def get_data(
     request: Request,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.get_current_user),
 ):
     return SingleEntityResponse(data=get_client(current_user, request=request))
 
@@ -38,7 +38,7 @@ def get_data(
 def update_client_self(
     request: Request,
     new_data: ClientUpdateSelf,
-    current_user=Depends(deps.get_current_universal_user_by_bearer),
+    current_user=Depends(deps.get_current_user),
     session=Depends(deps.get_db),
 ):
 
