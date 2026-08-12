@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.params import Path
 
 from src.api import deps
-from src.core.permissions import Permission
+from src.core.permissions import Permission, has_permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
 from src.crud.crud_order import _object_display_label, crud_orders
-from src.exceptions import UnprocessableEntity
+from src.exceptions import InaccessibleEntity, UnprocessableEntity
 from src.getters.order import getting_order
 from src.schemas.order import OrderCreate, OrderGet, OrderUpdate
 from src.schemas.statistics import TopBreakdownItem
@@ -16,6 +16,9 @@ from src.templates_raise import get_raise
 
 ROLES_ELIGIBLE = [ADMIN, FOREMAN, DISPATCHER]
 ALL_EMPLOYER = [ADMIN, FOREMAN, MECHANIC, ENGINEER, DISPATCHER]
+
+#: «Выполнено» — см. `core/db/init_db.py:check_statuses`.
+STATUS_DONE = 4
 
 router = APIRouter()
 
@@ -169,7 +172,12 @@ def create_order(
     "/order/{order_id}/",
     response_model=SingleEntityResponse,
     name="update_order",
-    description="Изменяет изменяет данные задачи",
+    description=(
+        "Изменяет данные задачи.\n\n"
+        "Перевод в статус «Выполнено» требует отдельного права `order:close`: "
+        "заявку ведёт диспетчер, а закрывает тот, кто работал, — исполнитель "
+        "или прораб. Попытка закрыть заявку без этого права отвечает `403`."
+    ),
     tags=["Админ панель / Задачи"],
 )
 def update_order(
@@ -180,6 +188,24 @@ def update_order(
     session=Depends(deps.get_db),
     scope=Depends(deps.get_write_scope),
 ):
+    # Закрытие заявки — не обычная правка. Права разделены (`ORDER_UPDATE` и
+    # `ORDER_CLOSE`) именно ради этого случая, но проверять их зависимостью
+    # нельзя: закрытие отличается от правки не адресом, а телом запроса.
+    # До этой проверки право `ORDER_CLOSE` не спрашивала ни одна ручка, и
+    # диспетчер закрывал заявки, хотя договорились, что не может.
+    if new_data.status_id == STATUS_DONE and not has_permission(
+        current_user.role_id, Permission.ORDER_CLOSE
+    ):
+        raise InaccessibleEntity(
+            message="Закрывать заявки может исполнитель или прораб",
+            num=1023,
+            description=(
+                "Диспетчер ведёт заявку, но перевести её в «Выполнено» должен "
+                "тот, кто работал"
+            ),
+            path="$.body",
+        )
+
     obj, code, indexes = crud_orders.update_order(
         db=session, new_data=new_data, order_id=order_id, scope=scope
     )
