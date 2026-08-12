@@ -13,6 +13,7 @@ import pytest
 
 from src.crud.crud_statistics import crud_statistics, month_period, previous_month
 from src.models import Company, Division, FactoryModel, Object, Order, Organization
+from tests.scopes import ALL_SCOPE
 
 # id из `create_initial_data` (см. src/core/db/init_db.py:check_fault_category).
 CAT_AA = 1  # застревание пассажира, самая тяжёлая
@@ -79,7 +80,7 @@ class TestWhatCountsAsBreakdown:
         obj = make_object()
         make_order(obj, datetime.datetime(2026, 5, 10), fault_category_id=category_id)
 
-        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)
+        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)
 
         assert obj.id not in _counts(rows)
 
@@ -93,7 +94,7 @@ class TestWhatCountsAsBreakdown:
         obj = make_object()
         make_order(obj, datetime.datetime(2026, 5, 10), fault_category_id=category_id)
 
-        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)
+        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)
 
         assert _counts(rows)[obj.id] == 1
 
@@ -105,7 +106,7 @@ class TestWhatCountsAsBreakdown:
         obj = make_object()
         make_order(obj, datetime.datetime(2026, 5, 10), fault_category_id=None)
 
-        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)
+        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)
 
         assert _counts(rows)[obj.id] == 1
 
@@ -115,7 +116,7 @@ class TestWhatCountsAsBreakdown:
         make_order(None, datetime.datetime(2026, 5, 10))
 
         total, objects = crud_statistics.count_breakdown_objects(
-            db=db_session, period=MAY
+            db=db_session, period=MAY, scope=ALL_SCOPE
         )
 
         assert (total, objects) == (0, 0)
@@ -129,7 +130,7 @@ class TestMonthBoundaries:
         obj = make_object()
         make_order(obj, datetime.datetime(2026, 5, 1, 0, 0, 0))
 
-        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)
+        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)
 
         assert _counts(rows)[obj.id] == 1
 
@@ -140,7 +141,7 @@ class TestMonthBoundaries:
         obj = make_object()
         make_order(obj, datetime.datetime(2026, 5, 31, 23, 59, 59, 999999))
 
-        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)
+        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)
 
         assert _counts(rows)[obj.id] == 1
 
@@ -149,7 +150,7 @@ class TestMonthBoundaries:
         obj = make_object()
         make_order(obj, datetime.datetime(2026, 6, 1, 0, 0, 0))
 
-        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)
+        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)
 
         assert obj.id not in _counts(rows)
 
@@ -163,7 +164,7 @@ class TestMonthBoundaries:
         make_order(obj, datetime.datetime(2027, 1, 1, 0, 0))
 
         rows = crud_statistics.top_breakdown_objects(
-            db=db_session, period=month_period(2026, 12)
+            db=db_session, period=month_period(2026, 12), scope=ALL_SCOPE
         )
 
         assert _counts(rows)[obj.id] == 1
@@ -183,7 +184,7 @@ class TestOrdering:
         for day in (3, 4, 5):
             make_order(noisy, datetime.datetime(2026, 5, day))
 
-        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)
+        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)
 
         assert [row.object_id for row in rows] == [noisy.id, quiet.id]
 
@@ -199,7 +200,7 @@ class TestOrdering:
         make_order(severe, datetime.datetime(2026, 5, 4), fault_category_id=CAT_N)
         make_order(severe, datetime.datetime(2026, 5, 5), fault_category_id=CAT_AA)
 
-        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)
+        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)
 
         assert [row.object_id for row in rows] == [severe.id, minor.id]
 
@@ -213,7 +214,7 @@ class TestOrdering:
         make_order(unknown, datetime.datetime(2026, 5, 2), fault_category_id=None)
         make_order(known, datetime.datetime(2026, 5, 3), fault_category_id=CAT_V)
 
-        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)
+        rows = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)
 
         assert [row.object_id for row in rows] == [known.id, unknown.id]
 
@@ -227,12 +228,12 @@ class TestOrdering:
                 make_order(obj, datetime.datetime(2026, 5, 2 + day + index * 5))
 
         top_two = crud_statistics.top_breakdown_objects(
-            db=db_session, period=MAY, limit=2
+            db=db_session, period=MAY, scope=ALL_SCOPE, limit=2
         )
         assert [row.object_id for row in top_two] == [objects[0].id, objects[1].id]
 
         next_two = crud_statistics.top_breakdown_objects(
-            db=db_session, period=MAY, limit=2, offset=2
+            db=db_session, period=MAY, scope=ALL_SCOPE, limit=2, offset=2
         )
         assert [row.object_id for row in next_two] == [objects[2].id, objects[3].id]
 
@@ -247,7 +248,7 @@ class TestTiming:
             accepted_at=datetime.datetime(2026, 5, 10, 12, 0),
         )
 
-        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)[0]
+        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)[0]
 
         assert row.reacted_count == 1
         assert float(row.avg_reaction_seconds) == 2 * 3600
@@ -265,7 +266,7 @@ class TestTiming:
             in_progress_at=datetime.datetime(2026, 5, 10, 13, 0),
         )
 
-        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)[0]
+        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)[0]
 
         assert row.reacted_count == 1
         assert float(row.avg_reaction_seconds) == 3 * 3600
@@ -283,7 +284,7 @@ class TestTiming:
         )
         make_order(obj, datetime.datetime(2026, 5, 11, 10, 0))
 
-        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)[0]
+        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)[0]
 
         assert row.breakdown_count == 2
         assert row.reacted_count == 1, "нетронутая заявка не должна попадать в среднее"
@@ -301,7 +302,7 @@ class TestTiming:
             accepted_at=datetime.datetime(2026, 5, 9, 10, 0),
         )
 
-        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)[0]
+        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)[0]
 
         assert row.reacted_count == 0
         assert row.avg_reaction_seconds is None
@@ -314,7 +315,7 @@ class TestTiming:
         obj = make_object()
         make_order(obj, datetime.datetime(2026, 5, 10, 10, 0), status_id=4)
 
-        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)[0]
+        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)[0]
 
         assert row.resolved_count == 0
         assert row.avg_resolution_seconds is None
@@ -330,7 +331,7 @@ class TestTiming:
             done_at=datetime.datetime(2026, 5, 10, 15, 0),
         )
 
-        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)[0]
+        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)[0]
 
         assert row.resolved_count == 1
         assert float(row.avg_resolution_seconds) == 5 * 3600
@@ -345,7 +346,7 @@ class TestCategorySummary:
         make_order(obj, datetime.datetime(2026, 5, 4), fault_category_id=CAT_A)
         make_order(obj, datetime.datetime(2026, 5, 5), fault_category_id=CAT_A)
 
-        rows = crud_statistics.breakdowns_by_category(db=db_session, period=MAY)
+        rows = crud_statistics.breakdowns_by_category(db=db_session, period=MAY, scope=ALL_SCOPE)
 
         assert [(row.code, row.count) for row in rows] == [
             ("AA", 1),
@@ -359,7 +360,7 @@ class TestCategorySummary:
         make_order(obj, datetime.datetime(2026, 5, 2), fault_category_id=None)
         make_order(obj, datetime.datetime(2026, 5, 3), fault_category_id=CAT_AA)
 
-        rows = crud_statistics.breakdowns_by_category(db=db_session, period=MAY)
+        rows = crud_statistics.breakdowns_by_category(db=db_session, period=MAY, scope=ALL_SCOPE)
 
         assert [row.category_id for row in rows] == [CAT_AA, None]
 
@@ -372,7 +373,7 @@ class TestCategorySummary:
         make_order(second, datetime.datetime(2026, 5, 4), fault_category_id=CAT_A)
 
         breakdown = crud_statistics.object_severity_breakdown(
-            db=db_session, period=MAY, object_ids=[first.id, second.id]
+            db=db_session, period=MAY, scope=ALL_SCOPE, object_ids=[first.id, second.id]
         )
 
         assert [(row.code, row.count) for row in breakdown[first.id]] == [
@@ -385,7 +386,7 @@ class TestCategorySummary:
     def test_severity_breakdown_without_objects_makes_no_query(self, db_session):
         assert (
             crud_statistics.object_severity_breakdown(
-                db=db_session, period=MAY, object_ids=[]
+                db=db_session, period=MAY, scope=ALL_SCOPE, object_ids=[]
             )
             == {}
         )
@@ -404,7 +405,7 @@ class TestFilters:
         make_order(other, datetime.datetime(2026, 5, 3))
 
         rows = crud_statistics.top_breakdown_objects(
-            db=db_session, period=MAY, division_id=division.id
+            db=db_session, period=MAY, scope=ALL_SCOPE, division_id=division.id
         )
 
         assert [row.object_id for row in rows] == [mine.id]
@@ -421,7 +422,7 @@ class TestFilters:
         make_order(other, datetime.datetime(2026, 5, 3))
 
         rows = crud_statistics.top_breakdown_objects(
-            db=db_session, period=MAY, organization_id=organization.id
+            db=db_session, period=MAY, scope=ALL_SCOPE, organization_id=organization.id
         )
 
         assert [row.object_id for row in rows] == [mine.id]
@@ -439,7 +440,7 @@ class TestObjectFields:
         obj = make_object(company_id=company.id)
         make_order(obj, datetime.datetime(2026, 5, 2))
 
-        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)[0]
+        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)[0]
 
         assert row.client == company.name
 
@@ -453,7 +454,7 @@ class TestObjectFields:
         obj = make_object(organization_id=organization.id, company_id=company.id)
         make_order(obj, datetime.datetime(2026, 5, 2))
 
-        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)[0]
+        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)[0]
 
         assert row.client == organization.title
 
@@ -470,7 +471,7 @@ class TestObjectFields:
         obj = make_object(factory_model_id=factory_model.id, address="ул. Красная, 1")
         make_order(obj, datetime.datetime(2026, 5, 2))
 
-        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY)[0]
+        row = crud_statistics.top_breakdown_objects(db=db_session, period=MAY, scope=ALL_SCOPE)[0]
 
         assert row.factory == factory_model.factory
         assert row.model == "ПП-0411"
@@ -491,7 +492,7 @@ class TestTotalsAndComparison:
         make_order(first, datetime.datetime(2026, 5, 5), fault_category_id=CAT_TO)
 
         total, objects = crud_statistics.count_breakdown_objects(
-            db=db_session, period=MAY
+            db=db_session, period=MAY, scope=ALL_SCOPE
         )
 
         assert (total, objects) == (3, 2), "плановое ТО не должно попадать в итог"
@@ -507,6 +508,7 @@ class TestTotalsAndComparison:
         counts = crud_statistics.breakdown_counts_by_object(
             db=db_session,
             period=month_period(*previous_month(2026, 5)),
+            scope=ALL_SCOPE,
             object_ids=[obj.id, quiet_now.id],
         )
 

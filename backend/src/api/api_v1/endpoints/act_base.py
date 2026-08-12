@@ -7,6 +7,7 @@ from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, FOREMAN
 from src.crud.crud_act_base import crud_acts_bases
+from src.crud.crud_object import crud_objects
 from src.getters.act_base import get_acts_bases
 from src.schemas.act_base import ActBaseCreate, ActBaseUpdate
 from src.templates_raise import get_raise
@@ -114,7 +115,15 @@ def get_act_base_by_object_id(
     current_user=Depends(deps.require(Permission.ACT_READ)),
     object_id: int = Path(..., title="ID объекта"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_read_scope),
 ):
+    # Сами шаблоны — справочник по модели техники, резать их нечем и незачем.
+    # А вот объект в запросе проверить надо: иначе по чужому лифту можно
+    # узнать, какая на нём стоит техника.
+    obj, code, indexes = crud_objects.get_object_by_id(
+        db=session, object_id=object_id, scope=scope
+    )
+    get_raise(code=code)
 
     data, code, indexes = crud_acts_bases.get_act_base_by_object_id(
         db=session, object_id=object_id

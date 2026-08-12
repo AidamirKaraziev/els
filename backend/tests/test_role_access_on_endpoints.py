@@ -49,6 +49,21 @@ def _call(client, method, path):
     return client.request(method, path, json={})
 
 
+def _denied_by_scope(response) -> bool:
+    """Отказ по области видимости, а не по праву.
+
+    Оба отвечают 403, и различить их можно только по коду в теле: область
+    отдаёт `136` (см. `templates_raise.out_of_scope`), нехватка права — ничего.
+    Различать обязательно: прораб из фикстуры заведён без участков, поэтому
+    правом объект создать он обладает, а областью — нет, и без этой проверки
+    тест читался бы как «у прораба отняли право».
+    """
+    if response.status_code != 403:
+        return False
+    errors = response.json().get("errors") or []
+    return any(error.get("code") == 136 for error in errors)
+
+
 @pytest.mark.integration
 @pytest.mark.parametrize("method, path, allowed", CASES)
 @pytest.mark.parametrize("role", list(Role))
@@ -57,12 +72,12 @@ def test_role_access(client_with_db, as_role, method, path, allowed, role):
     response = _call(client_with_db, method, path)
 
     if role in allowed:
-        assert response.status_code != 403, (
+        assert response.status_code != 403 or _denied_by_scope(response), (
             f"{role.name} должен иметь доступ к {method} {path}, "
             f"а получил {response.status_code}"
         )
     else:
-        assert response.status_code == 403, (
+        assert response.status_code == 403 and not _denied_by_scope(response), (
             f"{role.name} не должен иметь доступа к {method} {path}, "
             f"а получил {response.status_code}"
         )

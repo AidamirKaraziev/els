@@ -38,10 +38,9 @@ def get_data(
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
     current_user=Depends(deps.require(Permission.USER_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    logging.info(crud_universal_users.get_multi(db=session, page=None))
-
-    data, paginator = crud_universal_users.get_multi(db=session, page=page)
+    data, paginator = crud_universal_users.get_multi(db=session, scope=scope, page=page)
 
     return ListOfEntityResponse(
         data=[get_universal_user(datum, request=request) for datum in data],
@@ -62,11 +61,12 @@ def get_users_by_role_id(
     current_user=Depends(deps.require(Permission.USER_READ)),
     session=Depends(deps.get_db),
     page: Optional[int] = Query(None, title="Номер страницы"),
+    scope=Depends(deps.get_read_scope),
 ):
     obj, code, indexes = crud_role.get_role_by_id(db=session, role_id=role_id)
     get_raise(code=code)
     data, paginator = crud_universal_users.get_user_by_role_id(
-        db=session, page=page, role_id=role_id
+        db=session, page=page, role_id=role_id, scope=scope
     )
 
     return ListOfEntityResponse(
@@ -87,10 +87,11 @@ def get_data(
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
     current_user=Depends(deps.require(Permission.USER_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    logging.info(crud_universal_users.get_multi_employee(db=session, page=None))
-
-    data, paginator = crud_universal_users.get_multi_employee(db=session, page=page)
+    data, paginator = crud_universal_users.get_multi_employee(
+        db=session, scope=scope, page=page
+    )
 
     return ListOfEntityResponse(
         data=[get_universal_user(datum, request=request) for datum in data],
@@ -111,6 +112,7 @@ def get_data(
     company_id: int = Path(..., title="ID user"),
     current_user=Depends(deps.require(Permission.USER_READ)),
     page: int = Query(1, title="Номер страницы"),
+    scope=Depends(deps.get_read_scope),
 ):
     # проверка компании
     comp, code, indexes = crud_company.get_company_by_id(
@@ -118,14 +120,8 @@ def get_data(
     )
     get_raise(code=code)
 
-    logging.info(
-        crud_universal_users.get_multi_client_by_company(
-            db=session, company_id=company_id, page=None
-        )
-    )
-
     data, paginator = crud_universal_users.get_multi_client_by_company(
-        db=session, page=page, company_id=company_id
+        db=session, page=page, company_id=company_id, scope=scope
     )
 
     return ListOfEntityResponse(
@@ -146,12 +142,11 @@ def get_data(
     session=Depends(deps.get_db),
     current_user=Depends(deps.require(Permission.USER_READ)),
     page: int = Query(1, title="Номер страницы"),
+    scope=Depends(deps.get_read_scope),
 ):
-    # проверка компании
-
-    logging.info(crud_universal_users.get_multi_clients(db=session, page=None))
-
-    data, paginator = crud_universal_users.get_multi_clients(db=session, page=page)
+    data, paginator = crud_universal_users.get_multi_clients(
+        db=session, scope=scope, page=page
+    )
 
     return ListOfEntityResponse(
         data=[get_universal_user(datum, request=request) for datum in data],
@@ -174,15 +169,12 @@ def get_data(
     session=Depends(deps.get_db),
     user_id: int = Path(..., title="ID user"),
     current_universal_user=Depends(deps.require(Permission.USER_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    user = crud_universal_users.get(db=session, id=user_id)
-    if user is None:
-        raise UnfoundEntity(
-            message="Нет такого пользователя!",
-            num=105,
-            description="Нет пользователя с таким id!",
-            path="$.body",
-        )
+    user, code, indexes = crud_universal_users.get_user_by_id(
+        db=session, user_id=user_id, scope=scope
+    )
+    get_raise(code=code)
     return SingleEntityResponse(data=get_universal_user(user, request=request))
 
 
@@ -198,6 +190,7 @@ def update_user(
     new_data: UniversalUserUpdate,
     current_user=Depends(deps.get_current_user),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
     role_list = [current_user.role_id]
     changeable_list = role_list
@@ -208,6 +201,7 @@ def update_user(
         new_data=new_data,
         role_list=role_list,
         changeable_list=changeable_list,
+        scope=scope,
     )
 
     get_raise(code=code)

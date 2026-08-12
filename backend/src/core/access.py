@@ -16,8 +16,19 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import FrozenSet, Optional
 
+from sqlalchemy import false, or_, select, true
+
 from src.core.roles import Role
-from src.models import UniversalUser
+from src.models import (
+    ActFact,
+    DefectiveAct,
+    Object,
+    Order,
+    OrderPhoto,
+    PlannedTO,
+    UniversalUser,
+    UserDivision,
+)
 
 
 class ScopeKind(str, Enum):
@@ -123,6 +134,198 @@ def _scope(user: UniversalUser, *, for_write: bool) -> AccessScope:
     )
 
 
+# ---------------------------------------------------------------------------
+# Фильтры запроса
+# ---------------------------------------------------------------------------
+#
+# Каждая сущность режется ровно одной функцией `apply_*_scope`, и вызывается
+# она в CRUD, а не в ручках. Причина в цене ошибки: забытый фильтр ничего не
+# ломает — ответ приходит, статус 200, в логах чисто, просто данных больше,
+# чем положено.
+#
+# Фильтруем запросом, а не проверкой после выборки: выдача постраничная, и
+# проверка на выходе дала бы страницу, где из десяти записей видно три, а
+# `total` считал бы все десять.
+
+
+def object_scope_filter(scope: AccessScope):
+    """SQL-условие «этот лифт человеку виден».
+
+    Повторяет `can_access_object` один в один: список и одиночная проверка по
+    id обязаны отвечать одинаково, иначе запись из списка открывается с 403.
+    """
+    if scope.kind is ScopeKind.ALL:
+        return true()
+    if scope.kind is ScopeKind.DIVISIONS:
+        return or_(
+            Object.division_id.in_(sorted(scope.division_ids)),
+            Object.foreman_id == scope.user_id,
+            Object.mechanic_id == scope.user_id,
+        )
+    if scope.kind is ScopeKind.ASSIGNED:
+        return or_(
+            Object.mechanic_id == scope.user_id,
+            Object.foreman_id == scope.user_id,
+        )
+    if scope.kind is ScopeKind.COMPANY and scope.company_id is not None:
+        # Компания клиента, а не `organization_id` — это наше юрлицо по
+        # договору. Поля стоят рядом, перепутать легко, ошибка тихая.
+        return Object.company_id == scope.company_id
+    return false()
+
+
+def visible_object_ids(scope: AccessScope):
+    """Подзапрос с id доступных лифтов — для всего, что висит на объекте.
+
+    `correlate(None)` обязателен: без него SQLAlchemy склеит подзапрос с
+    внешним запросом, если тот уже присоединил `objects` (так делает
+    статистика), и условие превратится в тавтологию — то есть в утечку.
+    """
+    return (
+        select(Object.id).where(object_scope_filter(scope)).correlate(None)
+    ).scalar_subquery()
+
+
+def apply_object_scope(query, scope: AccessScope):
+    """Список лифтов по области видимости."""
+    return query.filter(object_scope_filter(scope))
+
+
+def order_scope_filter(scope: AccessScope):
+    """SQL-условие «эта заявка человеку видна»."""
+    if scope.kind is ScopeKind.ALL:
+        return true()
+    if scope.kind is ScopeKind.NOTHING:
+        return false()
+    return or_(
+        Order.object_id.in_(visible_object_ids(scope)),
+        # Своя заявка видна всегда: иначе механик потеряет доступ к уже
+        # выполненной работе, если объект переназначат другому.
+        Order.executor_id == scope.user_id,
+        Order.creator_id == scope.user_id,
+    )
+
+
+def apply_order_scope(query, scope: AccessScope):
+    """Список заявок: доступ наследуется от объекта плюс личное участие."""
+    return query.filter(order_scope_filter(scope))
+
+
+def visible_order_ids(scope: AccessScope):
+    """Подзапрос с id доступных заявок — для фотографий заявок."""
+    return (
+        select(Order.id).where(order_scope_filter(scope)).correlate(None)
+    ).scalar_subquery()
+
+
+def apply_order_photo_scope(query, scope: AccessScope):
+    """Список фотографий заявок. Наследует доступ от заявки целиком."""
+    if scope.kind is ScopeKind.ALL:
+        return query
+    return query.filter(OrderPhoto.order_id.in_(visible_order_ids(scope)))
+
+
+def apply_act_fact_scope(query, scope: AccessScope):
+    """Список фактических актов: от объекта плюс свои акты."""
+    if scope.kind is ScopeKind.ALL:
+        return query
+    if scope.kind is ScopeKind.NOTHING:
+        return query.filter(false())
+    return query.filter(
+        or_(
+            ActFact.object_id.in_(visible_object_ids(scope)),
+            ActFact.foreman_id == scope.user_id,
+            ActFact.main_mechanic_id == scope.user_id,
+        )
+    )
+
+
+def apply_planned_to_scope(query, scope: AccessScope):
+    """Список плановых ТО: целиком по объекту, личного участия у ТО нет."""
+    if scope.kind is ScopeKind.ALL:
+        return query
+    if scope.kind is ScopeKind.NOTHING:
+        return query.filter(false())
+    return query.filter(PlannedTO.object_id.in_(visible_object_ids(scope)))
+
+
+def visible_planned_to_ids(scope: AccessScope):
+    """Подзапрос с id доступных плановых ТО — для дефектных ведомостей."""
+    return (
+        select(PlannedTO.id)
+        .where(PlannedTO.object_id.in_(visible_object_ids(scope)))
+        .correlate(None)
+    ).scalar_subquery()
+
+
+def defective_act_scope_filter(scope: AccessScope):
+    """SQL-условие «эта дефектная ведомость человеку видна»."""
+    if scope.kind is ScopeKind.ALL:
+        return true()
+    if scope.kind is ScopeKind.NOTHING:
+        return false()
+    return or_(
+        DefectiveAct.planned_to_id.in_(visible_planned_to_ids(scope)),
+        DefectiveAct.responsible_user_id == scope.user_id,
+        DefectiveAct.created_by_user_id == scope.user_id,
+    )
+
+
+def apply_defective_act_scope(query, scope: AccessScope):
+    """Список дефектных ведомостей: через плановое ТО к объекту, плюс свои."""
+    return query.filter(defective_act_scope_filter(scope))
+
+
+def visible_defective_act_ids(scope: AccessScope):
+    """Подзапрос с id доступных ведомостей — для их фотографий."""
+    return (
+        select(DefectiveAct.id).where(defective_act_scope_filter(scope)).correlate(None)
+    ).scalar_subquery()
+
+
+def apply_user_scope(query, scope: AccessScope):
+    """Список людей.
+
+    Считается по участкам, а не по назначению на объекты: список коллег нужен,
+    чтобы выбрать исполнителя, и механик, видящий пустой список, не сможет
+    передать заявку. Себя человек видит в любом случае — иначе не откроется
+    собственный профиль.
+
+    Клиенту список людей и так не положен (у роли нет `USER_READ`), поэтому
+    для него здесь остаётся только он сам.
+    """
+    if scope.kind is ScopeKind.ALL:
+        return query
+    if scope.kind is ScopeKind.NOTHING:
+        return query.filter(UniversalUser.id == scope.user_id)
+    if scope.kind is ScopeKind.COMPANY:
+        return query.filter(
+            or_(
+                UniversalUser.id == scope.user_id,
+                UniversalUser.company_id == scope.company_id,
+            )
+        )
+
+    divisions = sorted(scope.division_ids)
+    return query.filter(
+        or_(
+            UniversalUser.id == scope.user_id,
+            UniversalUser.division_id.in_(divisions),
+            UniversalUser.id.in_(
+                select(UserDivision.user_id)
+                .where(UserDivision.division_id.in_(divisions))
+                .correlate(None)
+                .scalar_subquery()
+            ),
+        )
+    )
+
+
+# ---------------------------------------------------------------------------
+# Одиночные проверки по id
+# ---------------------------------------------------------------------------
+
+
 def can_access_object(scope: AccessScope, obj) -> bool:
     """Доступен ли конкретный объект (лифт) в этой области.
 
@@ -157,3 +360,54 @@ def can_access_order(scope: AccessScope, order) -> bool:
         # уже выполненной работе, если объект переназначат другому.
         return True
     return can_access_object(scope, order.object)
+
+
+def can_access_act_fact(scope: AccessScope, act) -> bool:
+    """Доступен ли фактический акт. Как заявка: объект плюс личное участие."""
+    if scope.kind is ScopeKind.ALL:
+        return True
+    if scope.kind is ScopeKind.NOTHING or act is None:
+        return False
+    if act.foreman_id == scope.user_id or act.main_mechanic_id == scope.user_id:
+        return True
+    return can_access_object(scope, act.object)
+
+
+def can_access_planned_to(scope: AccessScope, planned) -> bool:
+    """Доступно ли плановое ТО. Целиком наследует доступ от объекта."""
+    if scope.kind is ScopeKind.ALL:
+        return True
+    if scope.kind is ScopeKind.NOTHING or planned is None:
+        return False
+    return can_access_object(scope, planned.object)
+
+
+def can_access_defective_act(scope: AccessScope, act) -> bool:
+    """Доступна ли дефектная ведомость: через плановое ТО, плюс своё участие."""
+    if scope.kind is ScopeKind.ALL:
+        return True
+    if scope.kind is ScopeKind.NOTHING or act is None:
+        return False
+    if (
+        act.responsible_user_id == scope.user_id
+        or act.created_by_user_id == scope.user_id
+    ):
+        return True
+    return can_access_planned_to(scope, act.planned_to)
+
+
+def can_access_user(scope: AccessScope, user) -> bool:
+    """Виден ли человек. Правила те же, что у `apply_user_scope`."""
+    if scope.kind is ScopeKind.ALL:
+        return True
+    if user is None:
+        return False
+    if user.id == scope.user_id:
+        return True
+    if scope.kind is ScopeKind.NOTHING:
+        return False
+    if scope.kind is ScopeKind.COMPANY:
+        return scope.company_id is not None and user.company_id == scope.company_id
+    if user.division_id in scope.division_ids:
+        return True
+    return any(division.id in scope.division_ids for division in user.divisions)

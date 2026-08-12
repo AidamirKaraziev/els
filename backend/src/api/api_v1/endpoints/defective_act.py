@@ -1,5 +1,3 @@
-import logging
-
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.params import Path
 
@@ -38,9 +36,9 @@ def get_defective_acts(
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
     current_user=Depends(deps.require(Permission.ACT_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    logging.info(crud_defective_act.get_multi(db=session, page=None))
-    data, paginator = crud_defective_act.get_multi(db=session, page=page)
+    data, paginator = crud_defective_act.get_multi(db=session, scope=scope, page=page)
     return ListOfEntityResponse(
         data=[getting_defective_act(obj=datum, request=request) for datum in data],
         meta=Meta(paginator=paginator),
@@ -60,9 +58,10 @@ def get_defective_acts_by_planned_to(
     planned_to_id: int = Path(..., title="ID planned_to"),
     month: int = Query(0, ge=0, le=12, title="Месяц (1–12), 0 = без фильтра"),
     current_user=Depends(deps.require(Permission.ACT_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
     data_q, code, _ = crud_defective_act.get_by_planned_to_id(
-        db=session, planned_to_id=planned_to_id, month=month
+        db=session, planned_to_id=planned_to_id, month=month, scope=scope
     )
     get_raise(code=code)
     data = data_q.all()
@@ -83,9 +82,10 @@ def get_defective_act_by_id(
     session=Depends(deps.get_db),
     defective_act_id: int = Path(..., title="ID defective act"),
     current_user=Depends(deps.require(Permission.ACT_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
     obj, code, _ = crud_defective_act.get_defective_act_by_id(
-        db=session, defective_act_id=defective_act_id
+        db=session, defective_act_id=defective_act_id, scope=scope
     )
     get_raise(code=code)
     return SingleEntityResponse(data=getting_defective_act(obj, request))
@@ -103,10 +103,10 @@ def create_defective_act(
     new_data: DefectiveActCreate,
     current_user=Depends(deps.require(Permission.ACT_CREATE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-
     obj, code, _ = crud_defective_act.create_defective_act(
-        db=session, new_data=new_data, current_user=current_user
+        db=session, new_data=new_data, current_user=current_user, scope=scope
     )
     get_raise(code=code)
     return SingleEntityResponse(data=getting_defective_act(obj, request))
@@ -125,10 +125,13 @@ def update_defective_act(
     current_user=Depends(deps.require(Permission.ACT_UPDATE)),
     defective_act_id: int = Path(..., title="ID defective act"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-
     obj, code, _ = crud_defective_act.update_defective_act(
-        db=session, defective_act_id=defective_act_id, update_data=update_data
+        db=session,
+        defective_act_id=defective_act_id,
+        update_data=update_data,
+        scope=scope,
     )
     get_raise(code=code)
     return SingleEntityResponse(data=getting_defective_act(obj, request))
@@ -147,10 +150,10 @@ def update_defective_act_status(
     current_user=Depends(deps.require(Permission.ACT_UPDATE)),
     defective_act_id: int = Path(..., title="ID defective act"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-
     obj, code, _ = crud_defective_act.update_status(
-        db=session, defective_act_id=defective_act_id, new_data=new_data
+        db=session, defective_act_id=defective_act_id, new_data=new_data, scope=scope
     )
     get_raise(code=code)
     return SingleEntityResponse(data=getting_defective_act(obj, request))
@@ -168,10 +171,10 @@ def generate_defective_act_pdf(
     current_user=Depends(deps.require(Permission.ACT_READ)),
     defective_act_id: int = Path(..., title="ID defective act"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_read_scope),
 ):
-
     obj, code, _ = crud_defective_act.generate_pdf(
-        db=session, defective_act_id=defective_act_id
+        db=session, defective_act_id=defective_act_id, scope=scope
     )
     get_raise(code=code)
     return SingleEntityResponse(data=getting_defective_act(obj, request))

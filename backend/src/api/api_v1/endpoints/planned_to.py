@@ -39,9 +39,10 @@ def get_schedule_execution_stats(
     year: int = Query(..., ge=2000, le=2100, title="Отчётный год"),
     month: int = Query(..., ge=1, le=12, title="Отчётный месяц (1–12)"),
     current_user=Depends(deps.require(Permission.STATISTICS_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
     data = crud_planned_to.get_schedule_execution_stats(
-        db=session, year=year, month=month
+        db=session, scope=scope, year=year, month=month
     )
     return SingleEntityResponse(data=data)
 
@@ -58,10 +59,9 @@ def get_all_planned_to(
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
     current_user=Depends(deps.require(Permission.PLANNED_TO_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    logging.info(crud_planned_to.get_multi(db=session, page=None))
-
-    data, paginator = crud_planned_to.get_multi(db=session, page=page)
+    data, paginator = crud_planned_to.get_multi(db=session, scope=scope, page=page)
 
     return ListOfEntityResponse(
         data=[get_planned_to(obj=datum, request=request) for datum in data],
@@ -81,9 +81,10 @@ def get_planned_to_by_id(
     session=Depends(deps.get_db),
     planned_to_id: int = Path(..., title="ID planned TO"),
     current_universal_user=Depends(deps.require(Permission.PLANNED_TO_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
     obj, code, indexes = crud_planned_to.get_planed_to_by_id(
-        db=session, planned_to_id=planned_to_id
+        db=session, planned_to_id=planned_to_id, scope=scope
     )
     get_raise(code=code)
     return SingleEntityResponse(data=get_planned_to(obj, request))
@@ -102,19 +103,15 @@ def get_planned_to_by_obj_id(
     object_id: int = Path(..., title="ID объекта"),
     page: int = Query(1, title="Номер страницы"),
     current_universal_user=Depends(deps.require(Permission.PLANNED_TO_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
     cur_object, object_code, indexes = crud_objects.get_object_by_id(
-        db=session, object_id=object_id
+        db=session, object_id=object_id, scope=scope
     )
     get_raise(code=object_code)
 
-    logging.info(
-        crud_planned_to.get_planed_to_by_object_id(
-            db=session, page=None, object_id=object_id
-        )
-    )
     data, paginator = crud_planned_to.get_planed_to_by_object_id(
-        db=session, page=page, object_id=object_id
+        db=session, page=page, object_id=object_id, scope=scope
     )
 
     return ListOfEntityResponse(
@@ -135,10 +132,11 @@ def create_planned_to(
     new_data: PlannedTOCreate,
     current_user=Depends(deps.require(Permission.PLANNED_TO_WRITE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-    # сделать проверку на роль Администратора и Прораба
-
-    obj, code, index = crud_planned_to.create_planned_to(db=session, new_data=new_data)
+    obj, code, index = crud_planned_to.create_planned_to(
+        db=session, new_data=new_data, scope=scope
+    )
     get_raise(code=code)
     return SingleEntityResponse(data=get_planned_to(obj, request))
 
@@ -157,11 +155,10 @@ def update_planned_to(
     current_user=Depends(deps.require(Permission.PLANNED_TO_WRITE)),
     planned_to_id: int = Path(..., title="Id планового ТО"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-    # проверка на роли
-
     obj, code, indexes = crud_planned_to.update_planned_to(
-        db=session, new_data=new_data, planned_to_id=planned_to_id
+        db=session, new_data=new_data, planned_to_id=planned_to_id, scope=scope
     )
     get_raise(code=code)
 

@@ -19,6 +19,7 @@ import pytest
 from src.crud.crud_order import crud_orders
 from src.models import Object, Order
 from src.schemas.order import OrderUpdate
+from tests.scopes import ALL_SCOPE
 
 STATUS_ACCEPTED = 2
 STATUS_IN_PROGRESS = 3
@@ -54,6 +55,7 @@ def _update(db_session, db_order, status_id):
         db=db_session,
         new_data=OrderUpdate(object_id=db_order.object_id, status_id=status_id),
         order_id=db_order.id,
+        scope=ALL_SCOPE,
     )
     assert code == 0
     return obj

@@ -3,6 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from starlette import status
 
+from src.core.access import AccessScope, apply_act_fact_scope, can_access_act_fact
 from src.core.roles import ADMIN, FOREMAN, MECHANIC
 from src.crud.base import CRUDBase
 from src.crud.crud_act_base import crud_acts_bases
@@ -14,6 +15,7 @@ from src.models import (
     UniversalUser,
 )
 from src.schemas.act_fact import ActFactCreate, ActFactUpdate
+from src.utils import pagination
 from src.utils.time_stamp import date_from_timestamp
 
 ROLE_RIGHTS = [ADMIN, FOREMAN]
@@ -36,16 +38,31 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
         "detail": "Не найден механик с таким id",
     }
 
-    def get_act_fact_by_id(self, db: Session, id: int):
+    # Запись вне области видимости — 403, см. `templates_raise.out_of_scope`.
+    out_of_scope = -136
+
+    def scoped_query(self, db: Session, scope: AccessScope):
+        """Единственное место, где список фактических актов режется."""
+        return apply_act_fact_scope(db.query(self.model), scope)
+
+    def get_multi(self, db: Session, *, scope: AccessScope, page: Optional[int] = None):
+        """Перекрывает `CRUDBase.get_multi` ради обязательной области."""
+        return pagination.get_page(self.scoped_query(db, scope), page)
+
+    def get_act_fact_by_id(self, db: Session, id: int, scope: AccessScope):
         act_fact = super().get(db=db, id=id)
         if not act_fact:
             return None, self.not_found_id, None
+        if not can_access_act_fact(scope, act_fact):
+            return None, self.out_of_scope, None
         return act_fact, 0, None
 
-    def create_act_fact(self, db: Session, *, new_data: ActFactCreate):
+    def create_act_fact(
+        self, db: Session, *, new_data: ActFactCreate, scope: AccessScope
+    ):
         # проверка объекта
         obj, code, indexes = crud_objects.get_object_by_id(
-            db=db, object_id=new_data.object_id
+            db=db, object_id=new_data.object_id, scope=scope
         )
         if code != 0:
             return None, code, None
@@ -81,10 +98,17 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
         return db_obj, 0, None
 
     def update_act_fact(
-        self, db: Session, *, update_data: Optional[ActFactUpdate], act_fact_id: int
+        self,
+        db: Session,
+        *,
+        update_data: Optional[ActFactUpdate],
+        act_fact_id: int,
+        scope: AccessScope,
     ):
         # проверить есть ли объект с таким id
-        this_act_fact, code, indexes = self.get_act_fact_by_id(db=db, id=act_fact_id)
+        this_act_fact, code, indexes = self.get_act_fact_by_id(
+            db=db, id=act_fact_id, scope=scope
+        )
         if code != 0:
             return None, code, None
         # обновление выполненных шагов
@@ -130,8 +154,15 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
         db_obj = super().update(db=db, db_obj=this_act_fact, obj_in=update_data)
         return db_obj, 0, None
 
-    def get_act_fact_by_object_id(self, *, db: Session, object_id: int):
-        act_bases = db.query(ActFact).join(Object).filter(Object.id == object_id).all()
+    def get_act_fact_by_object_id(
+        self, *, db: Session, object_id: int, scope: AccessScope
+    ):
+        act_bases = (
+            self.scoped_query(db, scope)
+            .join(Object)
+            .filter(Object.id == object_id)
+            .all()
+        )
         return act_bases, 0, None
 
 

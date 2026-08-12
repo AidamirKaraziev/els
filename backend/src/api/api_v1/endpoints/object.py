@@ -7,7 +7,6 @@ from fastapi.params import Path
 from src.api import deps
 from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
-from src.core.roles import ADMIN, FOREMAN
 from src.crud.crud_company import crud_company
 from src.crud.crud_object import crud_objects
 from src.crud.users.crud_client import crud_client
@@ -20,8 +19,6 @@ PATH_MODEL = "objects"
 PATH_TYPE_LETTER_OF_APPOINTMENT = "letter_of_appointment"
 PATH_TYPE_ACCEPTANCE_CERTIFICATE = "acceptance_certificate"
 PATH_TYPE_ACT_PTO = "act_pto"
-
-ROLES_ELIGIBLE = [ADMIN, FOREMAN]
 
 router = APIRouter()
 
@@ -39,10 +36,9 @@ def get_data(
     session=Depends(deps.get_db),
     page: int = Query(None, title="Номер страницы"),
     current_user=Depends(deps.require(Permission.OBJECT_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    logging.info(crud_objects.get_multi(db=session, page=None))
-
-    data, paginator = crud_objects.get_multi(db=session, page=page)
+    data, paginator = crud_objects.get_multi(db=session, scope=scope, page=page)
 
     return ListOfEntityResponse(
         data=[get_object(obj=datum, request=request) for datum in data],
@@ -65,13 +61,14 @@ def get_objects_by_foreman(
     current_user=Depends(deps.require(Permission.OBJECT_READ)),
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
+    scope=Depends(deps.get_read_scope),
 ):
     user, code, indexes = crud_universal_users.get_user_by_id(
         db=session, user_id=foreman_id
     )
     get_raise(code=code)
     data, paginator = crud_objects.get_objects_by_foreman_id(
-        db=session, page=page, foreman_id=foreman_id
+        db=session, page=page, foreman_id=foreman_id, scope=scope
     )
     return ListOfEntityResponse(
         data=[get_object(datum, request) for datum in data],
@@ -96,13 +93,14 @@ def get_objects_by_mechanic(
     current_user=Depends(deps.require(Permission.OBJECT_READ)),
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
+    scope=Depends(deps.get_read_scope),
 ):
     user, code, indexes = crud_universal_users.get_user_by_id(
         db=session, user_id=mechanic_id
     )
     get_raise(code=code)
     data, paginator = crud_objects.get_objects_by_mechanic_id(
-        db=session, page=page, mechanic_id=mechanic_id
+        db=session, page=page, mechanic_id=mechanic_id, scope=scope
     )
     return ListOfEntityResponse(
         data=[get_object(datum, request) for datum in data],
@@ -136,11 +134,12 @@ def get_objects_by_mechanic(
     current_user=Depends(deps.require(Permission.OBJECT_READ)),
     session=Depends(deps.get_db),
     page: int = Query(default=1, title="Номер страницы"),
+    scope=Depends(deps.get_read_scope),
 ):
     user, code, indexes = crud_client.get_client_by_id(db=session, id=client_id)
     get_raise(code=code)
     data, paginator = crud_objects.get_object_by_client_id(
-        db=session, page=page, client_id=client_id
+        db=session, page=page, client_id=client_id, scope=scope
     )
     return ListOfEntityResponse(
         data=[get_object(datum, request) for datum in data],
@@ -161,13 +160,14 @@ def get_objects_by_company_id(
     current_user=Depends(deps.require(Permission.OBJECT_READ)),
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
+    scope=Depends(deps.get_read_scope),
 ):
     obj, code, indexes = crud_company.get_company_by_id(
         db=session, company_id=company_id
     )
     get_raise(code=code)
     data, paginator = crud_objects.get_objects_by_company_id(
-        db=session, page=page, company_id=company_id
+        db=session, page=page, company_id=company_id, scope=scope
     )
     return ListOfEntityResponse(
         data=[get_object(datum, request) for datum in data],
@@ -188,8 +188,11 @@ def get_data(
     session=Depends(deps.get_db),
     object_id: int = Path(..., title="ID object"),
     current_universal_user=Depends(deps.require(Permission.OBJECT_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    obj, code, indexes = crud_objects.get_object_by_id(db=session, object_id=object_id)
+    obj, code, indexes = crud_objects.get_object_by_id(
+        db=session, object_id=object_id, scope=scope
+    )
     get_raise(code=code)
     return SingleEntityResponse(data=get_object(obj, request))
 
@@ -207,10 +210,11 @@ def create_object(
     new_data: ObjectCreate,
     current_user=Depends(deps.require(Permission.OBJECT_CREATE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-    # сделать проверку на роль Администратора и Прораба
-
-    obj, code, index = crud_objects.create_object(db=session, new_data=new_data)
+    obj, code, index = crud_objects.create_object(
+        db=session, new_data=new_data, scope=scope
+    )
     get_raise(code=code)
     return SingleEntityResponse(data=get_object(obj, request))
 
@@ -229,11 +233,10 @@ def update_object(
     current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     object_id: int = Path(..., title="Id объекта"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-    # проверка на роли
-
     obj, code, indexes = crud_objects.update_object(
-        db=session, new_data=new_data, object_id=object_id
+        db=session, new_data=new_data, object_id=object_id, scope=scope
     )
     get_raise(code=code)
 
@@ -254,10 +257,11 @@ def create_letter_of_appointment_file(
     current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     object_id: int = Path(..., title="Id объекта"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-    # проверка на роли
-
-    obj, code, indexes = crud_objects.get_object_by_id(db=session, object_id=object_id)
+    obj, code, indexes = crud_objects.get_object_by_id(
+        db=session, object_id=object_id, scope=scope
+    )
     get_raise(code=code)
 
     crud_objects.adding_file(
@@ -286,10 +290,11 @@ def create_acceptance_certificate_file(
     current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     object_id: int = Path(..., title="Id объекта"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-    # проверка на роли
-
-    obj, code, indexes = crud_objects.get_object_by_id(db=session, object_id=object_id)
+    obj, code, indexes = crud_objects.get_object_by_id(
+        db=session, object_id=object_id, scope=scope
+    )
     get_raise(code=code)
 
     crud_objects.adding_file(
@@ -318,10 +323,11 @@ def create_act_pto_file(
     current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     object_id: int = Path(..., title="Id объекта"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-    # проверка на роли
-
-    obj, code, indexes = crud_objects.get_object_by_id(db=session, object_id=object_id)
+    obj, code, indexes = crud_objects.get_object_by_id(
+        db=session, object_id=object_id, scope=scope
+    )
     get_raise(code=code)
 
     crud_objects.adding_file(
@@ -349,12 +355,10 @@ def archiving_objects(
     object_id: int = Path(..., title="Id объекта"),
     current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
     obj, code, indexes = crud_objects.archiving_object(
-        db=session,
-        current_user=current_user,
-        object_id=object_id,
-        role_list=ROLES_ELIGIBLE,
+        db=session, object_id=object_id, scope=scope
     )
     get_raise(code=code)
     return SingleEntityResponse(data=get_object(obj, request=request))
@@ -373,12 +377,10 @@ def unzipping_objects(
     object_id: int = Path(..., title="Id объекта"),
     current_user=Depends(deps.require(Permission.OBJECT_UPDATE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
     obj, code, indexes = crud_objects.unzipping_object(
-        db=session,
-        current_user=current_user,
-        object_id=object_id,
-        role_list=ROLES_ELIGIBLE,
+        db=session, object_id=object_id, scope=scope
     )
     get_raise(code=code)
     return SingleEntityResponse(data=get_object(obj, request=request))

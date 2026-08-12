@@ -92,6 +92,7 @@ def update_dvision_for_employee(
     employee_id: int = Path(..., title="Id пользователя"),
     current_user=Depends(deps.require(Permission.USER_UPDATE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
     obj, code, indexes = crud_admin.change_division_for_employee(
         db=session,
@@ -100,6 +101,7 @@ def update_dvision_for_employee(
         employee_id=employee_id,
         role_list=ROLES_ELIGIBLE,
         employee_list=EMPLOYEE_LIST,
+        scope=scope,
     )
     get_raise(code=code)
 
@@ -119,6 +121,7 @@ def archiving_users(
     id_user: int = Path(..., title="Id пользователя"),
     current_user=Depends(deps.require(Permission.USER_ARCHIVE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
     obj, code, indexes = crud_admin.archiving_user(
         db=session,
@@ -126,6 +129,7 @@ def archiving_users(
         id_user=id_user,
         role_list=ROLES_ELIGIBLE,
         employee_list=EMPLOYEE_LIST,
+        scope=scope,
     )
     get_raise(code=code)
 
@@ -145,6 +149,7 @@ def unzipping_users(
     id_user: int = Path(..., title="Id пользователя"),
     current_user=Depends(deps.require(Permission.USER_ARCHIVE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
     obj, code, indexes = crud_admin.unzipping_user(
         db=session,
@@ -152,6 +157,7 @@ def unzipping_users(
         id_user=id_user,
         role_list=ROLES_ELIGIBLE,
         employee_list=EMPLOYEE_LIST,
+        scope=scope,
     )
     get_raise(code=code)
 
@@ -172,6 +178,7 @@ def update_user(
     user_id: int = Path(..., title="Id пользователя"),
     current_user=Depends(deps.require(Permission.USER_UPDATE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
 
     obj, code, indexes = crud_admin.updating_user(
@@ -181,6 +188,7 @@ def update_user(
         new_data=new_data,
         role_list=ROLES_ELIGIBLE,
         changeable_list=EMPLOYEE_LIST,
+        scope=scope,
     )
 
     get_raise(code=code)
@@ -202,6 +210,7 @@ def create_upload_file(
     user_id: int = Path(..., title="Id пользователя"),
     current_user=Depends(deps.require(Permission.USER_UPDATE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
 
     save_path, code, indexes = crud_foreman.updating_file_for_user(
@@ -210,6 +219,7 @@ def create_upload_file(
         user_id=user_id,
         role_list=ROLES_ELIGIBLE,
         changeable_list=EMPLOYEE_LIST,
+        scope=scope,
         file=file,
         path_model=PATH_MODEL,
         path_type=PATH_TYPE_PHOTO,
@@ -243,6 +253,7 @@ def create_upload_file(
     user_id: int = Path(..., title="Id пользователя"),
     current_user=Depends(deps.require(Permission.USER_UPDATE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
 
     save_path, code, indexes = crud_foreman.updating_file_for_user(
@@ -251,6 +262,7 @@ def create_upload_file(
         user_id=user_id,
         role_list=ROLES_ELIGIBLE,
         changeable_list=EMPLOYEE_LIST,
+        scope=scope,
         file=file,
         path_model=PATH_MODEL,
         path_type=PATH_TYPE_IDENTITY_CARD,
@@ -284,6 +296,7 @@ def create_upload_file(
     user_id: int = Path(..., title="Id пользователя"),
     current_user=Depends(deps.require(Permission.USER_UPDATE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
 
     save_path, code, indexes = crud_foreman.updating_file_for_user(
@@ -292,6 +305,7 @@ def create_upload_file(
         user_id=user_id,
         role_list=ROLES_ELIGIBLE,
         changeable_list=EMPLOYEE_LIST,
+        scope=scope,
         file=file,
         path_model=PATH_MODEL,
         path_type=PATH_TYPE_QUALIFICATION,

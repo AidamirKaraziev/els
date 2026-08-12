@@ -26,9 +26,10 @@ def get_defective_act_photos(
     defective_act_id: int = Path(..., title="ID defective act"),
     page: int = Query(1, title="Номер страницы"),
     current_user=Depends(deps.require(Permission.ACT_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
     data_q, code, _ = crud_defective_act_photo.get_photos_by_defective_act_id(
-        db=session, defective_act_id=defective_act_id
+        db=session, defective_act_id=defective_act_id, scope=scope
     )
     get_raise(code=code)
     data = data_q.all()
@@ -50,13 +51,14 @@ def add_defective_act_photo(
     current_user=Depends(deps.require(Permission.FILE_UPLOAD)),
     defective_act_id: int = Path(..., title="ID defective act"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-
     photo_obj, code, _ = crud_defective_act_photo.add_photo(
         db=session,
         file=file,
         defective_act_id=defective_act_id,
         created_by_user_id=current_user.id,
+        scope=scope,
     )
     get_raise(code=code)
     return SingleEntityResponse(
@@ -74,9 +76,10 @@ def delete_defective_act_photo(
     session=Depends(deps.get_db),
     current_user=Depends(deps.require(Permission.ACT_DELETE)),
     defective_act_photo_id: int = Path(..., title="ID defective act photo"),
+    scope=Depends(deps.get_write_scope),
 ):
     text, code, _ = crud_defective_act_photo.delete_photo_by_id(
-        db=session, defective_act_photo_id=defective_act_photo_id
+        db=session, defective_act_photo_id=defective_act_photo_id, scope=scope
     )
     get_raise(code=code)
     return text

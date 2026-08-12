@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from src.core.access import AccessScope, apply_order_scope, can_access_order
 from src.crud.base import CRUDBase
 from src.crud.crud_fault_category import crud_fault_category
 from src.crud.crud_object import crud_objects
@@ -32,19 +33,34 @@ def _object_display_label(name: Optional[str], object_id: int) -> str:
 class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
     not_found = -129
     is_exist = -1291
+    # Запись вне области видимости — 403, см. `templates_raise.out_of_scope`.
+    out_of_scope = -136
 
-    def get_order_by_id(self, *, db: Session, order_id: int):
+    def scoped_query(self, db: Session, scope: AccessScope):
+        """Единственное место, где список заявок режется по области."""
+        return apply_order_scope(db.query(self.model), scope)
+
+    def get_order_by_id(self, *, db: Session, order_id: int, scope: AccessScope):
         obj = db.query(Order).filter(Order.id == order_id).first()
         if obj is None:
             return None, self.not_found, None
+        if not can_access_order(scope, obj):
+            return None, self.out_of_scope, None
         return obj, 0, None
 
     def create_order(
-        self, db: Session, *, new_data: OrderCreate, current_user: UniversalUser
+        self,
+        db: Session,
+        *,
+        new_data: OrderCreate,
+        current_user: UniversalUser,
+        scope: AccessScope,
     ):
-        # проверка object_id
+        # Заявку заводят по объекту, к которому есть доступ. Для клиента это
+        # единственное, что он вообще создаёт, и завести её по чужому лифту он
+        # не должен.
         obj, code, indexes = crud_objects.get_object_by_id(
-            db=db, object_id=new_data.object_id
+            db=db, object_id=new_data.object_id, scope=scope
         )
         if code != 0:
             return None, code, None
@@ -66,14 +82,19 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         db_obj = super().create(db=db, obj_in=new_data)
         return db_obj, 0, None
 
-    def update_order(self, db: Session, *, new_data: OrderUpdate, order_id: int):
+    def update_order(
+        self, db: Session, *, new_data: OrderUpdate, order_id: int, scope: AccessScope
+    ):
         # проверка order_id
-        order, code, indexes = self.get_order_by_id(db=db, order_id=order_id)
+        order, code, indexes = self.get_order_by_id(
+            db=db, order_id=order_id, scope=scope
+        )
         if code != 0:
             return None, code, None
-        # проверить есть ли объект с таким id
+        # Объект тоже проверяется по области: иначе заявку можно было бы
+        # перевесить на чужой лифт и получить к нему доступ через неё.
         obj, code, indexes = crud_objects.get_object_by_id(
-            db=db, object_id=new_data.object_id
+            db=db, object_id=new_data.object_id, scope=scope
         )
         if code != 0:
             return None, code, None
@@ -87,7 +108,7 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         if new_data.executor_id == 0:
             new_data.executor_id = None
         if new_data.executor_id is not None:
-            fact_executor, code, indexes = crud_universal_users.get_user_by_id(
+            fact_executor, code, indexes = crud_universal_users.get_user_by_reference(
                 db=db, user_id=new_data.executor_id
             )
             if code != 0:
@@ -123,6 +144,7 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         self,
         *,
         db: Session,
+        scope: AccessScope,
         page: Optional[int],
         object_id: Optional[int] = None,
         year: Optional[int] = None,
@@ -131,13 +153,13 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
     ):
         """Список заявок с необязательными фильтрами.
 
-        Все параметры необязательные: без них запрос совпадает с прежним
-        `get_multi`, поэтому старые клиенты ничего не замечают.
+        Все параметры кроме `scope` необязательные: без них запрос совпадает с
+        прежним `get_multi`, поэтому старые клиенты ничего не замечают.
 
         Нужно для перехода из виджета «Топ поломок»: человек видит у объекта
         число за месяц и хочет посмотреть, какие именно это были заявки.
         """
-        query = db.query(self.model)
+        query = self.scoped_query(db, scope)
 
         if object_id is not None:
             query = query.filter(self.model.object_id == object_id)
@@ -168,16 +190,22 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
 
         return pagination.get_page(query, page)
 
-    def get_my_orders(self, *, db: Session, creator_id: int):
-        my_orders = db.query(self.model).filter(self.model.creator_id == creator_id)
+    def get_my_orders(self, *, db: Session, creator_id: int, scope: AccessScope):
+        # Свои заявки и так внутри области — фильтр здесь не сужает выдачу, а
+        # держит правило одним для всех выборок заявок.
+        my_orders = self.scoped_query(db, scope).filter(
+            self.model.creator_id == creator_id
+        )
         return my_orders, 0, None
 
-    def get_orders_for_me(self, *, db: Session, executor_id: int):
-        orders = db.query(self.model).filter(self.model.executor_id == executor_id)
+    def get_orders_for_me(self, *, db: Session, executor_id: int, scope: AccessScope):
+        orders = self.scoped_query(db, scope).filter(
+            self.model.executor_id == executor_id
+        )
         return orders, 0, None
 
     def get_top_breakdowns_by_month(
-        self, *, db: Session, year: int, month: int
+        self, *, db: Session, scope: AccessScope, year: int, month: int
     ) -> list:
         """
         Задачи (поломки) с object_id за календарный месяц [year-month],
@@ -189,7 +217,7 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         else:
             end = datetime.datetime(year, month + 1, 1)
 
-        return (
+        query = (
             db.query(
                 Object.id,
                 Object.name,
@@ -208,7 +236,13 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
                 Order.created_at >= start,
                 Order.created_at < end,
             )
-            .group_by(
+        )
+        # Тем же фильтром, что и список заявок: цифра в сводке и длина списка
+        # за тот же месяц должны сходиться, иначе виджет выглядит враньём.
+        query = apply_order_scope(query, scope)
+
+        return (
+            query.group_by(
                 Object.id,
                 Object.name,
                 Organization.id,

@@ -31,10 +31,9 @@ def get_data(
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
     current_user=Depends(deps.require(Permission.ACT_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    logging.info(crud_acts_fact.get_multi(db=session, page=None))
-
-    data, paginator = crud_acts_fact.get_multi(db=session, page=page)
+    data, paginator = crud_acts_fact.get_multi(db=session, scope=scope, page=page)
 
     return ListOfEntityResponse(
         data=[get_acts_facts(obj=datum, request=request) for datum in data],
@@ -54,8 +53,11 @@ def get_data(
     session=Depends(deps.get_db),
     act_fact_id: int = Path(..., title="ID object"),
     current_universal_user=Depends(deps.require(Permission.ACT_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    obj, code, indexes = crud_acts_fact.get_act_fact_by_id(db=session, id=act_fact_id)
+    obj, code, indexes = crud_acts_fact.get_act_fact_by_id(
+        db=session, id=act_fact_id, scope=scope
+    )
     get_raise(code=code)
     return SingleEntityResponse(data=get_acts_facts(obj, request))
 
@@ -75,10 +77,11 @@ def create_act_fact(
     new_data: ActFactCreate,
     current_user=Depends(deps.require(Permission.ACT_CREATE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-    # сделать проверку на роль Администратора и Прораба
-
-    obj, code, index = crud_acts_fact.create_act_fact(db=session, new_data=new_data)
+    obj, code, index = crud_acts_fact.create_act_fact(
+        db=session, new_data=new_data, scope=scope
+    )
     get_raise(code=code)
     return SingleEntityResponse(data=get_acts_facts(obj, request))
 
@@ -131,11 +134,10 @@ def update_act_fact(
     current_user=Depends(deps.require(Permission.ACT_UPDATE)),
     act_fact_id: int = Path(..., title="Id фактического акта"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-    # проверка на роли
-
     obj, code, indexes = crud_acts_fact.update_act_fact(
-        db=session, update_data=update_data, act_fact_id=act_fact_id
+        db=session, update_data=update_data, act_fact_id=act_fact_id, scope=scope
     )
     get_raise(code=code)
 
@@ -153,10 +155,10 @@ def get_act_fact_by_object_id(
     current_user=Depends(deps.require(Permission.ACT_READ)),
     object_id: int = Path(..., title="ID объекта"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_read_scope),
 ):
-
     data, code, indexes = crud_acts_fact.get_act_fact_by_object_id(
-        db=session, object_id=object_id
+        db=session, object_id=object_id, scope=scope
     )
     get_raise(code=code)
 

@@ -33,10 +33,9 @@ def get_order_photo(
     session=Depends(deps.get_db),
     page: int = Query(default=1, title="Номер страницы"),
     current_user=Depends(deps.require(Permission.ORDER_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    logging.info(crud_order_photo.get_multi(db=session, page=None))
-
-    data, paginator = crud_order_photo.get_multi(db=session, page=page)
+    data, paginator = crud_order_photo.get_multi(db=session, scope=scope, page=page)
 
     return ListOfEntityResponse(
         data=[getting_order_photo(obj=datum, request=request) for datum in data],
@@ -58,11 +57,10 @@ def get_photo_by_order_id(
     order_id: int = Path(..., title="Id задачи"),
     page: int = Query(1, title="Номер страницы"),
     current_user=Depends(deps.require(Permission.ORDER_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    logging.info(crud_order_photo.get_photo_by_order_id(db=session, order_id=order_id))
-
     data, code, indexes = crud_order_photo.get_photo_by_order_id(
-        db=session, order_id=order_id
+        db=session, order_id=order_id, scope=scope
     )
     get_raise(code=code)
     return ListOfEntityResponse(
@@ -83,9 +81,10 @@ def get_order_photo_by_id(
     session=Depends(deps.get_db),
     order_photo_id: int = Path(default=..., title="ID order_photo"),
     current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
     obj, code, indexes = crud_order_photo.get_photo_by_id(
-        db=session, order_photo_id=order_photo_id
+        db=session, order_photo_id=order_photo_id, scope=scope
     )
     get_raise(code=code)
 
@@ -106,9 +105,10 @@ def add_photo(
     current_user=Depends(deps.require(Permission.FILE_UPLOAD)),
     order_id: int = Path(default=..., title="Id задачи"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
     obj, code, indexes = crud_order_photo.check_executor(
-        db=session, order_id=order_id, executor_id=current_user.id
+        db=session, order_id=order_id, executor_id=current_user.id, scope=scope
     )
     get_raise(code=code)
 
@@ -118,11 +118,12 @@ def add_photo(
         path_model=PATH_MODEL,
         path_type=PATH_TYPE,
         order_id=order_id,
+        scope=scope,
     )
     get_raise(code=code)
 
     data, code, indexes = crud_order_photo.get_photo_by_order_id(
-        db=session, order_id=order_id
+        db=session, order_id=order_id, scope=scope
     )
     get_raise(code=code)
     return ListOfEntityResponse(
@@ -154,9 +155,10 @@ def delete_order_photo_by_id(
     session=Depends(deps.get_db),
     order_photo_id: int = Path(default=..., title="ID order_photo"),
     current_universal_user=Depends(deps.require(Permission.ORDER_DELETE)),
+    scope=Depends(deps.get_write_scope),
 ):
     text, code, indexes = crud_order_photo.delete_photo_by_photo_id(
-        db=session, id=order_photo_id
+        db=session, id=order_photo_id, scope=scope
     )
     get_raise(code=code)
     return text

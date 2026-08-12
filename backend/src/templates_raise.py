@@ -100,6 +100,11 @@ defective_act_invalid_month = -1343
 
 password_too_weak = -135
 
+# Запись существует, но лежит вне области видимости человека. 403, а не 404:
+# 404 строже (не подтверждает существование записи), но на фронте выглядит как
+# пропавшие данные, и разбираться будет человек, у которого «вчера работало».
+out_of_scope = -136
+
 
 def get_raise(code: Any):
     if type(code) is not int:
@@ -527,6 +532,13 @@ def get_raise(code: Any):
                 "символов"
             ),
             path="$.body",
+        )
+    if code == -136:
+        raise InaccessibleEntity(
+            message="Нет доступа к этой записи",
+            num=136,
+            description="Запись относится к другому участку, объекту или компании",
+            path="$.path",
         )
     if code != 0:
         raise UnfoundEntity(

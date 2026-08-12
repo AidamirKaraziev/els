@@ -72,9 +72,18 @@ class TestAccess:
         assert _get(client_with_db).status_code == 401
 
     @pytest.mark.integration
-    def test_client_role_is_rejected(self, client_with_db, as_role):
+    def test_client_is_allowed_and_sees_only_his_company(
+        self, client_with_db, as_role
+    ):
+        """Клиента до статистики пускаем с этапа 5.
+
+        Раньше здесь стояла временная проверка роли: без фильтра по области
+        ручка отдала бы клиенту сводку по всем компаниям сразу. Теперь сводка
+        режется по его `company_id`, поэтому запрет снят. Клиент без компании
+        видит нули, а не чужие цифры.
+        """
         as_role(CLIENT_ID)
-        assert _get(client_with_db).status_code != 200
+        assert _get(client_with_db).status_code == 200
 
 
 class TestFile:

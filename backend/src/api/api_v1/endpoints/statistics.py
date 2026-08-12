@@ -14,15 +14,10 @@ from fastapi.responses import StreamingResponse
 from src.api import deps
 from src.core.permissions import Permission
 from src.core.response import SingleEntityResponse
-from src.core.roles import ADMIN, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
 from src.crud.crud_statistics import crud_statistics, month_period, previous_month
-from src.crud.users.crud_universal_user import crud_universal_users
 from src.getters.statistics import get_breakdowns_report
 from src.schemas.statistics import BreakdownsReport
 from src.services.breakdowns_pdf import build_breakdowns_pdf
-from src.templates_raise import get_raise
-
-ALL_EMPLOYER = [ADMIN, FOREMAN, MECHANIC, ENGINEER, DISPATCHER]
 
 router = APIRouter()
 
@@ -64,19 +59,15 @@ def get_breakdowns_statistics(
         title="Добавить сравнение с предыдущим месяцем",
         description="Стоит денег ещё одного запроса, поэтому по умолчанию выключено.",
     ),
+    scope=Depends(deps.get_read_scope),
 ):
-    # Временно: клиента до статистики не пускаем. По договорённости он должен
-    # видеть цифры по своей компании, но фильтрация выдачи по области
-    # видимости делается этапом 5 — до тех пор ручка отдала бы ему сводку по
-    # всем компаниям сразу. Проверка снимается вместе с появлением фильтра.
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ALL_EMPLOYER
-    )
-    get_raise(code=code)
-
+    # Временной проверки роли здесь больше нет: клиент пускается в статистику,
+    # потому что сводка теперь режется по его компании тем же фильтром, что и
+    # списки. Цифры у клиента, прораба и админа будут разными — так и надо.
     return SingleEntityResponse(
         data=_collect_report(
             session=session,
+            scope=scope,
             year=year,
             month=month,
             limit=limit,
@@ -110,18 +101,11 @@ def export_breakdowns_statistics(
     division_id: int = Query(None, title="Только объекты этого участка"),
     organization_id: int = Query(None, title="Только объекты этой организации"),
     company_id: int = Query(None, title="Только объекты этой компании"),
+    scope=Depends(deps.get_read_scope),
 ):
-    # Временно: клиента до статистики не пускаем. По договорённости он должен
-    # видеть цифры по своей компании, но фильтрация выдачи по области
-    # видимости делается этапом 5 — до тех пор ручка отдала бы ему сводку по
-    # всем компаниям сразу. Проверка снимается вместе с появлением фильтра.
-    code = crud_universal_users.check_role_list(
-        current_user=current_user, role_list=ALL_EMPLOYER
-    )
-    get_raise(code=code)
-
     report = _collect_report(
         session=session,
+        scope=scope,
         year=year,
         month=month,
         # Без ограничения: в файл идёт весь период.
@@ -154,6 +138,7 @@ def export_breakdowns_statistics(
 def _collect_report(
     *,
     session,
+    scope,
     year: int,
     month: int,
     limit,
@@ -177,18 +162,18 @@ def _collect_report(
     }
 
     rows = crud_statistics.top_breakdown_objects(
-        db=session, period=period, limit=limit, offset=offset, **filters
+        db=session, period=period, scope=scope, limit=limit, offset=offset, **filters
     )
     total_breakdowns, objects_affected = crud_statistics.count_breakdown_objects(
-        db=session, period=period, **filters
+        db=session, period=period, scope=scope, **filters
     )
     summary_rows = crud_statistics.breakdowns_by_category(
-        db=session, period=period, **filters
+        db=session, period=period, scope=scope, **filters
     )
 
     object_ids = [row.object_id for row in rows]
     severity_by_object = crud_statistics.object_severity_breakdown(
-        db=session, period=period, object_ids=object_ids, **filters
+        db=session, period=period, scope=scope, object_ids=object_ids, **filters
     )
 
     previous_counts = None
@@ -196,6 +181,7 @@ def _collect_report(
         previous_counts = crud_statistics.breakdown_counts_by_object(
             db=session,
             period=month_period(*previous_month(year, month)),
+            scope=scope,
             object_ids=object_ids,
             **filters,
         )

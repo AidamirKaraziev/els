@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from src.core.access import AccessScope, apply_user_scope, can_access_user
 from src.core.response import Paginator
 from src.core.security import (
     WeakPasswordError,
@@ -44,6 +45,9 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
 class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+    # Запись вне области видимости — 403, см. `templates_raise.out_of_scope`.
+    out_of_scope = -136
+
     def __init__(self, model: Type[ModelType]):
         """
         CRUD object with default methods to Create, Read, Update, Delete (CRUD).
@@ -68,18 +72,20 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     # ) -> List[ModelType]:
     #     return db.query(self.model).offset(skip).limit(limit).all()
 
-    def get_multi(
-        self, db: Session, *, page: Optional[int] = None
-    ) -> Tuple[List[ModelType], Paginator]:
+    def scoped_query(self, db: Session, scope: AccessScope):
+        """Единственное место, где список людей режется по области."""
+        return apply_user_scope(db.query(self.model), scope)
 
-        query = db.query(self.model)
-        return pagination.get_page(query, page)
+    def get_multi(
+        self, db: Session, *, scope: AccessScope, page: Optional[int] = None
+    ) -> Tuple[List[ModelType], Paginator]:
+        return pagination.get_page(self.scoped_query(db, scope), page)
 
     def get_multi_employee(
-        self, db: Session, *, page: Optional[int] = None
+        self, db: Session, *, scope: AccessScope, page: Optional[int] = None
     ) -> Tuple[List[ModelType], Paginator]:
 
-        query = db.query(self.model).filter(
+        query = self.scoped_query(db, scope).filter(
             self.model.role_id != 1 and self.model.role_id != 6
         )
         return pagination.get_page(query, page)
@@ -121,20 +127,25 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     # КЛИЕНТЫ КОМПАНИИ
     def get_multi_client_by_company(
-        self, db: Session, *, company_id: int, page: Optional[int] = None
+        self,
+        db: Session,
+        *,
+        company_id: int,
+        scope: AccessScope,
+        page: Optional[int] = None,
     ) -> Tuple[List[ModelType], Paginator]:
 
-        query = db.query(self.model).filter(
+        query = self.scoped_query(db, scope).filter(
             self.model.role_id == 6 and self.model.company_id == company_id
         )
         return pagination.get_page(query, page)
 
     # ВСЕ КЛИЕНТЫ
     def get_multi_clients(
-        self, db: Session, *, page: Optional[int] = None
+        self, db: Session, *, scope: AccessScope, page: Optional[int] = None
     ) -> Tuple[List[ModelType], Paginator]:
 
-        query = db.query(self.model).filter(self.model.role_id == 6)
+        query = self.scoped_query(db, scope).filter(self.model.role_id == 6)
         return pagination.get_page(query, page)
 
     def create_for_user(
@@ -435,6 +446,7 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         employee_id: int,
         role_list: list,
         employee_list: list,
+        scope: AccessScope,
     ):
         # проверить роль админа
         code = self.check_role_list(current_user=current_user, role_list=role_list)
@@ -446,6 +458,10 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return None, -105, None
         if employee.role_id not in employee_list:
             return None, -1042, None
+        # Прораб ведёт людей своих участков, а не всех подряд. У админа
+        # область не ограничена, поэтому для него ничего не меняется.
+        if not can_access_user(scope, employee):
+            return None, self.out_of_scope, None
 
         # проверка division_id
         div = db.query(Division).filter(Division.id == division.division_id).first()
@@ -470,6 +486,7 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         current_user: UniversalUser,
         role_list: list,
         employee_list: list,
+        scope: AccessScope,
     ):
         # проверить роль админа
         code = self.check_role_list(current_user=current_user, role_list=role_list)
@@ -480,6 +497,8 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return None, -105, None
         if user.role_id not in employee_list:
             return None, -1024, None
+        if not can_access_user(scope, user):
+            return None, self.out_of_scope, None
         user, code, indexes = self.archiving(db=db, db_obj=user)
         return user, 0, None
 
@@ -491,6 +510,7 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         current_user: UniversalUser,
         role_list: list,
         employee_list: list,
+        scope: AccessScope,
     ):
         # проверить роль админа
         code = self.check_role_list(current_user=current_user, role_list=role_list)
@@ -501,6 +521,8 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return None, -105, None
         if user.role_id not in employee_list:
             return None, -1024, None
+        if not can_access_user(scope, user):
+            return None, self.out_of_scope, None
         user, code, indexes = self.unzipping(db=db, db_obj=user)
         return user, 0, None
 
@@ -513,6 +535,7 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         new_data: UniversalUserUpdate,
         role_list: list,
         changeable_list: list,
+        scope: AccessScope,
     ):
         # проверить роль пользователя
         code = self.check_role_list(current_user=current_user, role_list=role_list)
@@ -524,6 +547,8 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return None, -105, None
         if user.role_id not in changeable_list:
             return None, -1024, None
+        if not can_access_user(scope, user):
+            return None, self.out_of_scope, None
 
         new_data, code, indexes = self.check_data_for_update_user(
             db=db, new_data=new_data
@@ -545,6 +570,7 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         file: Optional[UploadFile],
         path_model: str,
         path_type: str,
+        scope: AccessScope,
     ):
         # проверить роль пользователя
         code = self.check_role_list(current_user=current_user, role_list=role_list)
@@ -556,6 +582,8 @@ class CRUDBaseUser(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return None, -105, None
         if user.role_id not in changeable_list:
             return None, -1024, None
+        if not can_access_user(scope, user):
+            return None, self.out_of_scope, None
 
         save_file = self.adding_file(
             db=db, file=file, path_model=path_model, path_type=path_type, db_obj=user

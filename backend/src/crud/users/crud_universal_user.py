@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from src.config import settings
+from src.core.access import AccessScope, can_access_user
 from src.core.roles import ADMIN, CLIENT_ID
 from src.core.security import (
     get_password_hash,
@@ -29,6 +30,9 @@ ADMIN_LIST = [ADMIN]
 class CrudUniversalUser(
     CRUDBaseUser[UniversalUser, UniversalUserCreate, UniversalUserUpdate]
 ):
+    # Запись вне области видимости — 403, см. `templates_raise.out_of_scope`.
+    out_of_scope = -136
+
     def create_foreman(
         self, db: Session, *, current_user: UniversalUser, new_data: ForemanCreate
     ):
@@ -189,20 +193,42 @@ class CrudUniversalUser(
             .first()
         )
 
-    def get_user_by_id(self, db: Session, *, user_id: int):
+    def get_user_by_reference(self, db: Session, *, user_id: int):
+        """Существует ли такой человек — для проверки ссылок на него.
+
+        Области здесь намеренно нет. Это не выдача данных, а проверка, что
+        указанный исполнитель или ответственный вообще заведён: назначить
+        инженера можно на объект любого участка, и фильтр по области сломал бы
+        согласованное правило, ничего не защитив — id и так пришёл от клиента.
+        """
         user = db.query(UniversalUser).filter(UniversalUser.id == user_id).first()
         if user is None:
             return None, -130, None
         return user, 0, None
 
+    def get_user_by_id(self, db: Session, *, user_id: int, scope: AccessScope):
+        user = db.query(UniversalUser).filter(UniversalUser.id == user_id).first()
+        if user is None:
+            return None, -130, None
+        if not can_access_user(scope, user):
+            return None, self.out_of_scope, None
+        return user, 0, None
+
     def get_user_by_role_id(
-        self, *, db: Session, role_id: int, page: Optional[int] = None
+        self,
+        *,
+        db: Session,
+        role_id: int,
+        scope: AccessScope,
+        page: Optional[int] = None,
     ):
-        objs = db.query(UniversalUser).filter(UniversalUser.role_id == role_id)
+        objs = self.scoped_query(db, scope).filter(UniversalUser.role_id == role_id)
         return pagination.get_page(objs, page)
 
-    def delete_user_by_id(self, *, db: Session, user_id: int, current_user_id: int):
-        user, code, indexes = self.get_user_by_id(db=db, user_id=user_id)
+    def delete_user_by_id(
+        self, *, db: Session, user_id: int, current_user_id: int, scope: AccessScope
+    ):
+        user, code, indexes = self.get_user_by_id(db=db, user_id=user_id, scope=scope)
         if code != 0:
             return None, code, None
         if user.id == current_user_id:
@@ -210,7 +236,9 @@ class CrudUniversalUser(
         self.remove(db=db, id=user_id)
         return f"Юзер с id {user_id} - удален!", 0, None
 
-    def get_clients_by_company_id(self, *, db: Session, company_id: int):
+    def get_clients_by_company_id(
+        self, *, db: Session, company_id: int, scope: AccessScope
+    ):
         from src.crud.crud_company import crud_company
 
         # проверка на компанию
@@ -220,7 +248,7 @@ class CrudUniversalUser(
         if code != 0:
             return None, code, None
         clients = (
-            db.query(UniversalUser)
+            self.scoped_query(db, scope)
             .filter(
                 UniversalUser.company_id == company_id,
                 UniversalUser.role_id == CLIENT_ID,

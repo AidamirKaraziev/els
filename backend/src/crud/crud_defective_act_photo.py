@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
+from src.core.access import AccessScope, ScopeKind, visible_defective_act_ids
 from src.crud.base import CRUDBase
 from src.crud.crud_defective_act import crud_defective_act
 from src.models import DefectiveActPhoto
@@ -22,9 +23,19 @@ class CrudDefectiveActPhoto(
     not_found = -1341
     file_is_none = -1342
 
-    def get_photo_by_id(self, *, db: Session, defective_act_photo_id: int):
+    def scoped_query(self, db: Session, scope: AccessScope):
+        """Единственное место, где фото ведомостей режутся по области."""
+        if scope.kind is ScopeKind.ALL:
+            return db.query(self.model)
+        return db.query(self.model).filter(
+            DefectiveActPhoto.defective_act_id.in_(visible_defective_act_ids(scope))
+        )
+
+    def get_photo_by_id(
+        self, *, db: Session, defective_act_photo_id: int, scope: AccessScope
+    ):
         obj = (
-            db.query(DefectiveActPhoto)
+            self.scoped_query(db, scope)
             .filter(DefectiveActPhoto.id == defective_act_photo_id)
             .first()
         )
@@ -32,13 +43,15 @@ class CrudDefectiveActPhoto(
             return None, self.not_found, None
         return obj, 0, None
 
-    def get_photos_by_defective_act_id(self, *, db: Session, defective_act_id: int):
+    def get_photos_by_defective_act_id(
+        self, *, db: Session, defective_act_id: int, scope: AccessScope
+    ):
         act, code, _ = crud_defective_act.get_defective_act_by_id(
-            db=db, defective_act_id=defective_act_id
+            db=db, defective_act_id=defective_act_id, scope=scope
         )
         if code != 0:
             return None, code, None
-        q = db.query(DefectiveActPhoto).filter(
+        q = self.scoped_query(db, scope).filter(
             DefectiveActPhoto.defective_act_id == act.id
         )
         return q, 0, None
@@ -50,12 +63,13 @@ class CrudDefectiveActPhoto(
         file: Optional[UploadFile],
         defective_act_id: int,
         created_by_user_id: int,
+        scope: AccessScope,
     ):
         if file is None:
             return None, self.file_is_none, None
 
         act, code, _ = crud_defective_act.get_defective_act_by_id(
-            db=db, defective_act_id=defective_act_id
+            db=db, defective_act_id=defective_act_id, scope=scope
         )
         if code != 0:
             return None, code, None
@@ -83,12 +97,14 @@ class CrudDefectiveActPhoto(
         db.refresh(new)
         return new, 0, None
 
-    def delete_photo_by_id(self, *, db: Session, defective_act_photo_id: int):
+    def delete_photo_by_id(
+        self, *, db: Session, defective_act_photo_id: int, scope: AccessScope
+    ):
         """
         Удаление записи о фото из БД (файл на диске не удаляем — как в order_photo).
         """
         obj, code, _ = self.get_photo_by_id(
-            db=db, defective_act_photo_id=defective_act_photo_id
+            db=db, defective_act_photo_id=defective_act_photo_id, scope=scope
         )
         if code != 0:
             return None, code, None

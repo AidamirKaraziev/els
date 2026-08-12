@@ -4,6 +4,11 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session, joinedload
 
+from src.core.access import (
+    AccessScope,
+    apply_defective_act_scope,
+    can_access_defective_act,
+)
 from src.crud.base import CRUDBase
 from src.crud.crud_planned_to import crud_planned_to
 from src.crud.crud_status import crud_status
@@ -15,26 +20,45 @@ from src.schemas.defective_act import (
     DefectiveActUpdate,
 )
 from src.services.defective_act_pdf import DefectiveActPdfData, build_defective_act_pdf
+from src.utils import pagination
 
 
 class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUpdate]):
     not_found = -1340
     invalid_month = -1343
+    # Запись вне области видимости — 403, см. `templates_raise.out_of_scope`.
+    out_of_scope = -136
 
-    def get_defective_act_by_id(self, *, db: Session, defective_act_id: int):
+    def scoped_query(self, db: Session, scope: AccessScope):
+        """Единственное место, где список дефектных ведомостей режется."""
+        return apply_defective_act_scope(db.query(self.model), scope)
+
+    def get_multi(self, db: Session, *, scope: AccessScope, page=None):
+        """Перекрывает `CRUDBase.get_multi` ради обязательной области."""
+        return pagination.get_page(self.scoped_query(db, scope), page)
+
+    def get_defective_act_by_id(
+        self, *, db: Session, defective_act_id: int, scope: AccessScope
+    ):
         obj = db.query(DefectiveAct).filter(DefectiveAct.id == defective_act_id).first()
         if obj is None:
             return None, self.not_found, None
+        if not can_access_defective_act(scope, obj):
+            return None, self.out_of_scope, None
         return obj, 0, None
 
-    def get_by_planned_to_id(self, *, db: Session, planned_to_id: int, month: int = 0):
+    def get_by_planned_to_id(
+        self, *, db: Session, planned_to_id: int, scope: AccessScope, month: int = 0
+    ):
         planned, code, _ = crud_planned_to.get_planed_to_by_id(
-            db=db, planned_to_id=planned_to_id
+            db=db, planned_to_id=planned_to_id, scope=scope
         )
         if code != 0:
             return None, code, None
 
-        q = db.query(DefectiveAct).filter(DefectiveAct.planned_to_id == planned.id)
+        q = self.scoped_query(db, scope).filter(
+            DefectiveAct.planned_to_id == planned.id
+        )
         if month:
             code = self._validate_month(month)
             if code != 0:
@@ -46,10 +70,15 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         return 0 if 1 <= int(month) <= 12 else self.invalid_month
 
     def create_defective_act(
-        self, *, db: Session, new_data: DefectiveActCreate, current_user: UniversalUser
+        self,
+        *,
+        db: Session,
+        new_data: DefectiveActCreate,
+        current_user: UniversalUser,
+        scope: AccessScope,
     ):
         planned, code, _ = crud_planned_to.get_planed_to_by_id(
-            db=db, planned_to_id=new_data.planned_to_id
+            db=db, planned_to_id=new_data.planned_to_id, scope=scope
         )
         if code != 0:
             return None, code, None
@@ -58,7 +87,7 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         if code != 0:
             return None, code, None
 
-        user, code, _ = crud_universal_users.get_user_by_id(
+        user, code, _ = crud_universal_users.get_user_by_reference(
             db=db, user_id=new_data.responsible_user_id
         )
         if code != 0:
@@ -81,17 +110,22 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         return db_obj, 0, None
 
     def update_defective_act(
-        self, *, db: Session, defective_act_id: int, update_data: DefectiveActUpdate
+        self,
+        *,
+        db: Session,
+        defective_act_id: int,
+        update_data: DefectiveActUpdate,
+        scope: AccessScope,
     ):
         obj, code, _ = self.get_defective_act_by_id(
-            db=db, defective_act_id=defective_act_id
+            db=db, defective_act_id=defective_act_id, scope=scope
         )
         if code != 0:
             return None, code, None
 
         if update_data.planned_to_id is not None:
             planned, code, _ = crud_planned_to.get_planed_to_by_id(
-                db=db, planned_to_id=update_data.planned_to_id
+                db=db, planned_to_id=update_data.planned_to_id, scope=scope
             )
             if code != 0:
                 return None, code, None
@@ -104,7 +138,7 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
             obj.month = update_data.month
 
         if update_data.responsible_user_id is not None:
-            user, code, _ = crud_universal_users.get_user_by_id(
+            user, code, _ = crud_universal_users.get_user_by_reference(
                 db=db, user_id=update_data.responsible_user_id
             )
             if code != 0:
@@ -128,9 +162,10 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         db: Session,
         defective_act_id: int,
         new_data: DefectiveActStatusUpdate,
+        scope: AccessScope,
     ):
         obj, code, _ = self.get_defective_act_by_id(
-            db=db, defective_act_id=defective_act_id
+            db=db, defective_act_id=defective_act_id, scope=scope
         )
         if code != 0:
             return None, code, None
@@ -146,9 +181,11 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         db.refresh(obj)
         return obj, 0, None
 
-    def generate_pdf(self, *, db: Session, defective_act_id: int) -> tuple:
+    def generate_pdf(
+        self, *, db: Session, defective_act_id: int, scope: AccessScope
+    ) -> tuple:
         obj = (
-            db.query(DefectiveAct)
+            self.scoped_query(db, scope)
             .options(
                 joinedload(DefectiveAct.planned_to).joinedload(PlannedTO.object),
                 joinedload(DefectiveAct.photos),

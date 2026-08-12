@@ -221,14 +221,10 @@ def get_clients_by_company_id(
     company_id: int,
     current_user=Depends(deps.require(Permission.COUNTERPARTY_READ)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_read_scope),
 ):
-    logging.info(
-        crud_universal_users.get_clients_by_company_id(
-            db=session, company_id=company_id
-        )
-    )
     data, code, indexes = crud_universal_users.get_clients_by_company_id(
-        db=session, company_id=company_id
+        db=session, company_id=company_id, scope=scope
     )
     get_raise(code=code)
 

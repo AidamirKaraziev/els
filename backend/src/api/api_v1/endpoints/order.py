@@ -39,11 +39,14 @@ router = APIRouter()
 def get_top_breakdowns_statistics(
     session=Depends(deps.get_db),
     current_user=Depends(deps.require(Permission.STATISTICS_READ)),
+    scope=Depends(deps.get_read_scope),
     year: int = Query(..., ge=1990, le=2100, title="Год отчёта"),
     month: int = Query(..., ge=1, le=12, title="Месяц отчёта (1–12)"),
 ):
 
-    rows = crud_orders.get_top_breakdowns_by_month(db=session, year=year, month=month)
+    rows = crud_orders.get_top_breakdowns_by_month(
+        db=session, scope=scope, year=year, month=month
+    )
     data = [
         TopBreakdownItem(
             object_id=row.id,
@@ -88,6 +91,7 @@ def get_orders(
         ),
     ),
     current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
     # Год и месяц описывают один период, поодиночке они бессмысленны.
     # Молча игнорировать половину фильтра нельзя: человек увидит не тот
@@ -102,6 +106,7 @@ def get_orders(
 
     data, paginator = crud_orders.get_orders_filtered(
         db=session,
+        scope=scope,
         page=page,
         object_id=object_id,
         year=year,
@@ -128,8 +133,11 @@ def get_order_by_id(
     session=Depends(deps.get_db),
     order_id: int = Path(..., title="ID order"),
     current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
-    obj, code, indexes = crud_orders.get_order_by_id(db=session, order_id=order_id)
+    obj, code, indexes = crud_orders.get_order_by_id(
+        db=session, order_id=order_id, scope=scope
+    )
     get_raise(code=code)
     return SingleEntityResponse(data=getting_order(obj, request))
 
@@ -147,11 +155,10 @@ def create_order(
     new_data: OrderCreate,
     current_user=Depends(deps.require(Permission.ORDER_CREATE)),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-    # сделать проверку на роль Администратора и Прораба
-
     obj, code, index = crud_orders.create_order(
-        db=session, new_data=new_data, current_user=current_user
+        db=session, new_data=new_data, current_user=current_user, scope=scope
     )
     get_raise(code=code)
     return SingleEntityResponse(data=getting_order(obj, request))
@@ -171,11 +178,10 @@ def update_order(
     current_user=Depends(deps.require(Permission.ORDER_UPDATE)),
     order_id: int = Path(..., title="Id задачи"),
     session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
 ):
-    # проверка на роли
-
     obj, code, indexes = crud_orders.update_order(
-        db=session, new_data=new_data, order_id=order_id
+        db=session, new_data=new_data, order_id=order_id, scope=scope
     )
     get_raise(code=code)
 
@@ -194,9 +200,10 @@ def get_orders_for_me(
     request: Request,
     session=Depends(deps.get_db),
     current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
     data, code, indexes = crud_orders.get_orders_for_me(
-        db=session, executor_id=current_universal_user.id
+        db=session, executor_id=current_universal_user.id, scope=scope
     )
     get_raise(code=code)
     return ListOfEntityResponse(
@@ -216,9 +223,10 @@ def get_my_orders(
     request: Request,
     session=Depends(deps.get_db),
     current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
+    scope=Depends(deps.get_read_scope),
 ):
     data, code, indexes = crud_orders.get_my_orders(
-        db=session, creator_id=current_universal_user.id
+        db=session, creator_id=current_universal_user.id, scope=scope
     )
     get_raise(code=code)
 

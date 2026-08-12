@@ -28,6 +28,7 @@ from typing import Dict, List, NamedTuple, Optional, Tuple
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from src.core.access import AccessScope, apply_order_scope
 from src.models import (
     Company,
     Division,
@@ -82,6 +83,7 @@ class CrudStatistics:
         *,
         db: Session,
         period: MonthPeriod,
+        scope: AccessScope,
         division_id: Optional[int] = None,
         organization_id: Optional[int] = None,
         company_id: Optional[int] = None,
@@ -89,6 +91,11 @@ class CrudStatistics:
         """Заявки-поломки за период с присоединённым объектом и категорией.
 
         Возвращает `Query`, к которому вызывающий добавляет свою группировку.
+
+        Область видимости применяется здесь — единственной точкой на всю
+        статистику. Все агрегаты ниже строятся поверх этого запроса, поэтому
+        порезаны разом и не могут разойтись между собой: цифра в карточке,
+        свод по категориям и выгрузка в PDF считают по одному отбору.
         """
         query = (
             db.query(Order)
@@ -114,7 +121,10 @@ class CrudStatistics:
         if company_id is not None:
             query = query.filter(Object.company_id == company_id)
 
-        return query
+        # Тем же фильтром, что и список заявок. Фильтры выше — это выбор
+        # пользователя, а этот — граница, за которую он выйти не может:
+        # запрошенный `company_id` чужой компании не расширит выдачу.
+        return apply_order_scope(query, scope)
 
     # ------------------------------------------------------------------
     # Топ объектов
@@ -125,6 +135,7 @@ class CrudStatistics:
         *,
         db: Session,
         period: MonthPeriod,
+        scope: AccessScope,
         limit: Optional[int] = 5,
         offset: int = 0,
         division_id: Optional[int] = None,
@@ -157,6 +168,7 @@ class CrudStatistics:
             self._breakdowns_query(
                 db=db,
                 period=period,
+                scope=scope,
                 division_id=division_id,
                 organization_id=organization_id,
                 company_id=company_id,
@@ -220,6 +232,7 @@ class CrudStatistics:
         *,
         db: Session,
         period: MonthPeriod,
+        scope: AccessScope,
         division_id: Optional[int] = None,
         organization_id: Optional[int] = None,
         company_id: Optional[int] = None,
@@ -232,6 +245,7 @@ class CrudStatistics:
             self._breakdowns_query(
                 db=db,
                 period=period,
+                scope=scope,
                 division_id=division_id,
                 organization_id=organization_id,
                 company_id=company_id,
@@ -253,6 +267,7 @@ class CrudStatistics:
         *,
         db: Session,
         period: MonthPeriod,
+        scope: AccessScope,
         division_id: Optional[int] = None,
         organization_id: Optional[int] = None,
         company_id: Optional[int] = None,
@@ -266,6 +281,7 @@ class CrudStatistics:
             self._breakdowns_query(
                 db=db,
                 period=period,
+                scope=scope,
                 division_id=division_id,
                 organization_id=organization_id,
                 company_id=company_id,
@@ -286,6 +302,7 @@ class CrudStatistics:
         *,
         db: Session,
         period: MonthPeriod,
+        scope: AccessScope,
         object_ids: List[int],
         division_id: Optional[int] = None,
         organization_id: Optional[int] = None,
@@ -303,6 +320,7 @@ class CrudStatistics:
             self._breakdowns_query(
                 db=db,
                 period=period,
+                scope=scope,
                 division_id=division_id,
                 organization_id=organization_id,
                 company_id=company_id,
@@ -339,6 +357,7 @@ class CrudStatistics:
         *,
         db: Session,
         period: MonthPeriod,
+        scope: AccessScope,
         object_ids: List[int],
         division_id: Optional[int] = None,
         organization_id: Optional[int] = None,
@@ -356,6 +375,7 @@ class CrudStatistics:
             self._breakdowns_query(
                 db=db,
                 period=period,
+                scope=scope,
                 division_id=division_id,
                 organization_id=organization_id,
                 company_id=company_id,

@@ -4,6 +4,12 @@ from typing import List, Optional, Tuple
 from sqlalchemy import and_, case, func
 from sqlalchemy.orm import Session
 
+from src.core.access import (
+    AccessScope,
+    apply_planned_to_scope,
+    can_access_planned_to,
+    object_scope_filter,
+)
 from src.core.response import Paginator
 from src.core.roles import FOREMAN
 from src.crud.base import CRUDBase
@@ -69,19 +75,39 @@ def _responsible_name_for_division(db: Session, division_id: int) -> Optional[st
 class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
     not_found = -133
     year_object_uc_is_exist = -1331
+    # Запись вне области видимости — 403, см. `templates_raise.out_of_scope`.
+    out_of_scope = -136
 
-    def get_planed_to_by_id(self, *, db: Session, planned_to_id: int):
+    def scoped_query(self, db: Session, scope: AccessScope):
+        """Единственное место, где список плановых ТО режется по области."""
+        return apply_planned_to_scope(db.query(self.model), scope)
+
+    def get_multi(self, db: Session, *, scope: AccessScope, page: Optional[int] = None):
+        """Перекрывает `CRUDBase.get_multi` ради обязательной области."""
+        return pagination.get_page(self.scoped_query(db, scope), page)
+
+    def get_planed_to_by_id(
+        self, *, db: Session, planned_to_id: int, scope: AccessScope
+    ):
         obj = db.query(PlannedTO).filter(PlannedTO.id == planned_to_id).first()
         if obj is None:
             return None, self.not_found, None
+        if not can_access_planned_to(scope, obj):
+            return None, self.out_of_scope, None
         return obj, 0, None
 
-    def create_planned_to(self, db: Session, *, new_data: PlannedTOCreate):
+    def create_planned_to(
+        self, db: Session, *, new_data: PlannedTOCreate, scope: AccessScope
+    ):
         # проверка объекта
         if new_data.object_id is not None:
-            obj = db.query(Object).filter(Object.id == new_data.object_id).first()
+            obj = (
+                db.query(Object)
+                .filter(Object.id == new_data.object_id, object_scope_filter(scope))
+                .first()
+            )
             if obj is None:
-                return None, -116, None  # нет объекта
+                return None, -116, None  # нет объекта или он вне области
         # проверка плановых то
         if new_data.year is not None and new_data.object_id is not None:
             constrain = (
@@ -96,84 +122,84 @@ class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
                 return None, self.year_object_uc_is_exist, None
         if new_data.january_to_id:
             january_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.january_to_id
+                db=db, id=new_data.january_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " january_to"
                 return None, code, None
         if new_data.february_to_id:
             february_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.february_to_id
+                db=db, id=new_data.february_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " february_to"
                 return None, code, None
         if new_data.march_to_id:
             march_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.march_to_id
+                db=db, id=new_data.march_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " march_to"
                 return None, code, None
         if new_data.april_to_id:
             april_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.april_to_id
+                db=db, id=new_data.april_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " april_to"
                 return None, code, None
         if new_data.may_to_id:
             may_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.may_to_id
+                db=db, id=new_data.may_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " may_to"
                 return None, code, None
         if new_data.june_to_id:
             june_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.june_to_id
+                db=db, id=new_data.june_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " june_to"
                 return None, code, None
         if new_data.july_to_id:
             july_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.july_to_id
+                db=db, id=new_data.july_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " july_to"
                 return None, code, None
         if new_data.august_to_id:
             august_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.august_to_id
+                db=db, id=new_data.august_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " august_to"
                 return None, code, None
         if new_data.september_to_id:
             september_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.september_to_id
+                db=db, id=new_data.september_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " september_to"
                 return None, code, None
         if new_data.october_to_id:
             october_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.october_to_id
+                db=db, id=new_data.october_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " october_to"
                 return None, code, None
         if new_data.november_to_id:
             november_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.november_to_id
+                db=db, id=new_data.november_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " november_to"
                 return None, code, None
         if new_data.december_to_id:
             december_to, code, indexes = crud_acts_fact.get_act_fact_by_id(
-                db=db, id=new_data.december_to_id
+                db=db, id=new_data.december_to_id, scope=scope
             )
             if code != 0:
                 code["detail"] = code["detail"] + " december_to"
@@ -182,11 +208,16 @@ class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
         return db_obj, 0, None
 
     def update_planned_to(
-        self, *, db: Session, new_data: PlannedTOUpdate, planned_to_id: int
+        self,
+        *,
+        db: Session,
+        new_data: PlannedTOUpdate,
+        planned_to_id: int,
+        scope: AccessScope,
     ):
         # проверка наличия планового ТО
         this_planned_to, code, indexes = self.get_planed_to_by_id(
-            db=db, planned_to_id=planned_to_id
+            db=db, planned_to_id=planned_to_id, scope=scope
         )
         if code != 0:
             return this_planned_to, code, indexes
@@ -207,7 +238,9 @@ class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
         ]
         for to_id in list_planned_to:
             if to_id is not None:
-                obj, code, indexes = crud_acts_fact.get_act_fact_by_id(db=db, id=to_id)
+                obj, code, indexes = crud_acts_fact.get_act_fact_by_id(
+                    db=db, id=to_id, scope=scope
+                )
                 if code != 0:
                     code["detail"] = (
                         code["detail"] + f". Нет фактического акта с id {to_id}"
@@ -222,13 +255,14 @@ class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
         *,
         db: Session,
         object_id: int,
+        scope: AccessScope,
         page: Optional[int] = None,
     ) -> Tuple[List[ModelType], Paginator]:
-        query = db.query(self.model).filter(self.model.object_id == object_id)
+        query = self.scoped_query(db, scope).filter(self.model.object_id == object_id)
         return pagination.get_page(query, page)
 
     def get_schedule_execution_stats(
-        self, *, db: Session, year: int, month: int
+        self, *, db: Session, scope: AccessScope, year: int, month: int
     ) -> ScheduleExecutionStatsGet:
         month_col = _MONTH_PLANNED_COLUMN[month]
         period_start, period_end = _reporting_month_bounds(year, month)
@@ -254,7 +288,9 @@ class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
             .join(Object, PlannedTO.object_id == Object.id)
             .join(Division, Division.id == Object.division_id)
             .join(ActFact, ActFact.id == month_col)
-            .filter(PlannedTO.year == year_str)
+            # Тот же фильтр по объекту, что и у списков: у прораба и админа
+            # проценты выполнения будут разными, и это ожидаемо.
+            .filter(PlannedTO.year == year_str, object_scope_filter(scope))
             .group_by(Object.division_id, Division.title)
             .order_by(Object.division_id)
             .all()
