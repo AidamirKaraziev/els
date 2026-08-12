@@ -17,11 +17,11 @@ from src.core.security import (
 )
 
 # Ручка «мой профиль» — самая дешёвая из закрытых токеном.
-ME = "/api/v1/cp/universal-user/me/"
+ME = "/api/v1/auth/me"
 
 
 @pytest.fixture
-def механик(db_session):
+def mechanic(db_session):
     from src.models import UniversalUser
 
     user = UniversalUser(
@@ -39,114 +39,115 @@ def механик(db_session):
     db_session.commit()
 
 
-def _заголовок(token):
+def _auth(token):
     return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.mark.integration
-def test_без_токена_даёт_401_а_не_403(client_with_db):
+def test_missing_token_gives_401_not_403(client_with_db):
     # Именно 401: перехватчик на фронте по нему обновляет токен. 403 остаётся
     # за «вошёл, но не положено» — это разные ситуации для клиента.
     assert client_with_db.get(ME).status_code == 401
 
 
 @pytest.mark.integration
-def test_с_токеном_отдаёт_профиль(client_with_db, механик):
-    ответ = client_with_db.get(
-        ME, headers=_заголовок(create_access_token(user_id=механик.id))
+def test_valid_token_returns_the_profile(client_with_db, mechanic):
+    response = client_with_db.get(
+        ME, headers=_auth(create_access_token(user_id=mechanic.id))
     )
-    assert ответ.status_code == 200
-    assert ответ.json()["data"]["email"] == механик.email
+    assert response.status_code == 200
+    assert response.json()["data"]["email"] == mechanic.email
 
 
 @pytest.mark.integration
-def test_испорченный_токен_даёт_401(client_with_db, механик):
-    токен = create_access_token(user_id=механик.id)
-    ответ = client_with_db.get(ME, headers=_заголовок(токен[:-3] + "aaa"))
-    assert ответ.status_code == 401
+def test_tampered_token_gives_401(client_with_db, mechanic):
+    token = create_access_token(user_id=mechanic.id)
+    assert client_with_db.get(ME, headers=_auth(token[:-3] + "aaa")).status_code == 401
 
 
 @pytest.mark.integration
-def test_refresh_токен_не_пускает_в_обычную_ручку(client_with_db):
-    ответ = client_with_db.get(ME, headers=_заголовок(generate_refresh_token()))
-    assert ответ.status_code == 401
+def test_refresh_token_is_not_accepted_on_regular_endpoint(client_with_db):
+    token = generate_refresh_token()
+    assert client_with_db.get(ME, headers=_auth(token)).status_code == 401
 
 
 @pytest.mark.integration
-def test_токен_удалённого_пользователя_даёт_401(client_with_db, db_session):
+def test_token_of_deleted_user_gives_401(client_with_db, db_session):
     # Пользователя может не быть: токен на руках остался, записи нет.
-    ответ = client_with_db.get(
-        ME, headers=_заголовок(create_access_token(user_id=10**7))
-    )
-    assert ответ.status_code == 401
+    token = create_access_token(user_id=10**7)
+    assert client_with_db.get(ME, headers=_auth(token)).status_code == 401
 
 
 @pytest.mark.integration
-def test_архивированный_сотрудник_теряет_доступ_сразу(
-    client_with_db, db_session, механик
+def test_archived_employee_loses_access_immediately(
+    client_with_db, db_session, mechanic
 ):
     """Главная дыра: раньше `is_actual` при проверке токена не смотрел никто."""
-    токен = create_access_token(user_id=механик.id)
-    assert client_with_db.get(ME, headers=_заголовок(токен)).status_code == 200
+    token = create_access_token(user_id=mechanic.id)
+    assert client_with_db.get(ME, headers=_auth(token)).status_code == 200
 
-    механик.is_active = False
+    mechanic.is_active = False
     db_session.commit()
 
-    ответ = client_with_db.get(ME, headers=_заголовок(токен))
-    assert ответ.status_code == 403
+    assert client_with_db.get(ME, headers=_auth(token)).status_code == 403
 
 
 @pytest.mark.integration
-def test_смена_пароля_гасит_старые_токены(client_with_db, db_session, механик):
-    старый_токен = create_access_token(user_id=механик.id)
-    assert client_with_db.get(ME, headers=_заголовок(старый_токен)).status_code == 200
+def test_password_change_kills_old_tokens(client_with_db, db_session, mechanic):
+    """Токен несёт отпечаток пароля и проверяется на точное совпадение.
 
-    # Пароль сменили минутой позже выпуска токена.
-    механик.password_changed_at = datetime.utcnow() + timedelta(minutes=1)
-    db_session.commit()
-
-    assert client_with_db.get(ME, headers=_заголовок(старый_токен)).status_code == 401
-
-    # А выданный после смены — работает.
-    новый_токен = create_access_token(user_id=механик.id)
-    механик.password_changed_at = datetime.utcnow() - timedelta(minutes=1)
-    db_session.commit()
-    assert client_with_db.get(ME, headers=_заголовок(новый_токен)).status_code == 200
-
-
-@pytest.mark.integration
-def test_просроченный_токен_даёт_401(client_with_db, механик):
-    просроченный = create_access_token(
-        user_id=механик.id, expires_delta=timedelta(seconds=-10)
+    Сравнивать времена нельзя: `iat` в JWT округляется до секунды, и вход в ту
+    же секунду, что и смена пароля, попадал бы в неоднозначность — либо
+    человека не пускает после смены, либо украденный токен её переживает.
+    """
+    old_token = create_access_token(
+        user_id=mechanic.id, password_changed_at=mechanic.password_changed_at
     )
-    assert client_with_db.get(ME, headers=_заголовок(просроченный)).status_code == 401
+    assert client_with_db.get(ME, headers=_auth(old_token)).status_code == 200
+
+    mechanic.password_changed_at = datetime.utcnow().replace(microsecond=0)
+    db_session.commit()
+
+    assert client_with_db.get(ME, headers=_auth(old_token)).status_code == 401
+
+    # Токен, выданный под новый пароль, работает — даже если это та же секунда.
+    new_token = create_access_token(
+        user_id=mechanic.id, password_changed_at=mechanic.password_changed_at
+    )
+    assert client_with_db.get(ME, headers=_auth(new_token)).status_code == 200
 
 
 @pytest.mark.integration
-def test_require_пускает_по_праву_и_отказывает_без_него(client_with_db, app, механик):
+def test_expired_token_gives_401(client_with_db, mechanic):
+    expired = create_access_token(
+        user_id=mechanic.id, expires_delta=timedelta(seconds=-10)
+    )
+    assert client_with_db.get(ME, headers=_auth(expired)).status_code == 401
+
+
+@pytest.mark.integration
+def test_require_allows_with_permission_and_denies_without(
+    client_with_db, app, mechanic
+):
     """Зависимость `require` — то, чего на ручках не было вообще."""
     from fastapi import Depends
 
     from src.api import deps
     from src.core.permissions import Permission
 
-    @app.get("/__тест__/удалить-пользователя")
-    def _только_с_правом(user=Depends(deps.require(Permission.USER_DELETE))):
+    @app.get("/__test__/delete-user")
+    def _needs_rare_permission(user=Depends(deps.require(Permission.USER_DELETE))):
         return {"ok": True}
 
-    @app.get("/__тест__/читать-заявки")
-    def _обычное_право(user=Depends(deps.require(Permission.ORDER_READ))):
+    @app.get("/__test__/read-orders")
+    def _needs_common_permission(user=Depends(deps.require(Permission.ORDER_READ))):
         return {"ok": True}
 
-    заголовки = _заголовок(create_access_token(user_id=механик.id))
+    headers = _auth(create_access_token(user_id=mechanic.id))
     # Механик читает заявки, но удалять пользователей не может.
     assert (
-        client_with_db.get("/__тест__/читать-заявки", headers=заголовки).status_code
-        == 200
+        client_with_db.get("/__test__/read-orders", headers=headers).status_code == 200
     )
     assert (
-        client_with_db.get(
-            "/__тест__/удалить-пользователя", headers=заголовки
-        ).status_code
-        == 403
+        client_with_db.get("/__test__/delete-user", headers=headers).status_code == 403
     )

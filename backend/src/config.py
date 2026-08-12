@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     LOGIN_MAX_FAILED_ATTEMPTS: int = 5
     LOGIN_LOCKOUT_MINUTES: int = 15
 
+    # Ссылка из письма «забыли пароль». Два часа, а не 48: письмо читают в
+    # тот же день, а ссылка всё это время открывает вход в систему.
+    PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = 2
+
     SERVER_NAME: str = "default_server_name"
     SERVER_HOST: AnyHttpUrl = "http://localhost"
     BACKEND_CORS_ORIGINS: List = []

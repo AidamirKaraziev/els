@@ -3,22 +3,15 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.params import Path
-from sqlalchemy.orm import Session
 
 from src.api import deps
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
-from src.core.security import create_access_token
 from src.crud.crud_company import crud_company
 from src.crud.crud_role import crud_role
 from src.crud.users.crud_universal_user import crud_universal_users
 from src.exceptions import UnfoundEntity
 from src.getters.universal_user import get_universal_user
-from src.schemas.token import TokenBase
-from src.schemas.universal_user import (
-    UniversalUserEntrance,
-    UniversalUserGet,
-    UniversalUserUpdate,
-)
+from src.schemas.universal_user import UniversalUserGet, UniversalUserUpdate
 from src.templates_raise import get_raise
 
 PATH_MODEL = "universal_user"
@@ -29,24 +22,7 @@ PATH_TYPE_QUALIFICATION = "qualification_file"
 router = APIRouter()
 
 
-# SIGN-IN
-# Вход по почте и паролю
-@router.post(
-    path="/cp/sign-in/",
-    response_model=SingleEntityResponse[TokenBase],
-    name="Войти в админ панель",
-    description="Войти в админ панель",
-    tags=["Вход / Админ панель"],
-)
-def entrance(
-    entrance_data: UniversalUserEntrance,
-    session: Session = Depends(deps.get_db),
-):
-    db_obj = crud_universal_users.authenticate(db=session, entrance_data=entrance_data)
-    # Временно: ручка уезжает в /auth/login на этапе 3, там же появится
-    # refresh-токен. Пока отдаём только access, чтобы фронт не встал.
-    token = create_access_token(user_id=db_obj.id)
-    return SingleEntityResponse(data=TokenBase(token=token))
+# Вход переехал в /api/v1/auth/login: там пара токенов вместо одного.
 
 
 @router.get(
@@ -180,20 +156,7 @@ def get_data(
     )
 
 
-@router.get(
-    "/cp/universal-user/me/",
-    response_model=SingleEntityResponse[UniversalUserGet],
-    name="Получить данные профиля ",
-    description="Получение всех  данных профиля, по токену",
-    tags=["Админ панель / Пользователь"],
-)
-def get_data(
-    request: Request,
-    current_universal_user=Depends(deps.get_current_universal_user_by_bearer),
-):
-    return SingleEntityResponse(
-        data=get_universal_user(current_universal_user, request=request)
-    )
+# Профиль переехал в /api/v1/auth/me.
 
 
 @router.get(

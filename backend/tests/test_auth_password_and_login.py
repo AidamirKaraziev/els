@@ -5,6 +5,8 @@
 невозможность войти под аккаунтом с принудительно сброшенным паролем.
 """
 
+from datetime import timedelta
+
 import pytest
 
 from src.config import settings
@@ -27,20 +29,20 @@ from src.exceptions import UnprocessableEntity
 # --- пароли ---------------------------------------------------------------
 
 
-def test_пароль_проверяется_по_своему_хешу():
+def test_password_is_checked_against_its_own_hash():
     hashed = get_password_hash("правильный-пароль")
     assert verify_password("правильный-пароль", hashed)
     assert not verify_password("другой-пароль", hashed)
 
 
-def test_проверка_пароля_не_падает_на_пустом_хеше():
+def test_empty_hash_does_not_raise():
     # В базе есть строки без пароля — раньше такая проверка кидала исключение
     # прямо в обработчике запроса.
     assert not verify_password("что угодно", None)
     assert not verify_password("что угодно", "")
 
 
-def test_невозможный_хеш_не_подходит_ни_к_какому_паролю():
+def test_unusable_hash_matches_no_password():
     hashed = make_unusable_password_hash()
     assert not is_password_usable(hashed)
     assert not verify_password("", hashed)
@@ -48,7 +50,7 @@ def test_невозможный_хеш_не_подходит_ни_к_каком�
     assert not verify_password(hashed, hashed)
 
 
-def test_короткий_пароль_не_принимается():
+def test_short_password_is_rejected():
     with pytest.raises(WeakPasswordError):
         validate_password_strength("1")
     with pytest.raises(WeakPasswordError):
@@ -59,34 +61,32 @@ def test_короткий_пароль_не_принимается():
 # --- токены ---------------------------------------------------------------
 
 
-def test_access_токен_разбирается_обратно():
+def test_access_token_decodes_back():
     token = create_access_token(user_id=42)
     payload = decode_access_token(token)
     assert payload["sub"] == "42"
     assert payload["type"] == ACCESS_TOKEN_TYPE
 
 
-def test_испорченный_токен_не_проходит():
+def test_tampered_token_is_rejected():
     token = create_access_token(user_id=1)
     with pytest.raises(InvalidTokenError):
         decode_access_token(token[:-3] + "aaa")
 
 
-def test_просроченный_токен_не_проходит():
-    from datetime import timedelta
-
+def test_expired_token_is_rejected():
     token = create_access_token(user_id=1, expires_delta=timedelta(seconds=-10))
     with pytest.raises(InvalidTokenError):
         decode_access_token(token)
 
 
-def test_refresh_токен_не_принимается_вместо_access():
+def test_refresh_token_is_not_accepted_as_access():
     # Refresh — не JWT вовсе, подсунуть его в заголовок нельзя.
     with pytest.raises(InvalidTokenError):
         decode_access_token(generate_refresh_token())
 
 
-def test_refresh_токены_разные_и_хеш_повторяем():
+def test_refresh_tokens_differ_and_hash_is_stable():
     first, second = generate_refresh_token(), generate_refresh_token()
     assert first != second
     assert hash_refresh_token(first) == hash_refresh_token(first)
@@ -97,15 +97,15 @@ def test_refresh_токены_разные_и_хеш_повторяем():
 
 
 @pytest.fixture
-def пользователь(db_session):
-    from src.core.roles import MECHANIC
+def mechanic(db_session):
+    from src.core.roles import Role
     from src.models import UniversalUser
 
     user = UniversalUser(
         name="Тестовый механик",
         email="Mehanik@Example.Ru",
         hashed_password=get_password_hash("надёжный-пароль"),
-        role_id=MECHANIC,
+        role_id=Role.MECHANIC,
         is_active=True,
     )
     db_session.add(user)
@@ -116,7 +116,7 @@ def пользователь(db_session):
     db_session.commit()
 
 
-def _войти(db_session, email, password):
+def _sign_in(db_session, email, password):
     from src.crud.users.crud_universal_user import crud_universal_users
     from src.schemas.universal_user import UniversalUserEntrance
 
@@ -127,71 +127,71 @@ def _войти(db_session, email, password):
 
 
 @pytest.mark.integration
-def test_вход_не_зависит_от_регистра_email(db_session, пользователь):
+def test_login_ignores_email_case(db_session, mechanic):
     # В боевой базе есть адреса вида `Голдобин@mail.ru`: раньше человек,
     # набравший свой адрес строчными, войти не мог.
-    for написание in ("Mehanik@Example.Ru", "mehanik@example.ru", "MEHANIK@EXAMPLE.RU"):
-        assert _войти(db_session, написание, "надёжный-пароль").id == пользователь.id
+    for spelling in ("Mehanik@Example.Ru", "mehanik@example.ru", "MEHANIK@EXAMPLE.RU"):
+        assert _sign_in(db_session, spelling, "надёжный-пароль").id == mechanic.id
 
 
 @pytest.mark.integration
-def test_неверный_пароль_не_пускает(db_session, пользователь):
+def test_wrong_password_is_rejected(db_session, mechanic):
     with pytest.raises(UnprocessableEntity):
-        _войти(db_session, пользователь.email, "не тот пароль")
+        _sign_in(db_session, mechanic.email, "не тот пароль")
 
 
 @pytest.mark.integration
-def test_несуществующий_email_отвечает_тем_же_текстом(db_session, пользователь):
+def test_unknown_email_gives_the_same_message(db_session, mechanic):
     # Разные тексты превратили бы форму входа в способ узнать, кто заведён.
     try:
-        _войти(db_session, "нет-такого@example.ru", "пароль")
-    except UnprocessableEntity as нет_пользователя:
+        _sign_in(db_session, "нет-такого@example.ru", "пароль")
+    except UnprocessableEntity as no_such_user:
         try:
-            _войти(db_session, пользователь.email, "не тот пароль")
-        except UnprocessableEntity as неверный_пароль:
-            assert нет_пользователя.message == неверный_пароль.message
+            _sign_in(db_session, mechanic.email, "не тот пароль")
+        except UnprocessableEntity as wrong_password:
+            assert no_such_user.message == wrong_password.message
 
 
 @pytest.mark.integration
-def test_заблокированный_сотрудник_не_входит(db_session, пользователь):
-    пользователь.is_active = False
+def test_archived_employee_cannot_log_in(db_session, mechanic):
+    mechanic.is_active = False
     db_session.commit()
     with pytest.raises(UnprocessableEntity):
-        _войти(db_session, пользователь.email, "надёжный-пароль")
+        _sign_in(db_session, mechanic.email, "надёжный-пароль")
 
 
 @pytest.mark.integration
-def test_после_серии_неудач_вход_блокируется(db_session, пользователь):
+def test_login_locks_after_failed_attempts(db_session, mechanic):
     for _ in range(settings.LOGIN_MAX_FAILED_ATTEMPTS):
         with pytest.raises(UnprocessableEntity):
-            _войти(db_session, пользователь.email, "не тот пароль")
+            _sign_in(db_session, mechanic.email, "не тот пароль")
 
-    db_session.refresh(пользователь)
-    assert пользователь.locked_until is not None
+    db_session.refresh(mechanic)
+    assert mechanic.locked_until is not None
 
     # Даже правильный пароль теперь не проходит.
-    with pytest.raises(UnprocessableEntity) as заблокировано:
-        _войти(db_session, пользователь.email, "надёжный-пароль")
-    assert "заблокирован" in заблокировано.value.description.lower()
+    with pytest.raises(UnprocessableEntity) as locked:
+        _sign_in(db_session, mechanic.email, "надёжный-пароль")
+    assert "заблокирован" in locked.value.description.lower()
 
 
 @pytest.mark.integration
-def test_удачный_вход_обнуляет_счётчик_неудач(db_session, пользователь):
+def test_successful_login_resets_the_counter(db_session, mechanic):
     with pytest.raises(UnprocessableEntity):
-        _войти(db_session, пользователь.email, "не тот пароль")
-    db_session.refresh(пользователь)
-    assert пользователь.failed_login_attempts == 1
+        _sign_in(db_session, mechanic.email, "не тот пароль")
+    db_session.refresh(mechanic)
+    assert mechanic.failed_login_attempts == 1
 
-    _войти(db_session, пользователь.email, "надёжный-пароль")
-    db_session.refresh(пользователь)
-    assert пользователь.failed_login_attempts == 0
-    assert пользователь.locked_until is None
+    _sign_in(db_session, mechanic.email, "надёжный-пароль")
+    db_session.refresh(mechanic)
+    assert mechanic.failed_login_attempts == 0
+    assert mechanic.locked_until is None
 
 
 @pytest.mark.integration
-def test_аккаунт_со_сброшенным_паролем_не_пускает(db_session, пользователь):
+def test_account_with_reset_password_cannot_log_in(db_session, mechanic):
     # То, что миграция делает с админом, у которого был пароль «1».
-    пользователь.hashed_password = make_unusable_password_hash()
+    mechanic.hashed_password = make_unusable_password_hash()
     db_session.commit()
     with pytest.raises(UnprocessableEntity):
-        _войти(db_session, пользователь.email, "надёжный-пароль")
+        _sign_in(db_session, mechanic.email, "надёжный-пароль")

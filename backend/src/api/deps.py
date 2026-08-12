@@ -14,7 +14,7 @@ from src.core.permissions import Permission, permissions_for
 from src.core.security import (
     InvalidTokenError,
     decode_access_token,
-    token_issued_at,
+    token_matches_password,
 )
 from src.crud.users.crud_universal_user import crud_universal_users
 from src.models import UniversalUser
@@ -79,13 +79,12 @@ def get_current_user(
             detail="Доступ к системе закрыт администратором",
         )
 
-    if user.password_changed_at is not None:
-        if token_issued_at(payload) < user.password_changed_at:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Пароль был изменён, войдите заново",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+    if not token_matches_password(payload, user.password_changed_at):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Пароль был изменён, войдите заново",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     return user
 

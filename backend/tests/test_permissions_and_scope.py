@@ -23,11 +23,11 @@ from src.core.roles import Role
 # --- права ----------------------------------------------------------------
 
 
-def test_админ_может_всё():
+def test_admin_can_do_everything():
     assert permissions_for(Role.ADMIN) == frozenset(Permission)
 
 
-def test_неизвестная_роль_не_получает_ничего():
+def test_unknown_role_gets_nothing():
     # `role_id` в базе обнуляемый: пользователь без роли не должен уронить
     # запрос, но и прав у него нет.
     assert permissions_for(None) == frozenset()
@@ -35,28 +35,28 @@ def test_неизвестная_роль_не_получает_ничего():
     assert permissions_for(999) == frozenset()
 
 
-def test_диспетчер_ведёт_заявки_но_не_закрывает_их():
+def test_dispatcher_runs_orders_but_cannot_close_them():
     # Согласовано: «видит всё, создаёт везде, закрывать не может».
     assert has_permission(Role.DISPATCHER, Permission.ORDER_CREATE)
     assert has_permission(Role.DISPATCHER, Permission.ORDER_UPDATE)
     assert not has_permission(Role.DISPATCHER, Permission.ORDER_CLOSE)
 
 
-def test_закрыть_заявку_может_исполнитель_или_прораб():
+def test_order_is_closed_by_executor_or_foreman():
     for role in (Role.MECHANIC, Role.ENGINEER, Role.FOREMAN, Role.ADMIN):
         assert has_permission(role, Permission.ORDER_CLOSE), role
 
 
-def test_у_механика_и_инженера_права_совпадают():
+def test_mechanic_and_engineer_share_permissions():
     # Отличаются они не правами, а тем, на какие объекты их можно назначить.
     assert permissions_for(Role.MECHANIC) == permissions_for(Role.ENGINEER)
 
 
-def test_клиент_только_заводит_заявки():
+def test_client_can_only_create_orders():
     assert has_permission(Role.CLIENT, Permission.ORDER_CREATE)
     assert has_permission(Role.CLIENT, Permission.ORDER_READ)
     assert has_permission(Role.CLIENT, Permission.OBJECT_READ)
-    for запрещено in (
+    for forbidden in (
         Permission.OBJECT_CREATE,
         Permission.OBJECT_UPDATE,
         Permission.ORDER_CLOSE,
@@ -66,10 +66,10 @@ def test_клиент_только_заводит_заявки():
         Permission.DIRECTORY_WRITE,
         Permission.COUNTERPARTY_READ,
     ):
-        assert not has_permission(Role.CLIENT, запрещено), запрещено
+        assert not has_permission(Role.CLIENT, forbidden), forbidden
 
 
-def test_справочники_правит_только_админ():
+def test_only_admin_edits_directories():
     for role in (
         Role.FOREMAN,
         Role.MECHANIC,
@@ -81,7 +81,7 @@ def test_справочники_правит_только_админ():
         assert not has_permission(role, Permission.DIRECTORY_WRITE), role
 
 
-def test_удалять_людей_может_только_админ():
+def test_only_admin_deletes_users():
     # Удаление пользователя обнуляет автора у его заявок, поэтому право
     # оставлено одному админу, а прораб может только архивировать.
     for role in Role:
@@ -91,21 +91,21 @@ def test_удалять_людей_может_только_админ():
     assert has_permission(Role.FOREMAN, Permission.USER_ARCHIVE)
 
 
-def test_прораб_ведёт_своих_людей():
-    for право in (
+def test_foreman_manages_his_people():
+    for permission in (
         Permission.USER_CREATE,
         Permission.USER_UPDATE,
         Permission.USER_ARCHIVE,
     ):
-        assert has_permission(Role.FOREMAN, право), право
-        assert not has_permission(Role.MECHANIC, право), право
-        assert not has_permission(Role.DISPATCHER, право), право
+        assert has_permission(Role.FOREMAN, permission), permission
+        assert not has_permission(Role.MECHANIC, permission), permission
+        assert not has_permission(Role.DISPATCHER, permission), permission
 
 
 # --- область видимости ----------------------------------------------------
 
 
-def _пользователь(role, *, user_id=10, divisions=(), division_id=None, company_id=None):
+def _user(role, *, user_id=10, divisions=(), division_id=None, company_id=None):
     return SimpleNamespace(
         id=user_id,
         role_id=int(role) if role is not None else None,
@@ -115,7 +115,7 @@ def _пользователь(role, *, user_id=10, divisions=(), division_id=Non
     )
 
 
-def _объект(*, division_id=None, foreman_id=None, mechanic_id=None, company_id=None):
+def _lift(*, division_id=None, foreman_id=None, mechanic_id=None, company_id=None):
     return SimpleNamespace(
         division_id=division_id,
         foreman_id=foreman_id,
@@ -124,123 +124,123 @@ def _объект(*, division_id=None, foreman_id=None, mechanic_id=None, compan
     )
 
 
-def test_админ_видит_и_меняет_всё():
-    админ = _пользователь(Role.ADMIN)
-    assert read_scope(админ).unrestricted
-    assert write_scope(админ).unrestricted
+def test_admin_sees_and_changes_everything():
+    admin = _user(Role.ADMIN)
+    assert read_scope(admin).unrestricted
+    assert write_scope(admin).unrestricted
 
 
-def test_прораб_видит_всё_а_меняет_свои_участки():
-    прораб = _пользователь(Role.FOREMAN, divisions=(1, 2))
-    assert read_scope(прораб).unrestricted
+def test_foreman_sees_everything_but_changes_his_divisions():
+    foreman = _user(Role.FOREMAN, divisions=(1, 2))
+    assert read_scope(foreman).unrestricted
 
-    на_запись = write_scope(прораб)
-    assert на_запись.kind is ScopeKind.DIVISIONS
-    assert на_запись.division_ids == frozenset({1, 2})
-    assert can_access_object(на_запись, _объект(division_id=1))
-    assert not can_access_object(на_запись, _объект(division_id=7))
-
-
-def test_прораб_меняет_объект_где_назначен_даже_вне_своего_участка():
-    прораб = _пользователь(Role.FOREMAN, user_id=10, divisions=(1,))
-    на_запись = write_scope(прораб)
-    assert can_access_object(на_запись, _объект(division_id=99, foreman_id=10))
+    for_write = write_scope(foreman)
+    assert for_write.kind is ScopeKind.DIVISIONS
+    assert for_write.division_ids == frozenset({1, 2})
+    assert can_access_object(for_write, _lift(division_id=1))
+    assert not can_access_object(for_write, _lift(division_id=7))
 
 
-def test_основной_участок_попадает_в_область_даже_без_связи():
+def test_foreman_changes_lift_he_is_assigned_to_outside_his_division():
+    foreman = _user(Role.FOREMAN, user_id=10, divisions=(1,))
+    for_write = write_scope(foreman)
+    assert can_access_object(for_write, _lift(division_id=99, foreman_id=10))
+
+
+def test_main_division_counts_even_without_the_link():
     # Страховка от неполных данных: участок мог быть проставлен в обход связи.
-    прораб = _пользователь(Role.FOREMAN, divisions=(), division_id=5)
-    assert write_scope(прораб).division_ids == frozenset({5})
+    foreman = _user(Role.FOREMAN, divisions=(), division_id=5)
+    assert write_scope(foreman).division_ids == frozenset({5})
 
 
-def test_механик_видит_только_назначенное():
-    механик = _пользователь(Role.MECHANIC, user_id=10, divisions=(1,))
-    область = read_scope(механик)
-    assert область.kind is ScopeKind.ASSIGNED
-    assert can_access_object(область, _объект(mechanic_id=10))
+def test_mechanic_sees_only_assigned_lifts():
+    mechanic = _user(Role.MECHANIC, user_id=10, divisions=(1,))
+    scope = read_scope(mechanic)
+    assert scope.kind is ScopeKind.ASSIGNED
+    assert can_access_object(scope, _lift(mechanic_id=10))
     # Свой участок сам по себе доступа не даёт — только личное назначение.
-    assert not can_access_object(область, _объект(division_id=1))
+    assert not can_access_object(scope, _lift(division_id=1))
 
 
-def test_инженер_видит_весь_свой_участок():
-    инженер = _пользователь(Role.ENGINEER, user_id=10, divisions=(1,))
-    область = read_scope(инженер)
-    assert область.kind is ScopeKind.DIVISIONS
-    assert can_access_object(область, _объект(division_id=1))
-    assert can_access_object(область, _объект(division_id=99, mechanic_id=10))
-    assert not can_access_object(область, _объект(division_id=99))
+def test_engineer_sees_his_whole_division():
+    engineer = _user(Role.ENGINEER, user_id=10, divisions=(1,))
+    scope = read_scope(engineer)
+    assert scope.kind is ScopeKind.DIVISIONS
+    assert can_access_object(scope, _lift(division_id=1))
+    assert can_access_object(scope, _lift(division_id=99, mechanic_id=10))
+    assert not can_access_object(scope, _lift(division_id=99))
 
 
-def test_диспетчер_работает_по_всем_участкам():
-    диспетчер = _пользователь(Role.DISPATCHER, divisions=(3,))
-    assert read_scope(диспетчер).unrestricted
-    assert write_scope(диспетчер).unrestricted
+def test_dispatcher_works_across_all_divisions():
+    dispatcher = _user(Role.DISPATCHER, divisions=(3,))
+    assert read_scope(dispatcher).unrestricted
+    assert write_scope(dispatcher).unrestricted
 
 
-def test_клиент_видит_только_свою_компанию():
-    клиент = _пользователь(Role.CLIENT, company_id=12)
-    область = read_scope(клиент)
-    assert область.kind is ScopeKind.COMPANY
-    assert can_access_object(область, _объект(company_id=12))
-    assert not can_access_object(область, _объект(company_id=3))
+def test_client_sees_only_his_company():
+    client = _user(Role.CLIENT, company_id=12)
+    scope = read_scope(client)
+    assert scope.kind is ScopeKind.COMPANY
+    assert can_access_object(scope, _lift(company_id=12))
+    assert not can_access_object(scope, _lift(company_id=3))
     # Компания и организация — разные вещи: клиент привязан к компании.
-    assert not can_access_object(область, _объект(division_id=1))
+    assert not can_access_object(scope, _lift(division_id=1))
 
 
-def test_пользователь_без_роли_не_видит_ничего():
-    область = read_scope(_пользователь(None))
-    assert область.kind is ScopeKind.NOTHING
-    assert область.empty
-    assert not can_access_object(область, _объект(division_id=1, company_id=1))
+def test_user_without_role_sees_nothing():
+    scope = read_scope(_user(None))
+    assert scope.kind is ScopeKind.NOTHING
+    assert scope.empty
+    assert not can_access_object(scope, _lift(division_id=1, company_id=1))
 
 
 @pytest.mark.parametrize(
-    "пользователь, пусто",
+    "user, is_empty",
     [
-        (_пользователь(Role.ENGINEER, divisions=()), True),
-        (_пользователь(Role.ENGINEER, divisions=(1,)), False),
-        (_пользователь(Role.CLIENT, company_id=None), True),
-        (_пользователь(Role.CLIENT, company_id=1), False),
-        (_пользователь(Role.ADMIN), False),
+        (_user(Role.ENGINEER, divisions=()), True),
+        (_user(Role.ENGINEER, divisions=(1,)), False),
+        (_user(Role.CLIENT, company_id=None), True),
+        (_user(Role.CLIENT, company_id=1), False),
+        (_user(Role.ADMIN), False),
     ],
 )
-def test_область_без_привязки_считается_пустой(пользователь, пусто):
+def test_scope_without_binding_is_empty(user, is_empty):
     # Инженер без участка и клиент без компании не должны видеть всё подряд.
-    assert read_scope(пользователь).empty is пусто
+    assert read_scope(user).empty is is_empty
 
 
-def test_заявка_видна_её_автору_и_исполнителю():
-    механик = _пользователь(Role.MECHANIC, user_id=10)
-    область = read_scope(механик)
+def test_order_is_visible_to_its_author_and_executor():
+    mechanic = _user(Role.MECHANIC, user_id=10)
+    scope = read_scope(mechanic)
 
-    чужой_объект = _объект(mechanic_id=77)
-    назначенная = SimpleNamespace(executor_id=10, creator_id=99, object=чужой_объект)
-    своя = SimpleNamespace(executor_id=77, creator_id=10, object=чужой_объект)
-    чужая = SimpleNamespace(executor_id=77, creator_id=99, object=чужой_объект)
+    someone_elses_lift = _lift(mechanic_id=77)
+    assigned = SimpleNamespace(executor_id=10, creator_id=99, object=someone_elses_lift)
+    created = SimpleNamespace(executor_id=77, creator_id=10, object=someone_elses_lift)
+    foreign = SimpleNamespace(executor_id=77, creator_id=99, object=someone_elses_lift)
 
     # Объект переназначили другому, но своя работа должна остаться видимой.
-    assert can_access_order(область, назначенная)
-    assert can_access_order(область, своя)
-    assert not can_access_order(область, чужая)
+    assert can_access_order(scope, assigned)
+    assert can_access_order(scope, created)
+    assert not can_access_order(scope, foreign)
 
 
-def test_заявка_наследует_доступ_от_объекта():
-    клиент = _пользователь(Role.CLIENT, user_id=10, company_id=12)
-    область = read_scope(клиент)
+def test_order_inherits_access_from_its_lift():
+    client = _user(Role.CLIENT, user_id=10, company_id=12)
+    scope = read_scope(client)
 
-    своя_компания = SimpleNamespace(
-        executor_id=None, creator_id=None, object=_объект(company_id=12)
+    own_company = SimpleNamespace(
+        executor_id=None, creator_id=None, object=_lift(company_id=12)
     )
-    чужая_компания = SimpleNamespace(
-        executor_id=None, creator_id=None, object=_объект(company_id=3)
+    other_company = SimpleNamespace(
+        executor_id=None, creator_id=None, object=_lift(company_id=3)
     )
-    assert can_access_order(область, своя_компания)
-    assert not can_access_order(область, чужая_компания)
+    assert can_access_order(scope, own_company)
+    assert not can_access_order(scope, other_company)
 
 
-def test_пустая_область_не_ломается_на_отсутствующих_записях():
-    область = AccessScope(
+def test_empty_scope_handles_missing_records():
+    scope = AccessScope(
         kind=ScopeKind.ASSIGNED, user_id=1, division_ids=frozenset(), company_id=None
     )
-    assert not can_access_object(область, None)
-    assert not can_access_order(область, None)
+    assert not can_access_object(scope, None)
+    assert not can_access_order(scope, None)

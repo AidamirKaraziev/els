@@ -4,6 +4,7 @@ from src.api.api_v1.endpoints import (
     act_base,
     act_fact,
     admin,
+    auth,
     client,
     company,
     contact_person,
@@ -37,6 +38,8 @@ from src.api.api_v1.endpoints import (
 api_router = APIRouter()
 
 
+# Первым — чтобы вход было видно в начале схемы, а не между справочниками.
+api_router.include_router(auth.router)
 api_router.include_router(planned_to.router)
 api_router.include_router(universal_user.router)
 api_router.include_router(admin.router)

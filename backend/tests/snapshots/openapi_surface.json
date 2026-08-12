@@ -1,4 +1,10 @@
 {
+  "DELETE /api/v1/auth/sessions/{session_id}": {
+    "required_body": [],
+    "required_params": [
+      "session_id"
+    ]
+  },
   "DELETE /api/v1/cp/admin/universal-user/{user_id}/": {
     "required_body": [],
     "required_params": [
@@ -74,6 +80,14 @@
     "required_params": []
   },
   "GET /api/v1/all-planned-to/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/auth/me": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/auth/sessions": {
     "required_body": [],
     "required_params": []
   },
@@ -202,10 +216,6 @@
     "required_params": [
       "id_user"
     ]
-  },
-  "GET /api/v1/cp/universal-user/me/": {
-    "required_body": [],
-    "required_params": []
   },
   "GET /api/v1/cp/universal-user/{user_id}/": {
     "required_body": [],
@@ -486,6 +496,57 @@
     ],
     "required_params": []
   },
+  "POST /api/v1/auth/login": {
+    "required_body": [
+      "email",
+      "password"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/auth/logout": {
+    "required_body": [
+      "refresh_token"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/auth/logout-all": {
+    "required_body": [],
+    "required_params": []
+  },
+  "POST /api/v1/auth/password/change": {
+    "required_body": [
+      "current_password",
+      "new_password"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/auth/password/reset-confirm": {
+    "required_body": [
+      "new_password",
+      "token"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/auth/password/reset-request": {
+    "required_body": [
+      "email"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/auth/refresh": {
+    "required_body": [
+      "refresh_token"
+    ],
+    "required_params": []
+  },
+  "POST /api/v1/auth/users/{user_id}/password": {
+    "required_body": [
+      "new_password"
+    ],
+    "required_params": [
+      "user_id"
+    ]
+  },
   "POST /api/v1/company/": {
     "required_body": [
       "director_name",
@@ -538,13 +599,6 @@
       "name",
       "password",
       "role_id"
-    ],
-    "required_params": []
-  },
-  "POST /api/v1/cp/sign-in/": {
-    "required_body": [
-      "email",
-      "password"
     ],
     "required_params": []
   },

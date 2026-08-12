@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 
 from src.config import settings
 from src.core.roles import ADMIN, CLIENT_ID
-from src.core.security import verify_password
+from src.core.security import (
+    get_password_hash,
+    validate_password_strength,
+    verify_password,
+)
 from src.crud.base_user import CRUDBaseUser
 from src.exceptions import UnprocessableEntity
 from src.models import Division, Location, UniversalUser, WorkingSpecialty
@@ -120,6 +124,36 @@ class CrudUniversalUser(
             )
 
         self._reset_failed_attempts(db=db, user=user)
+        return user
+
+    def set_password(
+        self, *, db: Session, user: UniversalUser, raw_password: str
+    ) -> UniversalUser:
+        """Задаёт пароль и завершает все сессии пользователя.
+
+        Сессии гасятся всегда — и при добровольной смене, и при сбросе
+        админом. Смена пароля после кражи токена не имеет смысла, если
+        украденный токен продолжает работать.
+
+        `password_changed_at` заодно гасит все ранее выданные токены доступа:
+        `deps.get_current_user` сравнивает с ним время выпуска токена.
+        """
+        from src.crud.crud_refresh_session import crud_refresh_sessions
+
+        validate_password_strength(raw_password)
+
+        user.hashed_password = get_password_hash(raw_password)
+        # Без микросекунд: отпечаток пароля в токене считается по целым
+        # секундам (`core.security.password_stamp`), и дробная часть в базе
+        # ничего не даёт, а сравнение делает хрупким.
+        user.password_changed_at = datetime.utcnow().replace(microsecond=0)
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        crud_refresh_sessions.revoke_all_for_user(db, user_id=user.id)
         return user
 
     def _is_locked(self, user: UniversalUser) -> bool:

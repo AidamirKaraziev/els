@@ -27,6 +27,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 
 ACCESS_TOKEN_TYPE = "access"
+PASSWORD_RESET_TOKEN_TYPE = "password_reset"
 
 # Столько байт случайности в refresh-токене. 48 байт — 64 символа в
 # url-safe base64, перебору не поддаётся.
@@ -94,8 +95,27 @@ def validate_password_strength(password: str) -> None:
 # --- access-токен ---------------------------------------------------------
 
 
-def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None) -> str:
-    """JWT с идентификатором пользователя.
+def password_stamp(password_changed_at: Optional[datetime]) -> str:
+    """Отпечаток текущего пароля — метка, меняющаяся при каждой смене.
+
+    Кладётся в токен и сверяется **на точное совпадение**. Сравнивать времена
+    («токен выпущен раньше смены пароля») нельзя: `iat` в JWT целочисленный и
+    округляется вниз, поэтому вход в ту же секунду, что и смена пароля, попадал
+    бы в неоднозначность. Либо человек не может войти после смены пароля, либо
+    украденный токен переживает её — в зависимости от того, в какую сторону
+    округлить. Точное равенство убирает вопрос целиком.
+    """
+    if password_changed_at is None:
+        return "0"
+    return str(int(password_changed_at.timestamp()))
+
+
+def create_access_token(
+    user_id: int,
+    password_changed_at: Optional[datetime] = None,
+    expires_delta: Optional[timedelta] = None,
+) -> str:
+    """JWT с идентификатором пользователя и отпечатком его пароля.
 
     Роль в токен намеренно не кладём. Права всё равно считаются по свежей
     строке пользователя — иначе повышение или понижение в должности доезжало
@@ -108,6 +128,7 @@ def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None)
     payload = {
         "sub": str(user_id),
         "type": ACCESS_TOKEN_TYPE,
+        "pwd": password_stamp(password_changed_at),
         "iat": now,
         "exp": expire,
     }
@@ -129,9 +150,53 @@ def decode_access_token(token: str) -> dict:
     return payload
 
 
-def token_issued_at(payload: dict) -> datetime:
-    """Момент выпуска токена — нужен, чтобы гасить токены при смене пароля."""
-    return datetime.utcfromtimestamp(payload["iat"])
+def token_matches_password(
+    payload: dict, password_changed_at: Optional[datetime]
+) -> bool:
+    """Выпущен ли токен под тот пароль, который стоит сейчас.
+
+    У токенов, выпущенных до появления отпечатка, поля `pwd` нет — такие не
+    проходят. При выкате все и так входят заново.
+    """
+    return payload.get("pwd") == password_stamp(password_changed_at)
+
+
+# --- токен сброса пароля --------------------------------------------------
+
+
+def create_password_reset_token(
+    user_id: int, password_changed_at: Optional[datetime] = None
+) -> str:
+    """Токен для ссылки «забыли пароль».
+
+    Отдельной таблицы под него нет намеренно: одноразовость даёт тот же
+    отпечаток пароля. Ссылкой воспользовались — пароль сменился — отпечаток
+    в токене больше не совпадает с текущим, и повторно ссылка не сработает.
+    """
+    now = datetime.utcnow()
+    payload = {
+        "sub": str(user_id),
+        "type": PASSWORD_RESET_TOKEN_TYPE,
+        "pwd": password_stamp(password_changed_at),
+        "iat": now,
+        "exp": now + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_password_reset_token(token: str) -> dict:
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError as exc:
+        raise InvalidTokenError(str(exc)) from exc
+
+    if payload.get("type") != PASSWORD_RESET_TOKEN_TYPE:
+        # Иначе обычным токеном доступа можно было бы менять пароль без знания
+        # старого.
+        raise InvalidTokenError("Ожидался токен сброса пароля")
+    if payload.get("sub") is None:
+        raise InvalidTokenError("В токене нет идентификатора пользователя")
+    return payload
 
 
 # --- refresh-токен --------------------------------------------------------
