@@ -33,3 +33,6 @@ frontend/env/*.json
 
 # Obsidian vault local state (do not commit)
 els-vault/.obsidian/*.json
+
+# Дампы БД: боевые данные, в git не место
+backups/
