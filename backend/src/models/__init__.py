@@ -1,8 +1,3 @@
-# Старые модели баз данных, которые можно удалить в будущем
-# from .user import User
-# from .verif_code import VerifCode
-# from .device import Device
-
 from .location import Location
 from .role import Role
 from .division import Division
@@ -33,6 +28,3 @@ from .contract import Contract
 from .working_specialty import WorkingSpecialty
 from .defective_acts import DefectiveAct
 from .defective_act_photo import DefectiveActPhoto
-
-# удалил модель базы данных, потому что не понимаю зачем она
-# from .act_fact_of_mechanic import ActFactOfMechanic

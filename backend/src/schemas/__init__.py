@@ -1,7 +1,13 @@
-from .msg import Msg
+"""Схемы запросов и ответов.
+
+Импорты здесь ничего не переэкспортируют для остального кода: все модули
+ходят за схемами напрямую (`from src.schemas.object import ObjectGet`).
+Список нужен только затем, чтобы `import src.schemas` подтягивал модули
+целиком — на это опирались звёздочные импорты прежнего подрядчика.
+"""
+
 from .act_base import *
 from .act_fact import *
-from .act_fact_of_mechanic import *
 from .admin import *
 from .client import *
 from .company import CompanyGet, CompanyCreate, CompanyUpdate
@@ -19,17 +25,15 @@ from .organization import *
 from .planned_to import *
 from .reason_fault import *
 from .role import RoleGet, RoleCreate, RoleUpdate
-from .stage_of_implementation import *
 from .status import *
 from .step import *
 from .sub_step import *
-from .token import *
 from .type_act import *
 from .type_object import *
 from .type_contract import *
-from .user import *
 from .universal_user import *
-from .verif_code import *
-from .working_specialty import WorkingSpecialtyGet, WorkingSpecialtyCreate, WorkingSpecialtyUpdate
-
-# from .universal_user import UniversalUserCreate
+from .working_specialty import (
+    WorkingSpecialtyGet,
+    WorkingSpecialtyCreate,
+    WorkingSpecialtyUpdate,
+)
