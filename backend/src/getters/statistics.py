@@ -1,4 +1,4 @@
-"""Сборка отчёта по поломкам из строк, которые вернул `crud_statistics`."""
+"""Сборка отчётов главной из строк, которые вернул `crud_statistics`."""
 
 from typing import Dict, List, Optional
 
@@ -7,6 +7,8 @@ from src.schemas.statistics import (
     BreakdownObjectItem,
     BreakdownPeriod,
     BreakdownsReport,
+    ScheduleExecutionDivision,
+    ScheduleExecutionReport,
     SeverityCount,
 )
 
@@ -97,5 +99,63 @@ def get_breakdowns_report(
         total_breakdowns=total_breakdowns,
         objects_affected=objects_affected,
         severity_summary=_severity_counts(summary_rows, total_breakdowns),
+        items=items,
+    )
+
+
+def _responsible(names: List[str]) -> Optional[str]:
+    """Имена прорабов в одну ячейку таблицы.
+
+    Второе и последующие имена сворачиваются в «+N»: в строку карточки на
+    телефоне не помещается и одно полное ФИО, а обрезать список молча — значит
+    показать участок так, будто за него отвечает один человек.
+    """
+    if not names:
+        return None
+    if len(names) == 1:
+        return names[0]
+    return f"{names[0]} +{len(names) - 1}"
+
+
+def get_schedule_execution_report(
+    *,
+    period: MonthPeriod,
+    rows,
+    foremen: Dict[int, List[str]],
+) -> ScheduleExecutionReport:
+    items: List[ScheduleExecutionDivision] = []
+    total_planned = 0
+    total_completed = 0
+    total_late = 0
+
+    for row in rows:
+        planned = int(row.planned_count or 0)
+        completed = int(row.completed_count or 0)
+        late = int(row.completed_late_count or 0)
+
+        total_planned += planned
+        total_completed += completed
+        total_late += late
+
+        names = foremen.get(row.division_id, [])
+        items.append(
+            ScheduleExecutionDivision(
+                division_id=row.division_id,
+                division=row.division,
+                responsible=_responsible(names),
+                responsible_count=len(names),
+                planned_count=planned,
+                completed_count=completed,
+                completed_late_count=late,
+                completion_percent=_share(completed, planned),
+            )
+        )
+
+    return ScheduleExecutionReport(
+        period=BreakdownPeriod(year=period.year, month=period.month),
+        planned_count=total_planned,
+        completed_count=total_completed,
+        completed_late_count=total_late,
+        completion_percent=_share(total_completed, total_planned),
         items=items,
     )

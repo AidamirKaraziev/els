@@ -16,7 +16,7 @@ from src.models import (
 )
 from src.schemas.act_fact import ActFactCreate, ActFactUpdate
 from src.utils import pagination
-from src.utils.time_stamp import date_from_timestamp
+from src.utils.time_stamp import datetime_from_timestamp
 
 ROLE_RIGHTS = [ADMIN, FOREMAN]
 ROLE_MECHANIC = [MECHANIC]
@@ -114,11 +114,13 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
         # обновление выполненных шагов
         if update_data.step_list_fact:
             update_data.step_list_fact = update_data.step_list_fact
-        # перевод дат в нужный формат
+        # Перевод дат в нужный формат. `datetime`, а не `date`: обе колонки
+        # объявлены DateTime, и прежний перевод в дату молча ронял время
+        # закрытия акта на полночь.
         if update_data.started_at is not None:
-            update_data.started_at = date_from_timestamp(update_data.started_at)
+            update_data.started_at = datetime_from_timestamp(update_data.started_at)
         if update_data.finished_at is not None:
-            update_data.finished_at = date_from_timestamp(update_data.finished_at)
+            update_data.finished_at = datetime_from_timestamp(update_data.finished_at)
         # проверка на ответственный прораб
         if update_data.foreman_id:
             foreman = (
@@ -144,7 +146,9 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
             if mechanic is None:
                 return None, self.not_found_mechanic, None
         # проверка статуса
-        if update_data.status_id:
+        # `is not None`, а не проверка на истинность: ноль — существующий id в
+        # чужих справочниках, и раньше такой запрос молча не менял ничего.
+        if update_data.status_id is not None:
             status, code, indexes = crud_status.getting_status(
                 db=db, status_id=update_data.status_id
             )

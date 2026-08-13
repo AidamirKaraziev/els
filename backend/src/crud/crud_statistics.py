@@ -1,8 +1,23 @@
 """Запросы для статистики на главной.
 
-Пока здесь живёт только топ поломок. Рядом встанут просроченные ТО,
-выполнение графиков и топ сотрудников — у них общий период и общие фильтры,
-поэтому модуль отдельный, а не внутри `crud_order`.
+Здесь живут топ поломок и выполнение графика ТО. Рядом встанут просроченные
+ТО и топ сотрудников — у них общий период и общие фильтры, поэтому модуль
+отдельный, а не внутри `crud_order`.
+
+Что считается выполнением графика
+---------------------------------
+План на месяц — заполненная ячейка месяца в `planned_to` за нужный год.
+Отдельного признака «в этом месяце ТО положено» в модели нет: на экране
+графика нажатие на месяц сразу создаёт акт, то есть заведение акта и есть
+планирование. Из-за этого объект, которому ТО на месяц просто не завели, в
+знаменатель не попадает — и разная периодичность обслуживания учитывается
+сама собой.
+
+Выполнено — у связанного акта заполнен `finished_at`, любой датой. Месяц
+берётся из ячейки плана, а не из даты закрытия: ТО за март, закрытое второго
+апреля, остаётся выполнением марта, иначе процент за прошлый месяц менялся бы
+задним числом. Закрытие после конца планового месяца отдельно считается
+просрочкой.
 
 Что считается поломкой
 ----------------------
@@ -28,8 +43,10 @@ from typing import Dict, List, NamedTuple, Optional, Tuple
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from src.core.access import AccessScope, apply_order_scope
+from src.core.access import AccessScope, apply_order_scope, object_scope_filter
+from src.core.roles import FOREMAN
 from src.models import (
+    ActFact,
     Company,
     Division,
     FactoryModel,
@@ -37,7 +54,9 @@ from src.models import (
     Object,
     Order,
     Organization,
+    PlannedTO,
     UniversalUser,
+    UserDivision,
 )
 
 # Категория, заведённая до миграции или вручную, приходит с NULL в
@@ -45,6 +64,24 @@ from src.models import (
 # заявки без категории отсутствует всегда. Чтобы такие заявки не выигрывали
 # сортировку по тяжести, подставляем заведомо больший ранг.
 _UNKNOWN_SEVERITY_RANK = 10**6
+
+# Месяц в `planned_to` — это отдельная колонка, а не строка таблицы. Разложить
+# её в нормальную форму значило бы переписать экран графика ТО, который в неё
+# пишет; здесь достаточно карты «номер месяца → колонка».
+_PLANNED_MONTH_COLUMN = {
+    1: PlannedTO.january_to_id,
+    2: PlannedTO.february_to_id,
+    3: PlannedTO.march_to_id,
+    4: PlannedTO.april_to_id,
+    5: PlannedTO.may_to_id,
+    6: PlannedTO.june_to_id,
+    7: PlannedTO.july_to_id,
+    8: PlannedTO.august_to_id,
+    9: PlannedTO.september_to_id,
+    10: PlannedTO.october_to_id,
+    11: PlannedTO.november_to_id,
+    12: PlannedTO.december_to_id,
+}
 
 
 class MonthPeriod(NamedTuple):
@@ -389,6 +426,114 @@ class CrudStatistics:
             .all()
         )
         return {row.object_id: int(row.count) for row in rows}
+
+    # ------------------------------------------------------------------
+    # Выполнение графика ТО
+    # ------------------------------------------------------------------
+
+    def schedule_execution_by_division(
+        self,
+        *,
+        db: Session,
+        period: MonthPeriod,
+        scope: AccessScope,
+        division_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+    ) -> List:
+        """План и факт ТО за месяц в разрезе участков.
+
+        Порядок — от худшего участка к лучшему: карточка на главной нужна,
+        чтобы находить отстающих, а не чтобы читать её сверху вниз целиком.
+        При равном проценте выше тот, у кого план больше, — там и цена
+        отставания выше.
+        """
+        month_column = _PLANNED_MONTH_COLUMN[period.month]
+
+        # Внутреннее соединение с актом и есть определение плана: ячейка без
+        # акта — это не проваленное ТО, а незаполненный график.
+        finished = ActFact.finished_at.isnot(None)
+        # Закрыто после конца планового месяца. Сравнение с `period.end`, а не
+        # с началом следующего дня: период — полуинтервал [start, end).
+        finished_late = finished & (ActFact.finished_at >= period.end)
+
+        planned = func.count(PlannedTO.id)
+        completed = func.count(PlannedTO.id).filter(finished)
+
+        query = (
+            db.query(PlannedTO)
+            .join(Object, PlannedTO.object_id == Object.id)
+            .join(ActFact, ActFact.id == month_column)
+            .outerjoin(Division, Object.division_id == Division.id)
+            # `year` в модели строковый, приводить период к строке приходится
+            # здесь. Менять тип колонки — отдельная миграция на живой таблице.
+            .filter(PlannedTO.year == str(period.year))
+        )
+
+        if division_id is not None:
+            query = query.filter(Object.division_id == division_id)
+        if organization_id is not None:
+            query = query.filter(Object.organization_id == organization_id)
+        if company_id is not None:
+            query = query.filter(Object.company_id == company_id)
+
+        # Граница, за которую человек выйти не может. Заодно отсекает строки
+        # графика, осиротевшие после удаления объекта: у них `object_id` пуст,
+        # и соединение с `objects` их не пропускает.
+        query = query.filter(object_scope_filter(scope))
+
+        return (
+            query.with_entities(
+                Object.division_id.label("division_id"),
+                Division.title.label("division"),
+                planned.label("planned_count"),
+                completed.label("completed_count"),
+                func.count(PlannedTO.id)
+                .filter(finished_late)
+                .label("completed_late_count"),
+            )
+            .group_by(Object.division_id, Division.title)
+            .order_by(
+                # Доля выполненных: считаем в SQL, чтобы сортировка и число на
+                # экране заведомо совпадали. Делить безопасно: группа
+                # существует только там, где есть хотя бы одна строка плана.
+                (completed * 1.0 / planned).asc(),
+                planned.desc(),
+                Object.division_id.asc(),
+            )
+            .all()
+        )
+
+    def foremen_by_division(
+        self, *, db: Session, division_ids: List[int]
+    ) -> Dict[int, List[str]]:
+        """{division_id: [имена прорабов]} — одним запросом на все участки.
+
+        Через `user_divisions`, а не через `universal_users.division_id`:
+        участков у человека может быть несколько, и проверки доступа смотрят
+        именно в связь. Основное поле показало бы прораба только на одном из
+        его участков.
+        """
+        if not division_ids:
+            return {}
+
+        rows = (
+            db.query(UserDivision.division_id, UniversalUser.name)
+            .join(UniversalUser, UniversalUser.id == UserDivision.user_id)
+            .filter(
+                UserDivision.division_id.in_(division_ids),
+                UniversalUser.role_id == FOREMAN,
+                UniversalUser.is_active.is_(True),
+            )
+            .order_by(UserDivision.division_id, UniversalUser.id)
+            .all()
+        )
+
+        result: Dict[int, List[str]] = {}
+        for division_id, name in rows:
+            if name:
+                result.setdefault(division_id, []).append(name)
+        return result
 
 
 crud_statistics = CrudStatistics()

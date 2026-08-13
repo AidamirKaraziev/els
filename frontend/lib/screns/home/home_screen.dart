@@ -8,7 +8,7 @@ import '../home_page/home_page.dart';
 import '../responsive_screens/responsive.dart';
 import 'best_employee.dart';
 import 'overdue_maintenance.dart';
-import 'schedule_execution.dart';
+import 'schedule_execution/schedule_execution.dart';
 import 'top_breakdowns/top_breakdowns.dart';
 
 ///Главная

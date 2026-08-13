@@ -1,7 +1,7 @@
 """Статистика для главной страницы.
 
-Пока здесь топ поломок. Рядом встанут просроченные ТО, выполнение графиков
-и топ сотрудников — период и фильтры у них общие.
+Здесь топ поломок и выполнение графика ТО. Рядом встанут просроченные ТО и
+топ сотрудников — период и фильтры у них общие.
 """
 
 import logging
@@ -15,8 +15,8 @@ from src.api import deps
 from src.core.permissions import Permission, permissions_for
 from src.core.response import SingleEntityResponse
 from src.crud.crud_statistics import crud_statistics, month_period, previous_month
-from src.getters.statistics import get_breakdowns_report
-from src.schemas.statistics import BreakdownsReport
+from src.getters.statistics import get_breakdowns_report, get_schedule_execution_report
+from src.schemas.statistics import BreakdownsReport, ScheduleExecutionReport
 from src.services.breakdowns_pdf import build_breakdowns_pdf
 
 router = APIRouter()
@@ -144,6 +144,55 @@ def export_breakdowns_statistics(
             ),
             "Content-Length": str(len(content)),
         },
+    )
+
+
+@router.get(
+    "/statistics/schedule-execution",
+    response_model=SingleEntityResponse[ScheduleExecutionReport],
+    name="schedule_execution_statistics",
+    summary="Выполнение графика ТО за месяц",
+    description=(
+        "Доля выполненных ТО за месяц в разрезе участков.\n\n"
+        "**План** — заполненные ячейки месяца в графике на этот год. "
+        "Отдельного признака «в этом месяце ТО положено» в базе нет: на экране "
+        "графика нажатие на месяц сразу создаёт акт, поэтому заведение акта и "
+        "есть планирование. Объект, которому ТО на месяц не завели, в план не "
+        "попадает — так учитывается разная периодичность обслуживания.\n\n"
+        "**Факт** — у акта заполнен `finished_at`. Месяц берётся из ячейки "
+        "плана, а не из даты закрытия: ТО за март, закрытое второго апреля, "
+        "остаётся выполнением марта и попадает в `completed_late_count`.\n\n"
+        "Сортировка: от худшего процента к лучшему."
+    ),
+    tags=["Статистика"],
+)
+def get_schedule_execution_statistics(
+    session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.STATISTICS_READ)),
+    year: int = Query(..., ge=1990, le=2100, title="Год отчёта"),
+    month: int = Query(..., ge=1, le=12, title="Месяц отчёта (1–12)"),
+    division_id: int = Query(None, title="Только объекты этого участка"),
+    organization_id: int = Query(None, title="Только объекты этой организации"),
+    company_id: int = Query(None, title="Только объекты этой компании"),
+    scope=Depends(deps.get_read_scope),
+):
+    period = month_period(year, month)
+    rows = crud_statistics.schedule_execution_by_division(
+        db=session,
+        period=period,
+        scope=scope,
+        division_id=division_id,
+        organization_id=organization_id,
+        company_id=company_id,
+    )
+    # Имена прорабов — вторым запросом и только по участкам из выдачи. В
+    # унаследованной ручке запрос уходил на каждый участок отдельно.
+    foremen = crud_statistics.foremen_by_division(
+        db=session,
+        division_ids=[row.division_id for row in rows if row.division_id is not None],
+    )
+    return SingleEntityResponse(
+        data=get_schedule_execution_report(period=period, rows=rows, foremen=foremen)
     )
 
 

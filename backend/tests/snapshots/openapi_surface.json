@@ -435,6 +435,13 @@
       "year"
     ]
   },
+  "GET /api/v1/statistics/schedule-execution": {
+    "required_body": [],
+    "required_params": [
+      "month",
+      "year"
+    ]
+  },
   "GET /api/v1/statuses/": {
     "required_body": [],
     "required_params": []

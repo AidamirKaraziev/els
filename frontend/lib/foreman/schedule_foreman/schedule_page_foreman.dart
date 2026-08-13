@@ -15,6 +15,8 @@ import '../../screns/home_page/home_page.dart';
 import '../../screns/object/view/object_page.dart';
 import '../../screns/object/view/object_screen.dart';
 import '../../screns/schedule/schedule_page.dart';
+import '../../screns/schedule/widgets/finish_to_button.dart';
+import '../../screns/schedule/widgets/schedule_year_dialog.dart';
 import '../../screns/schedule/schedule_screen.dart';
 import '../user_page_foreman.dart';
 import 'package:els/helper/api_config.dart';
@@ -589,7 +591,13 @@ class _SchedulePageForemanState extends State<SchedulePageForeman> {
                                         style: ElevatedButton.styleFrom(
                                             backgroundColor: ColorApp.myColorGreenAuth),
                                         onPressed: () async {
-                                          await creationTOGraphics('2025', IntTest.pressHover);
+                                          // Год спрашиваем, а не берём из кода:
+                                          // здесь годами стояла строка '2025',
+                                          // и график на текущий год завести
+                                          // было нечем.
+                                          final String? year = await pickScheduleYear(context);
+                                          if (year == null) return;
+                                          await creationTOGraphics(year, IntTest.pressHover);
                                           await getTOScheduleIdObject(IntTest.pressHover);
                                           myStream.add(IntTest.indexScreens);
                                           // Получить список плановых TO привязанных к обьекту
@@ -4625,6 +4633,23 @@ class _SchedulePageForemanState extends State<SchedulePageForeman> {
                                               // await getTOScheduleIdObject(IntTest.pressHover);
                                               myStream.add(IntTest.indexScreens);
                                             }, child: const Text('Изменить ТО месяцу')),
+                                        const SizedBox(height: 10.0),
+                                        /// Завершить ТО
+                                        ///
+                                        /// Та же кнопка, что и на админском
+                                        /// экране графика: от даты окончания
+                                        /// считается «Выполнение графика» на
+                                        /// главной.
+                                        FinishTOButton(
+                                          actId: intMonTOTes,
+                                          finishedAt: listTo[monTO] is Map
+                                              ? listTo[monTO]['finished_at']
+                                              : null,
+                                          onFinished: () async {
+                                            await getTOScheduleIdObject(IntTest.pressHover);
+                                            myStream.add(IntTest.indexScreens);
+                                          },
+                                        ),
                                         const SizedBox(height: 10.0),
                                         /// Список ТО
                                         StreamBuilder(

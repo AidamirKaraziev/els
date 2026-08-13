@@ -115,3 +115,66 @@ class BreakdownsReport(BaseModel):
         [], title="Свод по категориям за период, от самой тяжёлой"
     )
     items: List[BreakdownObjectItem] = Field([], title="Топ объектов по числу поломок")
+
+
+class ScheduleExecutionDivision(BaseModel):
+    """Участок в отчёте о выполнении графика ТО."""
+
+    division_id: Optional[int] = Field(
+        None, title="ID участка; null — объекты без участка"
+    )
+    division: Optional[str] = Field(None, title="Название участка")
+    responsible: Optional[str] = Field(
+        None,
+        title="Ответственные прорабы участка",
+        description=(
+            "Одно имя, либо «Никифоров +2», если прорабов несколько. "
+            "null, если активных прорабов у участка нет."
+        ),
+    )
+    responsible_count: int = Field(0, ge=0, title="Сколько активных прорабов у участка")
+
+    planned_count: int = Field(
+        ...,
+        ge=0,
+        title="ТО запланировано на месяц",
+        description=(
+            "Заполненные ячейки месяца в графике на этот год. Объект, "
+            "которому ТО на месяц не завели, сюда не попадает."
+        ),
+    )
+    completed_count: int = Field(
+        ..., ge=0, title="ТО выполнено", description="Акт закрыт: заполнен finished_at."
+    )
+    completed_late_count: int = Field(
+        ...,
+        ge=0,
+        title="Из них закрыто после конца планового месяца",
+        description="Входит в completed_count, а не считается отдельно от него.",
+    )
+    completion_percent: float = Field(
+        ..., ge=0, le=100, title="Доля выполненных ТО, проценты"
+    )
+
+
+class ScheduleExecutionReport(BaseModel):
+    """Выполнение графика ТО за месяц по участкам."""
+
+    period: BreakdownPeriod = Field(..., title="Период отчёта")
+    planned_count: int = Field(..., ge=0, title="Всего ТО запланировано за месяц")
+    completed_count: int = Field(..., ge=0, title="Всего выполнено")
+    completed_late_count: int = Field(..., ge=0, title="Всего закрыто с просрочкой")
+    completion_percent: float = Field(
+        ...,
+        ge=0,
+        le=100,
+        title="Доля выполненных по всем участкам",
+        description=(
+            "Считается от общих чисел, а не средним из процентов участков: "
+            "участок с одним ТО не должен весить столько же, сколько участок "
+            "с сорока."
+        ),
+    )
+    items: List[ScheduleExecutionDivision] = Field(
+        [], title="Участки, от худшего процента к лучшему"
+    )

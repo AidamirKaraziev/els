@@ -10,6 +10,8 @@ import 'package:http/http.dart' as http;
 import '../../TO/escalator_travelator_TO.dart';
 import '../../TO/liftMO.dart';
 import '../../TO/liftNotMO.dart';
+import 'widgets/finish_to_button.dart';
+import 'widgets/schedule_year_dialog.dart';
 import '../../helper/defective_act.dart';
 import '../../helper/my_user.dart';
 import 'package:intl/intl.dart';
@@ -264,22 +266,10 @@ addListFactAct(int idSelectedAct, String listAct) async {
   //print('Новый список акт фак  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>${response.runtimeType}');
 }
 
-/// Изменить статус акт факт
-correctFactActStatus(int idSelected) async {
-  var res = await Api.put(
-    Uri.parse("${ApiConfig.base}/act-fact/$idSelected/"),
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-    },
-    body: json.encode(
-      {
-        "status_id": 0
-      },
-    ),
-  );
-  var response = jsonDecode(utf8.decode(res.bodyBytes));
-  //print('Изменить статус акт фак  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>${response['data']}');
-}
+/// Завершение ТО живёт в `widgets/finish_to_button.dart`: тем же действием
+/// пользуется прорабский экран графика, а запрос и кнопка к нему в паре.
+/// Прежняя `correctFactActStatus` посылала `status_id: 0` и не вызывалась
+/// ниоткуда — бэкенд такой запрос всё равно молча игнорировал.
 
 /// ===================================================================================================
 
@@ -1015,7 +1005,13 @@ class _SchedulePageState extends State<SchedulePage> {
                                         style: ElevatedButton.styleFrom(
                                             backgroundColor: ColorApp.myColorGreenAuth),
                                         onPressed: () async {
-                                          await creationTOGraphics('2025', IntTest.pressHover);
+                                          // Год спрашиваем, а не берём из кода:
+                                          // здесь годами стояла строка '2025',
+                                          // и график на текущий год завести
+                                          // было нечем.
+                                          final String? year = await pickScheduleYear(context);
+                                          if (year == null) return;
+                                          await creationTOGraphics(year, IntTest.pressHover);
                                           await getTOScheduleIdObject(IntTest.pressHover);
                                           myStream.add(IntTest.indexScreens);
                                           // Получить список плановых TO привязанных к обьекту
@@ -5043,6 +5039,24 @@ class _SchedulePageState extends State<SchedulePage> {
                                               // await getTOScheduleIdObject(IntTest.pressHover);
                                               myStream.add(IntTest.indexScreens);
                                             }, child: const Text('Изменить ТО месяцу')),
+                                        const SizedBox(height: 10.0),
+                                        /// Завершить ТО
+                                        ///
+                                        /// Единственное место, где акт получает
+                                        /// дату окончания. От неё считается
+                                        /// виджет «Выполнение графика» на
+                                        /// главной: без закрытия акта участок
+                                        /// выглядит проваленным.
+                                        FinishTOButton(
+                                          actId: intMonTOTes,
+                                          finishedAt: listTo[monTO] is Map
+                                              ? listTo[monTO]['finished_at']
+                                              : null,
+                                          onFinished: () async {
+                                            await getTOScheduleIdObject(IntTest.pressHover);
+                                            myStream.add(IntTest.indexScreens);
+                                          },
+                                        ),
                                         const SizedBox(height: 10.0),
                                         /// Список ТО
                                         StreamBuilder(
