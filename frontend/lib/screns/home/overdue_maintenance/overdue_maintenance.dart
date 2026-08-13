@@ -6,6 +6,9 @@ import '../../responsive_screens/responsive.dart';
 import 'bloc/overdue_maintenance_bloc.dart';
 import 'models/overdue_maintenance_report.dart';
 
+/// Сколько долгов показываем на одной странице карточки.
+const int _kPageSize = 5;
+
 /// Просроченные ТО ==================================
 ///
 /// Раньше здесь стояли пять одинаковых красных строк «№13 / В.Р. Никифоров /
@@ -15,15 +18,15 @@ import 'models/overdue_maintenance_report.dart';
 /// Календаря нет намеренно, в отличие от двух соседних виджетов: просрочка —
 /// это состояние на сегодня, а не срез месяца. Выбор месяца здесь означал бы
 /// «покажи долги, какими они были в марте», и читался бы неверно. Вместо
-/// календаря в шапке стоит счётчик.
+/// календаря в шапке стоят счётчик и листание страниц.
 class OverdueMaintenance extends StatelessWidget {
   const OverdueMaintenance({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider<OverdueMaintenanceBloc>(
-      create: (_) =>
-          OverdueMaintenanceBloc()..add(const OverdueMaintenanceRequested()),
+      create: (_) => OverdueMaintenanceBloc()
+        ..add(const OverdueMaintenanceRequested(limit: _kPageSize)),
       child: const _OverdueMaintenanceView(),
     );
   }
@@ -72,10 +75,6 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final OverdueMaintenanceState current = state;
-    final OverdueMaintenanceReport? report =
-        current is OverdueMaintenanceLoaded ? current.report : null;
-
     return Container(
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
@@ -101,7 +100,7 @@ class _Card extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: bounded ? MainAxisSize.max : MainAxisSize.min,
             children: [
-              _Header(compact: compact, report: report),
+              _Header(compact: compact, state: state),
               const SizedBox(height: 12.0),
               if (bounded) Expanded(child: body) else body,
             ],
@@ -113,17 +112,22 @@ class _Card extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({Key? key, required this.compact, required this.report})
+  const _Header({Key? key, required this.compact, required this.state})
       : super(key: key);
 
   final bool compact;
-
-  /// `null`, пока идёт загрузка или случилась ошибка — счётчика тогда нет.
-  final OverdueMaintenanceReport? report;
+  final OverdueMaintenanceState state;
 
   @override
   Widget build(BuildContext context) {
-    final OverdueMaintenanceReport? current = report;
+    final OverdueMaintenanceReport? report = state.report;
+    final bool loading = state is OverdueMaintenanceLoading;
+    final int total = report?.totalCount ?? 0;
+
+    // Листать некуда, пока страница одна. Стрелки в этом случае не гасим, а
+    // убираем совсем: неактивные кнопки в шапке маленькой карточки читаются
+    // как поломка.
+    final bool paged = total > _kPageSize;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -138,24 +142,98 @@ class _Header extends StatelessWidget {
             ),
           ),
         ),
-        if (current != null && current.totalCount > 0) ...[
+        if (total > 0) ...[
           const SizedBox(width: 8.0),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-            decoration: BoxDecoration(
-              color: ColorApp.myColorRed,
-              borderRadius: BorderRadius.circular(20.0),
-            ),
-            child: Text(
-              '${current.totalCount}',
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                color: ColorApp.myColorWhite,
-              ),
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _CounterBadge(total: total),
+              if (paged) ...[
+                const SizedBox(width: 4.0),
+                _ArrowButton(
+                  icon: Icons.chevron_left,
+                  tooltip: 'Предыдущие',
+                  onPressed: !loading && state.offset > 0
+                      ? () => _go(context, state.offset - _kPageSize)
+                      : null,
+                ),
+                _ArrowButton(
+                  icon: Icons.chevron_right,
+                  tooltip: 'Следующие',
+                  onPressed:
+                      !loading && state.offset + _kPageSize < total
+                          ? () => _go(context, state.offset + _kPageSize)
+                          : null,
+                ),
+              ],
+            ],
           ),
         ],
       ],
+    );
+  }
+
+  void _go(BuildContext context, int offset) {
+    context.read<OverdueMaintenanceBloc>().add(
+          OverdueMaintenanceRequested(
+            limit: _kPageSize,
+            offset: offset < 0 ? 0 : offset,
+          ),
+        );
+  }
+}
+
+/// Сколько всего долгов. Красная точка в шапке — единственное место, где
+/// цвет тревоги остался крупным пятном: в самих строках он теперь только
+/// на полосе слева.
+class _CounterBadge extends StatelessWidget {
+  const _CounterBadge({Key? key, required this.total}) : super(key: key);
+
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        color: ColorApp.myColorRed,
+        borderRadius: BorderRadius.circular(20.0),
+      ),
+      child: Text(
+        '$total',
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: ColorApp.myColorWhite,
+        ),
+      ),
+    );
+  }
+}
+
+class _ArrowButton extends StatelessWidget {
+  const _ArrowButton({
+    Key? key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  }) : super(key: key);
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      tooltip: tooltip,
+      iconSize: 20.0,
+      splashRadius: 18.0,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 28.0, minHeight: 28.0),
+      color: ColorApp.myColorBlack,
+      disabledColor: ColorApp.myColorGrayBorder,
     );
   }
 }
@@ -185,7 +263,7 @@ class _Body extends StatelessWidget {
         actionLabel: 'Повторить',
         onAction: () => context
             .read<OverdueMaintenanceBloc>()
-            .add(const OverdueMaintenanceRequested()),
+            .add(const OverdueMaintenanceRequested(limit: _kPageSize)),
         bounded: bounded,
       );
     }
@@ -202,6 +280,7 @@ class _Body extends StatelessWidget {
       }
       return _Report(
         report: current.report,
+        offset: current.offset,
         showResponsible: showResponsible,
         bounded: bounded,
       );
@@ -229,11 +308,13 @@ class _Report extends StatelessWidget {
   const _Report({
     Key? key,
     required this.report,
+    required this.offset,
     required this.showResponsible,
     required this.bounded,
   }) : super(key: key);
 
   final OverdueMaintenanceReport report;
+  final int offset;
   final bool showResponsible;
   final bool bounded;
 
@@ -257,12 +338,13 @@ class _Report extends StatelessWidget {
         _ColumnTitles(showResponsible: showResponsible),
         Divider(color: Colors.grey.shade300, thickness: 1),
         if (bounded) Expanded(child: list) else list,
-        if (report.hasMore) ...[
+        if (report.totalCount > report.items.length) ...[
           const SizedBox(height: 4.0),
-          // Список обрезан `limit`, и молчать об этом нельзя: пять строк
-          // выглядят как весь долг.
+          // Какая часть долга сейчас на экране. Без этой подписи стрелки в
+          // шапке непонятно куда ведут.
           Text(
-            'Показано ${report.items.length} из ${report.totalCount}',
+            'Показаны ${offset + 1}–${offset + report.items.length}'
+            ' из ${report.totalCount}',
             style: const TextStyle(
               fontSize: 12.0,
               color: ColorApp.myColorGray,
@@ -306,7 +388,7 @@ class _ColumnTitles extends StatelessWidget {
     const TextStyle style = TextStyle(color: Colors.black, fontSize: 13.0);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
       child: Row(
         children: [
           const Expanded(flex: 3, child: Text('Объект', style: style)),
@@ -318,8 +400,18 @@ class _ColumnTitles extends StatelessWidget {
           const Expanded(flex: 4, child: Text('Клиент', style: style)),
           const SizedBox(width: 8.0),
           const SizedBox(
-            width: 76.0,
-            child: Text('Плановый ТО', style: style, textAlign: TextAlign.right),
+            width: 72.0,
+            child: Text('Месяц ТО', style: style, textAlign: TextAlign.right),
+          ),
+          const SizedBox(width: 8.0),
+          const SizedBox(
+            width: 56.0,
+            child: Text(
+              'Просрочка',
+              style: style,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),
@@ -339,23 +431,46 @@ class _MaintenanceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String? address = item.addressLabel;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
+      padding: const EdgeInsets.only(bottom: 8.0),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10.0),
-        height: 40.0,
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
         decoration: BoxDecoration(
-          color: item.color,
+          // Спокойная серая строка вместо сплошной заливки цветом тревоги.
+          // Пять красных прямоугольников подряд кричали одинаково громко, и
+          // отличить свежий долг от полугодового было нечем. Тот же приём,
+          // что и в «Топе поломок» на макете: строка нейтральная, цвет —
+          // только на бейдже справа.
+          color: ColorApp.myColorGrayShadow,
           borderRadius: BorderRadius.circular(10.0),
         ),
         child: Row(
           children: [
             Expanded(
               flex: 3,
-              child: Text(
-                item.objectLabel,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w500),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.objectLabel,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  // Адрес второй строкой: по «Лифт 12» непонятно, куда ехать
+                  // закрывать долг.
+                  if (address != null)
+                    Text(
+                      address,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11.0,
+                        color: ColorApp.myColorGray,
+                      ),
+                    ),
+                ],
               ),
             ),
             if (showResponsible) ...[
@@ -378,22 +493,31 @@ class _MaintenanceRow extends StatelessWidget {
             ),
             const SizedBox(width: 8.0),
             SizedBox(
-              width: 76.0,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    item.plannedLabel,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  // Без этой подписи ТО, просроченное на месяц, выглядит так
-                  // же, как забытое полгода назад.
-                  Text(
-                    item.overdueLabel,
-                    style: const TextStyle(fontSize: 11.0),
-                  ),
-                ],
+              width: 72.0,
+              child: Text(
+                item.plannedLabel,
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            const SizedBox(width: 8.0),
+            // Единственное цветное пятно строки. Без него ТО, просроченное на
+            // месяц, выглядит так же, как забытое полгода назад.
+            Container(
+              width: 56.0,
+              height: 32.0,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: item.color,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: Text(
+                item.overdueLabel,
+                style: const TextStyle(
+                  fontSize: 12.0,
+                  fontWeight: FontWeight.w700,
+                  color: ColorApp.myColorWhite,
+                ),
               ),
             ),
           ],

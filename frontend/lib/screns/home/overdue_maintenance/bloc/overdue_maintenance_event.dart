@@ -13,6 +13,7 @@ abstract class OverdueMaintenanceEvent {
 class OverdueMaintenanceRequested extends OverdueMaintenanceEvent {
   const OverdueMaintenanceRequested({
     this.limit = 5,
+    this.offset = 0,
     this.divisionId,
     this.organizationId,
     this.companyId,
@@ -21,6 +22,9 @@ class OverdueMaintenanceRequested extends OverdueMaintenanceEvent {
   /// Сколько строк показать. Счётчик в шапке считает по всей выдаче, поэтому
   /// обрезка списка не искажает цифру.
   final int limit;
+
+  /// Сколько строк пропустить — страница списка.
+  final int offset;
 
   final int? divisionId;
   final int? organizationId;

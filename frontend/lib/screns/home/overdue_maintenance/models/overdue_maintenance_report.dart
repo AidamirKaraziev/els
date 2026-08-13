@@ -64,6 +64,11 @@ class OverdueMaintenanceItem {
   String get clientLabel =>
       client?.trim().isNotEmpty == true ? client!.trim() : '—';
 
+  /// Адрес второй строкой под названием. По «Лифт 12» непонятно, куда ехать,
+  /// а механику и прорабу карточка нужна именно для этого.
+  String? get addressLabel =>
+      address?.trim().isNotEmpty == true ? address!.trim() : null;
+
   String get responsibleLabel => responsibleMechanic?.trim().isNotEmpty == true
       ? responsibleMechanic!.trim()
       : '—';
@@ -75,11 +80,11 @@ class OverdueMaintenanceItem {
     return '${kMonthsShort[month - 1]} $year';
   }
 
-  /// «5 мес.» — точная мера долга под датой.
-  String get overdueLabel => '$monthsOverdue мес.';
+  /// «5 мес» — надпись на бейдже просрочки.
+  String get overdueLabel => '$monthsOverdue мес';
 
-  /// Цвет строки. Два уровня, оба из палитры приложения: свежий долг —
-  /// жёлтый, всё остальное — красный. Точную величину несёт подпись
+  /// Цвет бейджа. Два уровня, оба из палитры приложения: свежий долг —
+  /// жёлтый, всё остальное — красный. Точную величину несёт сама подпись
   /// [overdueLabel], изобретать под неё оттенки не нужно.
   Color get color =>
       monthsOverdue <= 1 ? ColorApp.myColorYellow : ColorApp.myColorRed;
@@ -125,10 +130,10 @@ class OverdueMaintenanceReport {
 
   /// Пусто — значит долгов нет. Это хорошая новость, а не ошибка и не
   /// незаполненный график: график мог быть заполнен и весь закрыт вовремя.
-  bool get isEmpty => items.isEmpty;
-
-  /// Список обрезан: показываем не всё, что просрочено.
-  bool get hasMore => totalCount > items.length;
+  ///
+  /// Смотрим на `totalCount`, а не на длину списка: пустая страница за
+  /// концом выдачи — это не «долгов нет».
+  bool get isEmpty => totalCount == 0;
 
   factory OverdueMaintenanceReport.fromJson(Map<String, dynamic> json) {
     final Map<String, dynamic> generatedFor = _asMap(json['generated_for']);

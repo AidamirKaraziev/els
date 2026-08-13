@@ -27,8 +27,8 @@ class OverdueMaintenanceBloc
   final OverdueMaintenanceRepository _repository;
 
   /// Номер последнего запроса: отсекает ответы, которые уже никому не нужны.
-  /// Человек нажал «Повторить» дважды, а первый ответ пришёл после второго и
-  /// перезаписал бы его.
+  /// Человек пролистнул две страницы подряд, а ответ на первую пришёл после
+  /// второй и перезаписал бы её.
   int _requestId = 0;
 
   Future<void> _onRequested(
@@ -36,19 +36,39 @@ class OverdueMaintenanceBloc
     Emitter<OverdueMaintenanceState> emit,
   ) async {
     final int requestId = ++_requestId;
-    emit(const OverdueMaintenanceLoading());
+    // Предыдущую страницу отдаём в состояние загрузки: при листании шапка со
+    // счётчиком и стрелками не должна мигать между запросами.
+    emit(OverdueMaintenanceLoading(
+      previous: state.report,
+      offset: event.offset,
+    ));
 
     try {
-      final OverdueMaintenanceReport report = await _repository.fetch(
+      OverdueMaintenanceReport report = await _repository.fetch(
         limit: event.limit,
+        offset: event.offset,
         divisionId: event.divisionId,
         organizationId: event.organizationId,
         companyId: event.companyId,
       );
+      int offset = event.offset;
+
+      // Страница за концом выдачи: долгов стало меньше, пока человек листал.
+      // Пустой список при ненулевом счётчике выглядел бы как «долгов нет»,
+      // поэтому молча возвращаемся на первую страницу.
+      if (report.items.isEmpty && offset > 0 && report.totalCount > 0) {
+        report = await _repository.fetch(
+          limit: event.limit,
+          divisionId: event.divisionId,
+          organizationId: event.organizationId,
+          companyId: event.companyId,
+        );
+        offset = 0;
+      }
 
       if (requestId != _requestId) return;
 
-      emit(OverdueMaintenanceLoaded(report: report));
+      emit(OverdueMaintenanceLoaded(report: report, offset: offset));
     } on OverdueMaintenanceException catch (error) {
       if (requestId != _requestId) return;
       emit(OverdueMaintenanceFailure(message: error.message));
