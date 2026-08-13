@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import '../screns/employee/widgets/add_employee.dart';
 import '../screns/home_page/home_page.dart';
 import '../screns/object/widgets/add_object.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Создания договора
 
@@ -26,11 +27,10 @@ class CreateContract extends StatefulWidget {
 class _CreateContractState extends State<CreateContract> {
   /// Добавление договора ==========
   createContract() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/contract/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {
@@ -64,10 +64,9 @@ class _CreateContractState extends State<CreateContract> {
   /// Компании =====================
   getCompanyObjectList() async {
     final url = '${ApiConfig.base}/all-company/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {
@@ -83,10 +82,9 @@ class _CreateContractState extends State<CreateContract> {
   /// Список НДС ==================
   getContractNDSList() async {
     final url = '${ApiConfig.base}/cost-types/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     ndsList = response['data'];
@@ -99,10 +97,9 @@ class _CreateContractState extends State<CreateContract> {
   /// Список тип договора =========
   getTypeContractList() async {
     final url = '${ApiConfig.base}/contracts/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     typeContractList = response['data'];

@@ -16,16 +16,16 @@ import '../../../screns/object/widgets/add_model.dart';
 import '../../../screns/object/widgets/add_plot.dart';
 import '../../../screns/user/user_contact.dart';
 import '../../../widgets_create/organization_greate.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Создание объекта
 
 /// Договор =====================
 getTreatyObjectList() async {
   final url = '${ApiConfig.base}/all-contract/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
   getTreatyList = response['data'];
@@ -48,11 +48,10 @@ class _AddObjectForemanState extends State<AddObjectForeman> {
 
   /// Создание Обьекта ======
   createObjectForeman() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/object/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {

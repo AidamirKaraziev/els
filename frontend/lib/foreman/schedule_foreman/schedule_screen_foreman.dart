@@ -10,6 +10,7 @@ import '../../screns/home_page/home_page.dart';
 import '../../screns/user/user_contact.dart';
 import '../drawer_foreman.dart';
 import '../user_page_foreman.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Графики
 
@@ -19,12 +20,11 @@ List getScheduleListForeman = [];
 
 /// Данные выбраного графика прораба
 getListScheduleForeman() async {
-  final res = await http.get(
+  final res = await Api.get(
       Uri.parse('${ApiConfig.base}/object/by-foreman/?foreman_id=${userProfile[0]['id']}&page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${IntTest.token}',
       });
   var vova = jsonDecode(utf8.decode(res.bodyBytes));
   getScheduleListForeman = vova['data'];
@@ -35,11 +35,10 @@ getListScheduleForeman() async {
 /// Данные выбраного графика прораба =============
 getListScheduleInfoForeman(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/object/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedScheduleForeman = vova;

@@ -12,6 +12,7 @@ import '../view/company_page.dart';
 import 'add_companies.dart';
 import 'add_contact_person.dart';
 import 'package:http/http.dart' as http;
+import 'package:els/helper/api_client.dart';
 
 /// Контактные лица ///
 
@@ -24,11 +25,10 @@ Map listEditingContactPerson = {};
 /// получить данные выбранного контактного лица ===========
 getSelectContactFacesCompany(int numberCompany) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/contact-person/$numberCompany"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     selectedContactFaces = jsonDecode(utf8.decode(res.bodyBytes));
     print('данные выбранного контактного лица : ${selectedContactFaces['data']}');
@@ -348,11 +348,10 @@ class _EditingContactPersonState extends State<EditingContactPerson> {
 
   /// Изменение контактного лица ===
   editingContactPerson() async {
-    var response = await http.put(
+    var response = await Api.put(
       Uri.parse("${ApiConfig.base}/contact-person/${selectedContactFaces['data']['id']}/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode({
       "name": editingNameContactPerson.text,

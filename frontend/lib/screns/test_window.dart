@@ -11,6 +11,7 @@ import '../helper/my_user.dart';
 import 'companies/view/companies_screen.dart';
 import 'companies/widgets/AddObjectSelectedCompany.dart';
 import 'home_page/home_page.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Окно списки объекта
 
@@ -29,11 +30,10 @@ class _TestWindowState extends State<TestWindow> {
   ///Получение данных объекта одной компании =============
   getListCompanyInfoObjectSchedule(int userId) async {
     await Future(() async {
-      final res = await http.get(
+      final res = await Api.get(
           Uri.parse("${ApiConfig.base}/object/$userId/"),
           headers: {
             "Content-Type": "application/json; charset=utf-8",
-            'Authorization': 'Bearer ${IntTest.token}',
           });
       var vova = jsonDecode(utf8.decode(res.bodyBytes));
       listSelectedCompanySchedule = vova;

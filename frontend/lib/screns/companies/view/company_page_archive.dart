@@ -14,6 +14,7 @@ import 'package:http/http.dart' as http;
 import 'companies_screen.dart';
 import 'companies_screen_archive.dart';
 import 'company_page.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Окно выбранной компании Архив
 
@@ -33,11 +34,10 @@ class CompanyPageArchive extends StatefulWidget {
 /// Разморозка компании =================
 defrostingCompany(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/company/$userId/unzip/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     // var vova = jsonDecode(utf8.decode(res.bodyBytes));
     // listSelectedCompany = vova;

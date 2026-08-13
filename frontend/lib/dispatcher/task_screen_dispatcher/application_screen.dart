@@ -13,16 +13,15 @@ import '../../screns/home_page/home_page.dart';
 import '../../widgets_create/organization_greate.dart';
 import '../user_page_dispatcher.dart';
 import '../widgets/add_application.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Домашняя диспетчера
 
 /// Список созданых заявок ===
 getListApplication() async {
-  final res = await http
-      .get(Uri.parse('${ApiConfig.base}/order/my'), headers: {
+  final res = await Api.get(Uri.parse('${ApiConfig.base}/order/my'), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var madeApplication = jsonDecode(utf8.decode(res.bodyBytes));
   getApplication = madeApplication['data'];
@@ -38,11 +37,10 @@ List dataApplication = [];
 ///Получение данных выбраной задачи ==========
 getListApplicationInfo(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/order/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedApplicationId = vova;

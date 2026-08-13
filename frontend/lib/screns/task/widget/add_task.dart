@@ -8,6 +8,7 @@ import '../../home_page/home_page.dart';
 import '../../user/user_contact.dart';
 import '../bloc_task/task_bloc.dart';
 import '../view/task_screen.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Окно добавление задачи
 
@@ -21,11 +22,10 @@ class AddTask extends StatefulWidget {
 class _AddTaskState extends State<AddTask> {
   /// Создание задачи ========
   createNewTask() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/order/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode({
         "object_id": objectTitleTask, //идентификатор объекта
@@ -68,7 +68,7 @@ class _AddTaskState extends State<AddTask> {
   /// Участок ===================
   // getPlotTaskList() async {
   //   final url = '${ApiConfig.base}/divisions/?page=1';
-  //   final res = await http.get(Uri.parse(url), headers: {
+  //   final res = await Api.get(Uri.parse(url), headers: {
   //     "Content-Type": "application/json; charset=utf-8",
   //     'Accept': 'application/json',
   //     'Authorization': 'Bearer ${IntTest.token}',
@@ -86,10 +86,9 @@ class _AddTaskState extends State<AddTask> {
   /// Объект ====================
   getListObjectTask() async {
     final url = '${ApiConfig.base}/all-objects/';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {
@@ -103,7 +102,7 @@ class _AddTaskState extends State<AddTask> {
   /// Механик =====================
   // getListEmployeeTask() async {
   //   final url = '${ApiConfig.base}/cp/all-employee/?page=1';
-  //   final res = await http.get(Uri.parse(url), headers: {
+  //   final res = await Api.get(Uri.parse(url), headers: {
   //     "Content-Type": "application/json; charset=utf-8",
   //     'Accept': 'application/json',
   //     'Authorization': 'Bearer ${IntTest.token}',
@@ -121,10 +120,9 @@ class _AddTaskState extends State<AddTask> {
   /// Категория неисправности ===
   faultCategoryTask() async {
     final url = '${ApiConfig.base}/fault-category/all?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {
@@ -140,10 +138,9 @@ class _AddTaskState extends State<AddTask> {
   /// Все сотрудники ===========
   allEmployee() async {
     final url = '${ApiConfig.base}/cp/all-employee/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {

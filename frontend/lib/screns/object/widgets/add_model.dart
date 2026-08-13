@@ -8,6 +8,7 @@ import '../../../helper/button/my_button.dart';
 import '../../../helper/class_colors.dart';
 import '../../home_page/home_page.dart';
 import 'add_object.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Создания модэли по ID
 
@@ -16,10 +17,9 @@ var typeSelectModel; /// разобраться с
 /// Тип =======================
 getTypeObjectList() async {
   final url = '${ApiConfig.base}/type-object/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
   typeObjectList = response['data'];
@@ -33,10 +33,9 @@ List typeObjectList = [];
 getModelObjectListId(var modelId) async {
   //api/v1/factory-model/sort-by-type-object/$modelId/?page=1
   final url = '${ApiConfig.base}/factory-model/sort-by-type-object/$modelId/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
   modelListId = response['data'];
@@ -58,11 +57,10 @@ class AddModel extends StatefulWidget {
 class _AddModelState extends State<AddModel> {
   /// Добавление модели ======
   addingModel() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/factory-model/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode({
         "type_object_id": typeObjectTitle,

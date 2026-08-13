@@ -10,6 +10,7 @@ import 'companies_screen_foreman.dart';
 import 'company_class_foreman/add_object_selected_company.dart';
 import 'company_class_foreman/add_account_foreman.dart';
 import 'company_class_foreman/contact_faces_foreman.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Окно выбранной компании
 
@@ -24,11 +25,10 @@ List listSelectedContactPersonCompanyForeman = [];
 /// получить список акаунтов компании =================
 getAccountCompanyForeman(int numberCompany) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/company/clients/${IntTest.pressHover}"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedAccountCompanyForeman = vova['data'];
@@ -41,11 +41,10 @@ getAccountCompanyForeman(int numberCompany) async {
 /// получить список обьектов компании ====================
 getListObjectCompanyForeman(int numberCompany) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/object/sort-by-company/$numberCompany/?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedObjectCompanyForeman = vova['data'];
@@ -58,11 +57,10 @@ getListObjectCompanyForeman(int numberCompany) async {
 /// получить список контактных лиц компании ==
 getContactPersonCompanyForeman() async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/contact-person/sort-by-company/${IntTest.pressHover}/?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedContactPersonCompanyForeman = vova['data'];

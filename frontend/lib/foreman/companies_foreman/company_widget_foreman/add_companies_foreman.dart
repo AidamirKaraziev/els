@@ -7,16 +7,16 @@ import '../../../helper/class_colors.dart';
 import 'package:http/http.dart' as http;
 import '../../../screns/home_page/home_page.dart';
 import '../companies_screen_foreman.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Создание компании Прорабом
 
 /// Компании =====================
 getCompanyObjectList() async {
   final url = '${ApiConfig.base}/all-company/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
   getCompanyList = response['data'];
@@ -41,11 +41,10 @@ class _AddCompanyForemanState extends State<AddCompanyForeman> {
 
   /// Создание Компании ============
   createCompanyForeman() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/company/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {

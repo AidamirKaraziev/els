@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../screns/home_page/home_page.dart';
 import '../task_screen_foreman.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Редактирование Задачи
 
@@ -26,11 +27,10 @@ class _EditingTaskForemanState extends State<EditingTaskForeman> {
 
   /// Функция Редактирование Задачи ==
   editingTaskForeman(int userId) async {
-    var response = await http.put(
+    var response = await Api.put(
       Uri.parse("${ApiConfig.base}/order/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {
@@ -58,10 +58,9 @@ class _EditingTaskForemanState extends State<EditingTaskForeman> {
   /// Автор  ================
   getAuthorTask() async {
     final url = '${ApiConfig.base}/cp/all-employee/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {
@@ -76,10 +75,9 @@ class _EditingTaskForemanState extends State<EditingTaskForeman> {
   /// Исполнитель ========================
   getExecutorTask() async {
     final url = '${ApiConfig.base}/cp/all-employee/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {
@@ -94,10 +92,9 @@ class _EditingTaskForemanState extends State<EditingTaskForeman> {
   /// Объект ============================
   getTaskObjectList() async {
     final url = '${ApiConfig.base}/all-objects/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {
@@ -112,10 +109,9 @@ class _EditingTaskForemanState extends State<EditingTaskForeman> {
   /// Статус ========================
   getStatusTask() async {
     final url = '${ApiConfig.base}/statuses/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {

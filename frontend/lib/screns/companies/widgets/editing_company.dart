@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 
 import '../../home_page/home_page.dart';
 import '../view/companies_screen.dart';
+import 'package:els/helper/api_client.dart';
 
 
 
@@ -52,17 +53,16 @@ class _EditingCompanyState extends State<EditingCompany> {
   requestHttp(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
-      "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse("${ApiConfig.base}/company/${IntTest.pressHover}/photo/");
-    http.MultipartRequest request =  http.MultipartRequest("PUT", uri);
+    http.MultipartRequest request = await Api.multipart("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
         contentType: MediaType('image', 'jpeg'),
         filename: basename(imageFile.fileName ?? ''));
     request.files.add(multipartFile);
     request.headers.addAll(headers);
-    var response = await request.send();
+    var response = await Api.sendMultipart(request);
     response.stream.transform(utf8.decoder).listen((value) {
       Map listTestPhoto = jsonDecode(value);
       listSelectedCompany['data']['photo'] = listTestPhoto['data']['photo'];
@@ -74,11 +74,10 @@ class _EditingCompanyState extends State<EditingCompany> {
 
   /// Функция редактировании компании ==
   editingCompany(int userId) async {
-    var response = await http.put(
+    var response = await Api.put(
       Uri.parse("${ApiConfig.base}/company/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {

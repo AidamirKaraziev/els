@@ -11,6 +11,7 @@ import '../../../screns/home_page/home_page.dart';
 import '../../../screns/object/view/object_page.dart';
 import '../../../screns/object/view/object_screen.dart';
 import '../company_page_foreman.dart';
+import 'package:els/helper/api_client.dart';
 
 /// отображения списка обьектов компании  Просмотр объекта
 
@@ -28,11 +29,10 @@ class _AddObjectSelectedCompanyForemanState extends State<AddObjectSelectedCompa
   /// Данные выбраного обьекта ============
   getListObjectInfo(int userId) async {
     await Future(() async {
-      final res = await http.get(
+      final res = await Api.get(
           Uri.parse("${ApiConfig.base}/object/$userId/"),
           headers: {
             "Content-Type": "application/json; charset=utf-8",
-            'Authorization': 'Bearer ${IntTest.token}',
           });
       var vova = jsonDecode(utf8.decode(res.bodyBytes));
       listSelectedObjectViewingCompany = vova['data'];

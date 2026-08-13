@@ -9,6 +9,7 @@ import '../../../helper/class_colors.dart';
 import 'package:http/http.dart' as http;
 
 import 'add_object.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Создание договора
 
@@ -27,11 +28,10 @@ class _AddContractState extends State<AddContract> {
 
   /// Добавление нового договора ===
   addingContactPerson() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/contract/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode({
         "company_id": getCompanyForContractTitle,
@@ -51,10 +51,9 @@ class _AddContractState extends State<AddContract> {
   /// Договор =====================
   getViewContract() async {
     final url = '${ApiConfig.base}/contracts/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     getViewContractList = response['data'];
@@ -68,10 +67,9 @@ class _AddContractState extends State<AddContract> {
   /// Компании =======================
   getCompanyForContract() async {
     final url = '${ApiConfig.base}/all-company/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     getCompanyForContractList = response['data'];
@@ -85,10 +83,9 @@ class _AddContractState extends State<AddContract> {
   /// Типы цен =======================
   getPriceTypesContract() async {
     final url = '${ApiConfig.base}/cost-types/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     getPriceTypesContractList = response['data'];

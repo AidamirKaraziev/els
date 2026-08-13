@@ -14,6 +14,7 @@ import '../../employee/view/employees_screen.dart';
 import '../../home_page/home_page.dart';
 import '../user_contact.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Изменение сотрудника
 
@@ -38,11 +39,10 @@ class _EditingProfileState extends State<EditingProfile> {
 
   /// Изменение юзера =======================
   editingProfile() async {
-    var response = await http.put(
+    var response = await Api.put(
       Uri.parse("${ApiConfig.base}/cp/universal-user/me/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {
@@ -79,18 +79,17 @@ class _EditingProfileState extends State<EditingProfile> {
   requestHttp(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
-      "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
         "${ApiConfig.base}/cp/universal-user/me/photo/");
-    http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+    http.MultipartRequest request = await Api.multipart("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
         contentType: MediaType('image', 'jpeg'),
         filename: basename(imageFile.fileName ?? ''));
     request.files.add(multipartFile);
     request.headers.addAll(headers);
-    var response = await request.send();
+    var response = await Api.sendMultipart(request);
     response.stream.transform(utf8.decoder).listen((value) {
       Map listTestPhoto = jsonDecode(value);
       userProfile[0]['photo'] = listTestPhoto['data']['photo'];

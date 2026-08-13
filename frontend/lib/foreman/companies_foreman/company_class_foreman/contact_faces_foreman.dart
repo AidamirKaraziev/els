@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import '../../../screns/companies/widgets/add_companies.dart';
 import '../../../screns/home_page/home_page.dart';
 import '../../../screns/object/widgets/add_contact_person_object.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Контактные лица ///
 
@@ -24,11 +25,10 @@ Map listEditingContactPersonForeman = {};
 /// получить данные выбранного контактного лица ==================
 getSelectContactFacesCompanyForeman(int numberCompany) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/contact-person/$numberCompany"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     selectedContactFacesForeman = jsonDecode(utf8.decode(res.bodyBytes));
     print('данные выбранного контактного лица : ${selectedContactFacesForeman['data']}');
@@ -349,11 +349,10 @@ class _EditingContactPersonForemanState extends State<EditingContactPersonForema
 
   /// Изменение контактного лица ===
   editingContactPerson() async {
-    var response = await http.put(
+    var response = await Api.put(
       Uri.parse("${ApiConfig.base}/contact-person/${selectedContactFacesForeman['data']['id']}/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode({
       "name": editingNameContactPerson.text,

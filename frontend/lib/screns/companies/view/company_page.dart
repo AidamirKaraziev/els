@@ -12,6 +12,7 @@ import '../widgets/editing_company.dart';
 import 'package:http/http.dart' as http;
 import 'companies_screen.dart';
 import 'companies_screen_archive.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Окно выбранной компании
 
@@ -20,11 +21,10 @@ bool addObjectSelectedCompany = false;
 /// получить список контактных лиц компании ==
 getContactPersonCompany() async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/contact-person/sort-by-company/${IntTest.pressHover}/?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedContactPersonCompany = vova['data'];
@@ -37,11 +37,10 @@ getContactPersonCompany() async {
 /// получить список акаунтов компании ==========
 getAccountCompany(int numberCompany) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/company/clients/${IntTest.pressHover}"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedAccountCompany = vova['data'];
@@ -54,11 +53,10 @@ getAccountCompany(int numberCompany) async {
 /// получить список обьектов компании =============
 getListObjectCompany(int numberCompany) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/object/sort-by-company/$numberCompany/?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedObjectCompany = vova['data'];
@@ -71,11 +69,10 @@ getListObjectCompany(int numberCompany) async {
 /// Замозморозка компании =============
 freezingCompany(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/company/$userId/archive/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedCompany = vova;
@@ -86,11 +83,10 @@ freezingCompany(int userId) async {
 /// Разморозка компании =================
 defrostingCompany(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/company/$userId/unzip/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     // var vova = jsonDecode(utf8.decode(res.bodyBytes));
     // listSelectedCompany = vova;

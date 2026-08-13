@@ -12,6 +12,7 @@ import '../../screns/employee/widgets/topButton.dart';
 import '../../screns/home_page/home_page.dart';
 import '../drawer_foreman.dart';
 import '../user_page_foreman.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Задачи Прораба
 
@@ -35,11 +36,9 @@ class TaskScreenForeman extends StatefulWidget {
 
 /// Список всех задач ==========
 getListTaskForeman() async {
-  final res = await http
-      .get(Uri.parse('${ApiConfig.base}/order/all'), headers: {
+  final res = await Api.get(Uri.parse('${ApiConfig.base}/order/all'), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var vova = jsonDecode(utf8.decode(res.bodyBytes));
   getTaskForeman = vova['data'];
@@ -51,11 +50,10 @@ getListTaskForeman() async {
 ///Получение данных выбраной задачи ==========
 getListTaskInfoForeman(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/order/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedTaskIdForeman = vova;
@@ -67,11 +65,10 @@ getListTaskInfoForeman(int userId) async {
 ///Получение фото выбраной задачи =====================
 getPhotoSelectedTaskInfoForeman(int taskId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/order-photo/$taskId?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     photoSelectedTaskIdForeman = vova['data'];

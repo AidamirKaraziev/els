@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../../../../helper/api_config.dart';
 import '../../../../helper/class_colors.dart';
 import '../models/breakdowns_report.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Ошибка, которую виджет может показать человеку.
 ///
@@ -53,11 +54,10 @@ class BreakdownsRepository {
 
     http.Response response;
     try {
-      response = await http.get(
+      response = await Api.get(
         uri,
         headers: <String, String>{
           'Accept': 'application/json',
-          'Authorization': 'Bearer ${IntTest.token}',
         },
       ).timeout(timeout);
     } catch (_) {
@@ -161,11 +161,10 @@ class BreakdownsRepository {
 
     http.Response response;
     try {
-      response = await http.get(
+      response = await Api.get(
         uri,
         headers: <String, String>{
           'Accept': 'application/json',
-          'Authorization': 'Bearer ${IntTest.token}',
         },
       ).timeout(timeout);
     } catch (_) {

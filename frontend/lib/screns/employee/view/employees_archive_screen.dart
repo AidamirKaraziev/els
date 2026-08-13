@@ -12,6 +12,7 @@ import '../../user/user_profile.dart';
 import '../bloc/employee_bloc.dart';
 import '../widgets/add_employee.dart';
 import 'employees_screen.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Сотрудники Архив
 
@@ -22,12 +23,11 @@ late int testId;
 
 /// Получение списка сотрудников Архив
 getListEmployeeArchived() async{
-  final res = await http.get(
+  final res = await Api.get(
       Uri.parse('${ApiConfig.base}/cp/all-employee/?page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${IntTest.token}',
       });
   var getEmployeeArchivedMap = jsonDecode(utf8.decode(res.bodyBytes));
   listArchivedEmployees = getEmployeeArchivedMap['data'];
@@ -53,11 +53,10 @@ class _EmployeesArchiveScreenState extends State<EmployeesArchiveScreen> {
   ///Получение данных одного сотрудника Архив ========
   getListEmployeesInfoArchived(int userId) async {
     await Future(() async {
-      final res = await http.get(
+      final res = await Api.get(
           Uri.parse("${ApiConfig.base}/cp/universal-user/$userId/"),
           headers: {
             "Content-Type": "application/json; charset=utf-8",
-            'Authorization': 'Bearer ${IntTest.token}',
           });
       var vova = jsonDecode(utf8.decode(res.bodyBytes));
       listSelectedEmployeeArchived = vova;

@@ -7,6 +7,7 @@ import '../../../helper/class_colors.dart';
 import '../../../screns/home_page/home_page.dart';
 import '../../../screns/user/user_contact.dart';
 import '../task_screen_foreman.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Окно добавление задачи
 
@@ -20,11 +21,10 @@ class AddTaskForeman extends StatefulWidget {
 class _AddTaskForemanState extends State<AddTaskForeman> {
   /// Создание задачи ==============
   createNewTaskForeman() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/order/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode({
         "object_id": organizationTitle, //идентификатор объекта
@@ -57,10 +57,9 @@ class _AddTaskForemanState extends State<AddTaskForeman> {
   /// Механик ========================
   getMechanicObjectList() async {
     final url = '${ApiConfig.base}/cp/all-employee/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {
@@ -75,10 +74,9 @@ class _AddTaskForemanState extends State<AddTaskForeman> {
   /// Объект ========================
   getOrganizationObjectList() async {
     final url = '${ApiConfig.base}/all-objects/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {
@@ -93,10 +91,9 @@ class _AddTaskForemanState extends State<AddTaskForeman> {
   /// Категория неисправности ============
   faultCategory() async {
     final url = '${ApiConfig.base}/fault-category/all?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {
@@ -112,10 +109,9 @@ class _AddTaskForemanState extends State<AddTaskForeman> {
   /// Все сотрудники =======
   allEmployee() async {
     final url = '${ApiConfig.base}/cp/all-employee/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {

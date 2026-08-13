@@ -11,6 +11,7 @@ import '../../screns/home_page/home_page.dart';
 import '../screns/user/user_contact.dart';
 
 import 'employee_foreman/employee_widget_foreman/editing_employee_foreman.dart';
+import 'package:els/helper/api_client.dart';
 
 
 /// Окно User
@@ -25,7 +26,7 @@ class OpenViewUserForeman extends StatefulWidget {
 /// Замозморозка сотрудника ===================
 // freezingEmployeeForeman(int userId) async {
 //   await Future(() async {
-//     final res = await http.get(
+//     final res = await Api.get(
 //         Uri.parse("${ApiConfig.base}/cp/admin/$userId/archive/"),
 //         headers: {
 //           "Content-Type": "application/json; charset=utf-8",
@@ -41,7 +42,7 @@ class OpenViewUserForeman extends StatefulWidget {
 /// Разморозка сотрудника =======================
 // defrostingEmployeeForeman(int userId) async {
 //   await Future(() async {
-//     final res = await http.get(
+//     final res = await Api.get(
 //         Uri.parse("${ApiConfig.base}/cp/admin/$userId/unzip/"),
 //         headers: {
 //           "Content-Type": "application/json; charset=utf-8",
@@ -81,14 +82,14 @@ class OpenViewUserForeman extends StatefulWidget {
 //   }; // ignore this headers if there is no authentication
 //   var uri = Uri.parse(
 //       "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/photo/");
-//   http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+//   http.MultipartRequest request = await Api.multipart("PUT", uri);
 //   http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
 //       'file', imageFile.data!,
 //       contentType: MediaType('image', 'jpeg'),
 //       filename: basename(imageFile.fileName ?? ''));
 //   request.files.add(multipartFile);
 //   request.headers.addAll(headers);
-//   var response = await request.send();
+//   var response = await Api.sendMultipart(request);
 //   response.stream.transform(utf8.decoder).listen((value) {
 //     Map listTestPhoto = jsonDecode(value);
 //     listSelectedEmployeeForeman['data']['photo'] = listTestPhoto['data']['photo'];
@@ -126,14 +127,14 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
   //   }; // ignore this headers if there is no authentication
   //   var uri = Uri.parse(
   //       "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
-  //   http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+  //   http.MultipartRequest request = await Api.multipart("PUT", uri);
   //   http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
   //       'file', imageFile.data!,
   //       contentType: MediaType('image', 'jpeg'),
   //       filename: basename(imageFile.fileName ?? ''));
   //   request.files.add(multipartFile);
   //   request.headers.addAll(headers);
-  //   var response = await request.send();
+  //   var response = await Api.sendMultipart(request);
   //   response.stream.transform(utf8.decoder).listen((value) {
   //     Map listTestPhoto = jsonDecode(value);
   //     listSelectedEmployeeForeman['data']['identity_card'] = listTestPhoto['data']['identity_card'];
@@ -169,14 +170,14 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
   //   }; // ignore this headers if there is no authentication
   //   var uri = Uri.parse(
   //       "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
-  //   http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+  //   http.MultipartRequest request = await Api.multipart("PUT", uri);
   //   http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
   //       'file', imageFile.data!,
   //       contentType: MediaType('image', 'jpeg'),
   //       filename: basenameDoc(imageFile.fileName ?? ''));
   //   request.files.add(multipartFile);
   //   request.headers.addAll(headers);
-  //   var response = await request.send();
+  //   var response = await Api.sendMultipart(request);
   //   response.stream.transform(utf8.decoder).listen((value) {
   //     Map listTestPhoto = jsonDecode(value);
   //     listSelectedEmployeeForeman['data']['qualification_file'] = listTestPhoto['data']['qualification_file'];
@@ -1132,14 +1133,14 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
 //     }; // ignore this headers if there is no authentication
 //     var uri = Uri.parse(
 //         "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
-//     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+//     http.MultipartRequest request = await Api.multipart("PUT", uri);
 //     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
 //         'file', imageFile.data!,
 //         contentType: MediaType('image', 'jpeg'),
 //         filename: basename(imageFile.fileName ?? ''));
 //     request.files.add(multipartFile);
 //     request.headers.addAll(headers);
-//     var response = await request.send();
+//     var response = await Api.sendMultipart(request);
 //     response.stream.transform(utf8.decoder).listen((value) {
 //       Map listTestPhoto = jsonDecode(value);
 //       listSelectedEmployeeForeman['data']['identity_card'] =
@@ -1234,14 +1235,14 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
 //     }; // ignore this headers if there is no authentication
 //     var uri = Uri.parse(
 //         "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
-//     http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+//     http.MultipartRequest request = await Api.multipart("PUT", uri);
 //     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
 //         'file', imageFile.data!,
 //         contentType: MediaType('image', 'jpeg'),
 //         filename: basenameDoc(imageFile.fileName ?? ''));
 //     request.files.add(multipartFile);
 //     request.headers.addAll(headers);
-//     var response = await request.send();
+//     var response = await Api.sendMultipart(request);
 //     response.stream.transform(utf8.decoder).listen((value) {
 //       Map listTestPhoto = jsonDecode(value);
 //       listSelectedEmployeeForeman['data']['qualification_file'] =

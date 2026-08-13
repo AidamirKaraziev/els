@@ -18,6 +18,7 @@ import '../../object/widgets/add_object.dart';
 import '../../object/widgets/add_plot.dart';
 import '../view/companies_screen.dart';
 import 'add_contact_person.dart';
+import 'package:els/helper/api_client.dart';
 
 
 ///Создание объекта для компании
@@ -34,11 +35,10 @@ class AddObjectCompanies extends StatefulWidget {
 class _AddObjectCompaniesState extends State<AddObjectCompanies> {
   /// Создание Обьекта компании =====
   createObjectCompanies() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/object/"), // listSelectedCompany['data']['id']
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}', // organizationTitle <<<<<
       },
       body: json.encode(
         {

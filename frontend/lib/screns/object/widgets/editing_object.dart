@@ -14,6 +14,7 @@ import 'add_contact_person_object.dart';
 import 'add_model.dart';
 import 'add_object.dart';
 import 'add_plot.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Редактирование объекта
 
@@ -32,11 +33,10 @@ class _EditingObjectState extends State<EditingObject> {
 
   /// Функция Редактирование объекта ==
   editingObject(int userId) async {
-    var response = await http.put(
+    var response = await Api.put(
       Uri.parse("${ApiConfig.base}/object/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {

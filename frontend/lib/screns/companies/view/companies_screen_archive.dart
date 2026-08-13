@@ -10,6 +10,7 @@ import '../../home_page/home_page.dart';
 import 'package:http/http.dart' as http;
 
 import 'companies_screen.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Компании  Архив
 
@@ -35,12 +36,11 @@ int isHover = -1;
 
 /// Список всех компаний Архив
 getCompanyArchive() async {
-  final res = await http.get(
+  final res = await Api.get(
       Uri.parse('${ApiConfig.base}/all-company/?page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${IntTest.token}',
       });
   var getCompanyArc = jsonDecode(utf8.decode(res.bodyBytes));
   getCompany = getCompanyArc['data'];

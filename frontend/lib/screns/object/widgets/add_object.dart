@@ -17,16 +17,16 @@ import 'add_contact_person_object.dart';
 import 'add_contract.dart';
 import 'add_model.dart';
 import 'add_plot.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Создание объекта
 
 /// Договор =====================
 getTreatyObjectList() async {
   final url = '${ApiConfig.base}/all-contract/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
   getTreatyList = response['data'];
@@ -49,11 +49,10 @@ class _AddObjectState extends State<AddObject> {
 
   /// Создание Обьекта ======
   createObject() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/object/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {

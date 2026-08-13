@@ -8,6 +8,7 @@ import '../../../helper/my_drawer/my_drawer.dart';
 import 'package:http/http.dart' as http;
 import '../../screns/home_page/home_page.dart';
 import '../user_page_foreman.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Компании =======================================
 
@@ -20,12 +21,11 @@ Map listSelectedCompanyForeman = {};
 
 /// Список всех компаний
 getListCompanyForeman() async {
-  final res = await http.get(
+  final res = await Api.get(
       Uri.parse('${ApiConfig.base}/all-company/?page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${IntTest.token}',
       });
   var vova = jsonDecode(utf8.decode(res.bodyBytes));
 
@@ -50,11 +50,10 @@ int isHover = -1;
 ///Получение данных одной компании ==============
 getListCompanyInfoForeman(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/company/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedCompanyForeman = vova;

@@ -17,16 +17,16 @@ import '../view/employee_page.dart';
 import '../view/employees_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Изменение сотрудника
 
 /// Участок =================
 getPlotEmployee() async {
   final url = '${ApiConfig.base}/divisions/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
 
@@ -53,10 +53,9 @@ class _EditingEmployeeState extends State<EditingEmployee> {
   /// Получение Должность для изменения ==
   getEditingEmployeeJobTitle() async {
     final url = '${ApiConfig.base}/roles/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {
@@ -79,12 +78,11 @@ class _EditingEmployeeState extends State<EditingEmployee> {
 
   /// Изменение юзера =======================
   editingEmployeeUser(int userId) async {
-    var response = await http.put(
+    var response = await Api.put(
       Uri.parse(
           "${ApiConfig.base}/cp/admin/universal-user/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {
@@ -105,12 +103,11 @@ class _EditingEmployeeState extends State<EditingEmployee> {
 
   /// Изменение юзера ===========================
   editingPlotEmployeeUser(int userId) async {
-    var response = await http.put(
+    var response = await Api.put(
       Uri.parse(
           "${ApiConfig.base}/cp/admin/$userId/division/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {
@@ -168,11 +165,10 @@ class _EditingEmployeeState extends State<EditingEmployee> {
   requestHttp(XFile imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
-      "Authorization": "Bearer ${IntTest.token}"
     };
     var uri = Uri.parse(
         "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/photo/");
-    http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+    http.MultipartRequest request = await Api.multipart("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', await imageFile.readAsBytes(),
         contentType: MediaType('image', 'jpeg'),
@@ -181,7 +177,7 @@ class _EditingEmployeeState extends State<EditingEmployee> {
     request.files.add(multipartFile);
     request.headers.addAll(headers);
 
-    var response = await request.send();
+    var response = await Api.sendMultipart(request);
     print(response.statusCode);
     myStream.add(IntTest.indexScreens);
 

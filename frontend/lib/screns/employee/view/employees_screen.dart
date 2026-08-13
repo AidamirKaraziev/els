@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import '../bloc/employee_bloc.dart';
 import '../widgets/add_employee.dart';
 import 'employees_archive_screen.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Сотрудники
 
@@ -35,12 +36,11 @@ var myColorButtonEmployee;
 
 /// Получение списка сотрудников ===
 getListEmployee() async{
-  final res = await http.get(
+  final res = await Api.get(
       Uri.parse('${ApiConfig.base}/cp/all-employee/?page=$newScreensEmployee'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${IntTest.token}',
       });
   Map vova = jsonDecode(utf8.decode(res.bodyBytes));
   dataEmployee = vova['data'];
@@ -55,11 +55,10 @@ getListEmployee() async{
 ///Получение данных одного сотрудника ======
 getListEmployeesInfo(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/cp/universal-user/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedEmployee = vova;

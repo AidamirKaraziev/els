@@ -8,15 +8,15 @@ import 'package:http/http.dart' as http;
 
 import '../screns/home_page/home_page.dart';
 import '../screns/object/widgets/add_object.dart';
+import 'package:els/helper/api_client.dart';
 
 
 /// Организация ========================
 getOrganizationObjectList() async {
   final url = '${ApiConfig.base}/all-organization/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
   organizationList = response['data'];
@@ -39,11 +39,10 @@ class _AddOrganizationState extends State<AddOrganization> {
 
   /// Создание организации =======
   createOrganization() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/organization/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {

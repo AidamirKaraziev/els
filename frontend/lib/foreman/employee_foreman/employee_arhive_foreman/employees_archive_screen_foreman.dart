@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../../../screns/home_page/home_page.dart';
 import '../../user_page_foreman.dart';
 import '../employees_screen_foreman.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Сотрудники Архив
 
@@ -21,11 +22,10 @@ Map listSelectedEmployeeForemanArchive = {};
 ///Получение данных одного сотрудника архив =============
 getListEmployeesInfoForemanArchive(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/cp/universal-user/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedEmployeeForemanArchive = vova['data'];

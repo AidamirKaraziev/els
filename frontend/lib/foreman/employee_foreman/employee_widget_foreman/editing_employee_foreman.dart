@@ -10,6 +10,7 @@ import '../../../helper/class_colors.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
 import '../../../screns/home_page/home_page.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Изменение сотрудника
 
@@ -26,7 +27,7 @@ class _EditingEmployeeForemanState extends State<EditingEmployeeForeman> {
   /// Получение Должность для изменения ==
   // getEditingEmployeeJobTitle() async {
   //   final url = '${ApiConfig.base}/roles/?page=1';
-  //   final res = await http.get(Uri.parse(url), headers: {
+  //   final res = await Api.get(Uri.parse(url), headers: {
   //     "Content-Type": "application/json; charset=utf-8",
   //     'Accept': 'application/json',
   //     'Authorization': 'Bearer ${IntTest.token}',
@@ -50,12 +51,11 @@ class _EditingEmployeeForemanState extends State<EditingEmployeeForeman> {
 
   /// Изменение юзера ==============================
   editingEmployeeUserForeman(int userId) async {
-    var res = await http.put(
+    var res = await Api.put(
       Uri.parse(
           "${ApiConfig.base}/cp/foreman/universal-user/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {
@@ -90,11 +90,10 @@ class _EditingEmployeeForemanState extends State<EditingEmployeeForeman> {
   requestHttp(XFile imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
-      "Authorization": "Bearer ${IntTest.token}"
     };
     var uri = Uri.parse(
         "${ApiConfig.base}/cp/foreman/universal-user/${IntTest.pressHover}/photo/");
-    http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+    http.MultipartRequest request = await Api.multipart("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', await imageFile.readAsBytes(),
         contentType: MediaType('image', 'jpeg'),
@@ -103,7 +102,7 @@ class _EditingEmployeeForemanState extends State<EditingEmployeeForeman> {
     request.files.add(multipartFile);
     request.headers.addAll(headers);
 
-    var response = await request.send();
+    var response = await Api.sendMultipart(request);
     print(response.statusCode);
     myStream.add(IntTest.indexScreens);
 

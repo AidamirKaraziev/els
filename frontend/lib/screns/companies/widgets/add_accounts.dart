@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../../home_page/home_page.dart';
 import '../view/companies_screen.dart';
 import '../view/company_page.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Добавление акаунта
 
@@ -25,11 +26,10 @@ class _AddAccountsState extends State<AddAccounts> {
 
   /// Добавление акаунта ==========
   addingContactPerson() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/cp/admin/create-client/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode({
         "name": nameAccountUser.text,

@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../helper/class_colors.dart';
 import '../../employee/bloc/employee_bloc.dart';
 import '../../employee/view/employees_screen.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Редактировании профиля
 
@@ -23,7 +24,7 @@ import '../../employee/view/employees_screen.dart';
 //   /// Получение Должность для изменения ==
 //   // getEditingUserJobTitle() async {
 //   //   final url = '${ApiConfig.base}/roles/?page=1';
-//   //   final res = await http.get(Uri.parse(url), headers: {
+//   //   final res = await Api.get(Uri.parse(url), headers: {
 //   //     "Content-Type": "application/json; charset=utf-8",
 //   //     'Accept': 'application/json',
 //   //     'Authorization': 'Bearer ${IntTest.token}',
@@ -50,7 +51,7 @@ import '../../employee/view/employees_screen.dart';
 //
 //   /// Изменение юзера =======================
 //   // editingUser(int userId) async {
-//   //   var response = await http.put(
+//   //   var response = await Api.put(
 //   //     Uri.parse("http://185.119.58.63/api/v1/cp/admin/universal-user/$userId/"),
 //   //     headers: {
 //   //       "Content-Type": "application/json; charset=utf-8",

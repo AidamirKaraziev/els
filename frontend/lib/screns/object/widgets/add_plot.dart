@@ -10,15 +10,15 @@ import '../../employee/widgets/add_employee.dart';
 import '../../employee/widgets/editing_employee.dart';
 import '../../home_page/home_page.dart';
 import 'add_object.dart';
+import 'package:els/helper/api_client.dart';
 
 
 /// Участок =========
 getPlot() async {
   final url = '${ApiConfig.base}/divisions/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
 
@@ -43,7 +43,7 @@ class _AddPlotState extends State<AddPlot> {
   // /// Участок ===================
   // getPlotObjectList() async {
   //   final url = '${ApiConfig.base}/divisions/?page=1';
-  //   final res = await http.get(Uri.parse(url), headers: {
+  //   final res = await Api.get(Uri.parse(url), headers: {
   //     "Content-Type": "application/json; charset=utf-8",
   //     'Accept': 'application/json',
   //     'Authorization': 'Bearer ${IntTest.token}',
@@ -62,11 +62,10 @@ class _AddPlotState extends State<AddPlot> {
 
   /// Создать новый участок ==
   createNewPlot() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/divisions/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode({
         "title": newNamePlot.text,

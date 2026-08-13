@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../../object/widgets/add_contact_person_object.dart';
 import '../view/companies_screen.dart';
 import '../view/company_page.dart';
+import 'package:els/helper/api_client.dart';
 
 
 
@@ -25,11 +26,10 @@ class _AddContactPersonState extends State<AddContactPerson> {
 
   /// Добавление контактного лица ==
   addingContactPerson() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/contact-person/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode({
         "name": newNameContactPerson.text,

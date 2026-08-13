@@ -39,7 +39,10 @@ class IntTest {
   static int pressHoverCompany = 0;
   static int badgeCount = 2;
   static String myTitle = 'Главная';
-  static String token = '';
+  // Токен отсюда убран: он живёт в TokenStore (helper/api_client.dart) и
+  // подставляется клиентом в момент отправки. Пока он лежал статикой, каждый
+  // экран собирал заголовок сам — 166 мест, и любое из них могло уйти в
+  // запрос с уже устаревшим значением.
   // Адрес бэкенда переехал в helper/api_config.dart: он больше не зашит в код,
   // а определяется origin страницы (веб) или --dart-define API_ORIGIN (телефон).
 }

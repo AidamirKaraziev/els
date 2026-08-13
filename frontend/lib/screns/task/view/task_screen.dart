@@ -12,6 +12,7 @@ import '../../employee/widgets/topButton.dart';
 import '../../home_page/home_page.dart';
 import '../widget/add_task.dart';
 import 'package:http/http.dart' as http;
+import 'package:els/helper/api_client.dart';
 
 ///Задачи
 
@@ -38,11 +39,9 @@ class TaskScreen extends StatefulWidget {
 
 /// Список всех задач ===
 getListTask() async {
-  final res = await http
-      .get(Uri.parse('${ApiConfig.base}/order/all'), headers: {
+  final res = await Api.get(Uri.parse('${ApiConfig.base}/order/all'), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var getEmployeeMap = jsonDecode(utf8.decode(res.bodyBytes));
   getTask = getEmployeeMap['data'];
@@ -57,11 +56,10 @@ getListTask() async {
 ///Получение данных выбраной задачи ====
 getListTaskInfo(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/order/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedTaskId = vova;
@@ -73,11 +71,10 @@ getListTaskInfo(int userId) async {
 ///Получение фото выбраной задачи ==============
 getPhotoSelectedTaskInfo(int taskId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/order-photo/$taskId?page=1"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
      var vova = jsonDecode(utf8.decode(res.bodyBytes));
     photoSelectedTaskId = vova['data'];
@@ -89,11 +86,10 @@ getPhotoSelectedTaskInfo(int taskId) async {
 ///Получение одного фото выбраной задачи ===
 getPhotoTaskSelected(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/order-photo/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     onePhotoSelectedTaskId = vova['data']['photo'];

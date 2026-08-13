@@ -13,16 +13,16 @@ import '../widgets/add_companies.dart';
 import 'package:http/http.dart' as http;
 
 import 'companies_screen_archive.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Компании =======================================
 
 getNewCompanyList() async {
-  final res = await http.get(
+  final res = await Api.get(
       Uri.parse('${ApiConfig.base}/all-company/?page=$newScreensCompany'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${IntTest.token}',
       });
   var getCompanyBloc = jsonDecode(utf8.decode(res.bodyBytes));
   dataCompany = getCompanyBloc['data'];
@@ -65,11 +65,10 @@ int isHover = -1;
 ///Получение данных одной компании =======
 getListCompanyInfo(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/company/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedCompany = vova;

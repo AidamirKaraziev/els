@@ -6,6 +6,7 @@ import 'package:meta/meta.dart';
 import '../../../helper/class_colors.dart';
 import '../../home_page/home_page.dart';
 import '../view/object_screen.dart';
+import 'package:els/helper/api_client.dart';
 
 part 'object_event.dart';
 part 'object_state.dart';
@@ -18,12 +19,11 @@ class MyObjectBloc extends Bloc<MyObjectEvent, MyObjectState> {
   }
 
   _getObject(ObjectGetEvent event, Emitter<MyObjectState> emit) async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse('${ApiConfig.base}/all-objects/?page=$newScreensObject'),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           'Accept': 'application/json',
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var getObjectListBlock = jsonDecode(utf8.decode(res.bodyBytes));
     dataObject = getObjectListBlock['data'];

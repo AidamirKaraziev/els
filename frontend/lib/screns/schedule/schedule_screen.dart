@@ -10,6 +10,7 @@ import '../../helper/my_user.dart';
 import '../employee/widgets/topButton.dart';
 import '../home_page/home_page.dart';
 import '../object/view/object_screen.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Графики
 
@@ -22,12 +23,11 @@ int myColorButtonSchedule = 1;
 int newScreensSchedule = 1;
 
 getScheduleFun() async {
-  final res = await http.get(
+  final res = await Api.get(
       Uri.parse('${ApiConfig.base}/all-objects/?page=$newScreensSchedule'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${IntTest.token}',
       });
   var getObjectListBlock = jsonDecode(utf8.decode(res.bodyBytes));
   dataSchedule = getObjectListBlock['data'];

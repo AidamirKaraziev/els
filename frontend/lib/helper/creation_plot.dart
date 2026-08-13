@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../screns/home_page/home_page.dart';
 import 'button/my_button.dart';
 import 'class_colors.dart';
+import 'package:els/helper/api_client.dart';
 
 class CreationPlot extends StatefulWidget {
   const CreationPlot({Key? key}) : super(key: key);
@@ -19,11 +20,10 @@ class _CreationPlotState extends State<CreationPlot> {
 
   /// Создание участка ======
   createPlot() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/divisions/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {

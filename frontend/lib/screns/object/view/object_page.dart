@@ -15,6 +15,7 @@ import '../bloc/object_bloc.dart';
 import 'object_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Окно выбранного обьекта
 
@@ -28,11 +29,10 @@ class ObjectPage extends StatefulWidget {
 /// Замозморозка Обьекта =============
 freezingObject(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/object/$userId/archive/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedObject = vova;
@@ -43,11 +43,10 @@ freezingObject(int userId) async {
 /// Разморозка Обьекта =================
 defrostingObject(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/object/$userId/unzip/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedObject = vova;
@@ -79,17 +78,16 @@ class _ObjectPageState extends State<ObjectPage> {
   requestHttp(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
-      "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse("${ApiConfig.base}/object/${IntTest.pressHover}/letter_of_appointment/");
-    http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+    http.MultipartRequest request = await Api.multipart("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
         contentType: MediaType('image', 'jpeg'),
         filename: basename(imageFile.fileName ?? ''));
     request.files.add(multipartFile);
     request.headers.addAll(headers);
-    var response = await request.send();
+    var response = await Api.sendMultipart(request);
     response.stream.transform(utf8.decoder).listen((value) {
       Map listTestPhoto = jsonDecode(value);
       // listSelectedObject['data']['letter_of_appointment'] = listTestPhoto['data']['identity_card'];
@@ -122,17 +120,16 @@ class _ObjectPageState extends State<ObjectPage> {
   requestHttpAPO(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
-      "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse("${ApiConfig.base}/object/${IntTest.pressHover}/act_pto/");
-    http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+    http.MultipartRequest request = await Api.multipart("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
         contentType: MediaType('image', 'jpeg'),
         filename: basenameAPO(imageFile.fileName ?? ''));
     request.files.add(multipartFile);
     request.headers.addAll(headers);
-    var response = await request.send();
+    var response = await Api.sendMultipart(request);
     response.stream.transform(utf8.decoder).listen((value) {
       Map listTestPhoto = jsonDecode(value);
       getListObjectInfo(IntTest.pressHover);
@@ -147,10 +144,9 @@ class _ObjectPageState extends State<ObjectPage> {
   getMechanic() async {
     final url =
         '${ApiConfig.base}/universal-user/sort-by-role/3/';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     getMechanicList = response['data'];
@@ -165,10 +161,9 @@ class _ObjectPageState extends State<ObjectPage> {
   getForeman() async {
     final url =
         '${ApiConfig.base}/universal-user/sort-by-role/2/';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     // print(response['data'][0]['is_actual']);
@@ -182,11 +177,10 @@ class _ObjectPageState extends State<ObjectPage> {
 
   /// Функция изменение мех заморож ===========
   editingObjectMechanic(int userId) async {
-    var response = await http.put(
+    var response = await Api.put(
       Uri.parse("${ApiConfig.base}/object/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {
@@ -202,11 +196,10 @@ class _ObjectPageState extends State<ObjectPage> {
 
   /// Функция изменение прораба заморож =======
   editingObjectForeman(int userId) async {
-    var response = await http.put(
+    var response = await Api.put(
       Uri.parse("${ApiConfig.base}/object/$userId/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {

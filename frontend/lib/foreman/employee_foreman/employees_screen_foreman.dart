@@ -9,6 +9,7 @@ import '../../screns/employee/view/employees_screen.dart';
 import '../../screns/home_page/home_page.dart';
 import '../drawer_foreman.dart';
 import '../user_page_foreman.dart';
+import 'package:els/helper/api_client.dart';
 
 ///Сотрудники
 
@@ -21,12 +22,11 @@ final employeeScrollController = ScrollController();
 
 /// Получение списка сотрудников ==
 getListEmployeeForeman() async{
-  final res = await http.get(
+  final res = await Api.get(
       Uri.parse('${ApiConfig.base}/cp/all-employee/?page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${IntTest.token}',
       });
   var vova = jsonDecode(utf8.decode(res.bodyBytes));
   getEmployeeForeman = vova['data'];
@@ -37,11 +37,10 @@ getListEmployeeForeman() async{
 ///Получение данных одного сотрудника =============
 getListEmployeesInfoForeman(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/cp/universal-user/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedEmployeeForeman = vova['data'];

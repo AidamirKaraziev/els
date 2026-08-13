@@ -16,6 +16,7 @@ import '../widgets/employee_acount_freeze.dart';
 import 'package:http/http.dart' as http;
 import 'employees_screen.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Окно выбранного сотрудника
 
@@ -29,11 +30,10 @@ class OpenViewEmployee extends StatefulWidget {
 /// Замозморозка сотрудника ============
 freezingEmployee(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/cp/admin/$userId/archive/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedEmployee = vova;
@@ -48,11 +48,10 @@ freezingEmployee(int userId) async {
 /// Разморозка сотрудника ================
 defrostingEmployee(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/cp/admin/$userId/unzip/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedEmployee = vova;
@@ -67,12 +66,11 @@ defrostingEmployee(int userId) async {
 /// Удаление сотрудника ==============
 deleteEmployee(int userId) async {
   await Future(() async {
-    final res = await http.delete(
+    final res = await Api.delete(
         Uri.parse(
             "${ApiConfig.base}/cp/admin/universal-user/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
   });
 }
@@ -101,18 +99,17 @@ Future openGallery() async {
 requestHttp(PickedImage imageFile) async {
   Map<String, String> headers = {
     "Accept": "application/json",
-    "Authorization": "Bearer ${IntTest.token}"
   }; // ignore this headers if there is no authentication
   var uri = Uri.parse(
       "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/photo/");
-  http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+  http.MultipartRequest request = await Api.multipart("PUT", uri);
   http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
       'file', imageFile.data!,
       contentType: MediaType('image', 'jpeg'),
       filename: basename(imageFile.fileName ?? ''));
   request.files.add(multipartFile);
   request.headers.addAll(headers);
-  var response = await request.send();
+  var response = await Api.sendMultipart(request);
   response.stream.transform(utf8.decoder).listen((value) {
     Map listTestPhoto = jsonDecode(value);
     listSelectedEmployee['data']['photo'] = listTestPhoto['data']['photo'];
@@ -148,18 +145,17 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
   requestHttp(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
-      "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
         "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
-    http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+    http.MultipartRequest request = await Api.multipart("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
         contentType: MediaType('image', 'jpeg'),
         filename: basename(imageFile.fileName ?? ''));
     request.files.add(multipartFile);
     request.headers.addAll(headers);
-    var response = await request.send();
+    var response = await Api.sendMultipart(request);
     response.stream.transform(utf8.decoder).listen((value) {
       Map listTestPhoto = jsonDecode(value);
       listSelectedEmployee['data']['identity_card'] = listTestPhoto['data']['identity_card'];
@@ -193,18 +189,17 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
   requestHttpDoc(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
-      "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
         "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
-    http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+    http.MultipartRequest request = await Api.multipart("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
         contentType: MediaType('image', 'jpeg'),
         filename: basenameDoc(imageFile.fileName ?? ''));
     request.files.add(multipartFile);
     request.headers.addAll(headers);
-    var response = await request.send();
+    var response = await Api.sendMultipart(request);
     response.stream.transform(utf8.decoder).listen((value) {
       Map listTestPhoto = jsonDecode(value);
       listSelectedEmployee['data']['qualification_file'] = listTestPhoto['data']['qualification_file'];
@@ -1192,18 +1187,17 @@ class _WorksPhotoDocUdoState extends State<WorksPhotoDocUdo> {
   requestHttp(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
-      "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
         "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/identity-card/");
-    http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+    http.MultipartRequest request = await Api.multipart("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
         contentType: MediaType('image', 'jpeg'),
         filename: basename(imageFile.fileName ?? ''));
     request.files.add(multipartFile);
     request.headers.addAll(headers);
-    var response = await request.send();
+    var response = await Api.sendMultipart(request);
     response.stream.transform(utf8.decoder).listen((value) {
       Map listTestPhoto = jsonDecode(value);
       listSelectedEmployee['data']['identity_card'] =
@@ -1294,18 +1288,17 @@ class _WorksPhotoDocState extends State<WorksPhotoDoc> {
   requestHttpDoc(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
-      "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
         "${ApiConfig.base}/cp/admin/universal-user/${IntTest.pressHover}/qualification-file/");
-    http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+    http.MultipartRequest request = await Api.multipart("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
         contentType: MediaType('image', 'jpeg'),
         filename: basenameDoc(imageFile.fileName ?? ''));
     request.files.add(multipartFile);
     request.headers.addAll(headers);
-    var response = await request.send();
+    var response = await Api.sendMultipart(request);
     response.stream.transform(utf8.decoder).listen((value) {
       Map listTestPhoto = jsonDecode(value);
       listSelectedEmployee['data']['qualification_file'] =

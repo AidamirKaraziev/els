@@ -1,7 +1,7 @@
 /// Единая точка исходящих запросов: заголовок, обновление токена, повтор.
 ///
 /// До рефакторинга авторизации токен жил 8 дней и лежал одной строкой в
-/// статике `IntTest.token`, а заголовок писался руками в каждом из 167 мест.
+/// статике `IntTest.token`, а заголовок писался руками в каждом из 166 мест.
 /// Теперь токенов два: access на 30 минут и refresh, и по истечении первого
 /// бэкенд отвечает `401`. Разбирать это в каждом экране бессмысленно —
 /// поэтому все запросы идут сюда.
@@ -25,7 +25,6 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_config.dart';
-import 'class_colors.dart';
 
 /// Пара токенов и срок жизни access — всё, что нужно знать о сессии.
 ///
@@ -79,8 +78,6 @@ class TokenStore {
     if (preferences.getString(_legacyKey) != null) {
       await preferences.remove(_legacyKey);
     }
-
-    IntTest.token = _access ?? '';
   }
 
   /// Сохраняет выданную пару. `expiresIn` — срок жизни access в секундах.
@@ -93,10 +90,6 @@ class TokenStore {
     _refresh = refresh;
     _expiresAt = DateTime.now().add(Duration(seconds: expiresIn));
 
-    // Зеркало для тех мест, где заголовок ещё собирается руками. Уйдёт
-    // вместе с последним таким местом.
-    IntTest.token = access;
-
     final SharedPreferences preferences = await SharedPreferences.getInstance();
     await preferences.setString(_accessKey, access);
     await preferences.setString(_refreshKey, refresh);
@@ -108,7 +101,6 @@ class TokenStore {
     _access = null;
     _refresh = null;
     _expiresAt = null;
-    IntTest.token = '';
 
     final SharedPreferences preferences = await SharedPreferences.getInstance();
     await preferences.remove(_accessKey);
@@ -258,6 +250,16 @@ class Api {
   static Future<http.StreamedResponse> sendMultipart(
     http.MultipartRequest request,
   ) async {
+    // Токен проставляем здесь, а не только в `multipart`. Экраны собирают
+    // свою карту заголовков заранее и дописывают её через
+    // `request.headers.addAll(headers)` уже после сборки запроса — то есть
+    // затирают свежий токен тем, который был на момент сборки карты. Это
+    // последнее место перед отправкой, и здесь слово остаётся за хранилищем.
+    final String? access = TokenStore.access;
+    if (access != null && access.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $access';
+    }
+
     final http.StreamedResponse response = await request.send();
     if (response.statusCode == 401) {
       await _dropSession();
@@ -416,9 +418,9 @@ class Api {
 
   /// Заголовки запроса: то, что просил экран, плюс токен поверх.
   ///
-  /// Токен ставится последним намеренно. В 167 местах он ещё собирается
-  /// руками из `IntTest.token`, и значение там взято на момент сборки
-  /// строки — то есть могло устареть, пока запрос ждал обновления.
+  /// Токен ставится последним намеренно: карта заголовков приходит из экрана,
+  /// собранная до отправки, и слово должно остаться за хранилищем — иначе в
+  /// запрос уедет значение, устаревшее за время обновления.
   static Map<String, String> _headers(Map<String, String>? headers) {
     final Map<String, String> result = <String, String>{
       'Content-Type': 'application/json; charset=utf-8',

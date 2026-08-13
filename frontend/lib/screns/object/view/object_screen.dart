@@ -12,6 +12,7 @@ import '../../home_page/home_page.dart';
 import 'package:http/http.dart' as http;
 import '../bloc/object_bloc.dart';
 import '../widgets/add_object.dart';
+import 'package:els/helper/api_client.dart';
 
 ///ОБЬЕКТЫ
 
@@ -39,12 +40,11 @@ int newScreensObject = 1;
 /// незакрытый экземпляр блока. Связь оставлена односторонней: событие блока
 /// обновляет оба списка, а эта функция — только свой.
 getAllListOfObjects() async {
-  final res = await http.get(
+  final res = await Api.get(
       Uri.parse('${ApiConfig.base}/all-objects/'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${IntTest.token}',
       });
   var vova = jsonDecode(utf8.decode(res.bodyBytes));
   getAllObject = vova['data'];
@@ -60,12 +60,11 @@ getAllListOfObjects() async {
 
 /// Список обьектов архив ========
 getListObjectArchive() async {
-  final res = await http.get(
+  final res = await Api.get(
       Uri.parse('${ApiConfig.base}/all-objects/?page=1'),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${IntTest.token}',
       });
   var vova = jsonDecode(utf8.decode(res.bodyBytes));
   getObject = vova['data'];
@@ -80,11 +79,10 @@ getListObjectArchive() async {
 /// Данные выбраного обьекта ============
 getListObjectInfo(int userId) async {
   await Future(() async {
-    final res = await http.get(
+    final res = await Api.get(
         Uri.parse("${ApiConfig.base}/object/$userId/"),
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          'Authorization': 'Bearer ${IntTest.token}',
         });
     var vova = jsonDecode(utf8.decode(res.bodyBytes));
     listSelectedObject = vova;

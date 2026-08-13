@@ -10,14 +10,14 @@ import 'package:http/http.dart' as http;
 import '../../companies/view/companies_screen.dart';
 import '../../companies/widgets/add_companies.dart';
 import '../../home_page/home_page.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Контактное Лицо ====================
 getContactPersonObjectList() async {
   final url = '${ApiConfig.base}/all-contact-person/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
   contactPersonList = response['data'];
@@ -29,10 +29,9 @@ List contactPersonList = [];
 /// Контактное лицо выбранной компании ==========
 getContactPersonSelectedCompanyList() async {
   final url = '${ApiConfig.base}/contact-person/sort-by-company/${IntTest.pressHover}/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
   contactPersonSelectedCompanyList = response['data'];
@@ -55,11 +54,10 @@ class _AddContactPersonObjectState extends State<AddContactPersonObject> {
 
   /// Добавление контактного лица ==
   addingContactPerson() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/contact-person/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode({
         "name": newNameContactPerson.text,

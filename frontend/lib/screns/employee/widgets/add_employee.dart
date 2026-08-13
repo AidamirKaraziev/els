@@ -12,6 +12,7 @@ import '../../home_page/home_page.dart';
 import '../../object/widgets/add_plot.dart';
 import '../bloc/employee_bloc.dart';
 import '../view/employees_screen.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Окно добавление сотрудника
 
@@ -23,10 +24,9 @@ bool myBoolTest = false;
 getForemanObjectList() async {
   final url =
       '${ApiConfig.base}/universal-user/sort-by-role/2/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
   foremanList = response['data'];
@@ -42,10 +42,9 @@ List foremanList = [];
 getMechanicObjectList() async {
   final url =
       '${ApiConfig.base}/universal-user/sort-by-role/3/?page=1';
-  final res = await http.get(Uri.parse(url), headers: {
+  final res = await Api.get(Uri.parse(url), headers: {
     "Content-Type": "application/json; charset=utf-8",
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${IntTest.token}',
   });
   var response = jsonDecode(utf8.decode(res.bodyBytes));
   mechanicList = response['data'];
@@ -66,11 +65,10 @@ class AddEmployee extends StatefulWidget {
 class _AddEmployeeState extends State<AddEmployee> {
   /// Создание юзера ======
   createUser() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.origin}/$myLink/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode(
         {
@@ -139,10 +137,9 @@ class _AddEmployeeState extends State<AddEmployee> {
   /// Должность ===================
   getEmployeeJobTitle() async {
     final url = '${ApiConfig.base}/roles/?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     setState(() {

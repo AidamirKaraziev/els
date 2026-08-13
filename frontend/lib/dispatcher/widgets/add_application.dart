@@ -8,6 +8,7 @@ import '../../screns/home_page/home_page.dart';
 import '../../screns/task/view/task_screen.dart';
 import '../../screns/user/user_contact.dart';
 import '../task_screen_dispatcher/application_screen.dart';
+import 'package:els/helper/api_client.dart';
 
 /// Окно добавление Заявки
 
@@ -26,11 +27,10 @@ class _AddApplicationState extends State<AddApplication> {
 
   /// Создание Заявки ==============
   createNewApplication() async {
-    var response = await http.post(
+    var response = await Api.post(
       Uri.parse("${ApiConfig.base}/order/"),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        'Authorization': 'Bearer ${IntTest.token}',
       },
       body: json.encode({
         "object_id": objectTitleApplication, //идентификатор объекта
@@ -53,10 +53,9 @@ class _AddApplicationState extends State<AddApplication> {
   /// Объект =============================
   getListObjectApplication() async {
     final url = '${ApiConfig.base}/all-objects/';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     objectListApplication = response['data'];
@@ -69,10 +68,9 @@ class _AddApplicationState extends State<AddApplication> {
   /// Механик ============================
   getListMechanicApplication() async {
     final url = '${ApiConfig.base}/universal-user/sort-by-role/3/';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     mechanicListApplication = response['data'];
@@ -85,10 +83,9 @@ class _AddApplicationState extends State<AddApplication> {
   /// Категория неисправности ============
   faultCategoryApplication() async {
     final url = '${ApiConfig.base}/fault-category/all?page=1';
-    final res = await http.get(Uri.parse(url), headers: {
+    final res = await Api.get(Uri.parse(url), headers: {
       "Content-Type": "application/json; charset=utf-8",
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${IntTest.token}',
     });
     var response = jsonDecode(utf8.decode(res.bodyBytes));
     faultCategoryListApplication = response['data'];
@@ -132,7 +129,7 @@ class _AddApplicationState extends State<AddApplication> {
   /// Причины неисправности =============
   // causeOfMalfunction() async {
   //   final url = '${ApiConfig.base}/reason-fault/all?page=1';
-  //   final res = await http.get(Uri.parse(url), headers: {
+  //   final res = await Api.get(Uri.parse(url), headers: {
   //     "Content-Type": "application/json; charset=utf-8",
   //     'Accept': 'application/json',
   //     'Authorization': 'Bearer ${IntTest.token}',
@@ -498,12 +495,11 @@ class _SearchPageState extends State<SearchPage> {
     });
 
     try {
-      final response = await http.get(
+      final response = await Api.get(
         Uri.parse('${ApiConfig.base}/all-objects/'),
           headers: {
             "Content-Type": "application/json; charset=utf-8",
             'Accept': 'application/json',
-            'Authorization': 'Bearer ${IntTest.token}',
           });
 
       if (response.statusCode == 200) {
@@ -595,7 +591,7 @@ class _SearchAndSelectPageState extends State<SearchAndSelectPage> {
     });
 
     try {
-      final response = await http.get(
+      final response = await Api.get(
         Uri.parse('${ApiConfig.base}/all-objects/'),
       );
 

@@ -12,6 +12,7 @@ import '../employee/view/employees_screen.dart';
 import '../home_page/home_page.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:els/helper/api_client.dart';
 
 
 /// Блок User Profile
@@ -54,18 +55,17 @@ class _UserProfileState extends State<UserProfile> {
   requestHttp(PickedImage imageFile) async {
     Map<String, String> headers = {
       "Accept": "application/json",
-      "Authorization": "Bearer ${IntTest.token}"
     }; // ignore this headers if there is no authentication
     var uri = Uri.parse(
         "${ApiConfig.base}/cp/universal-user/me/photo/");
-    http.MultipartRequest request = http.MultipartRequest("PUT", uri);
+    http.MultipartRequest request = await Api.multipart("PUT", uri);
     http.MultipartFile multipartFile = http.MultipartFile.fromBytes(
         'file', imageFile.data!,
         contentType: MediaType('image', 'jpeg'),
         filename: basename(imageFile.fileName ?? ''));
     request.files.add(multipartFile);
     request.headers.addAll(headers);
-    var response = await request.send();
+    var response = await Api.sendMultipart(request);
     response.stream.transform(utf8.decoder).listen((value) {
       Map listTestPhoto = jsonDecode(value);
       userProfile[0]['photo'] = listTestPhoto['data']['photo'];
