@@ -191,6 +191,67 @@ def test_client_without_company_sees_nothing_not_everything(
     assert _ids(client_with_db.get(f"{API}/all-objects/")) == set()
 
 
+# --- списки объектов по сотруднику ----------------------------------------
+
+
+@pytest.mark.integration
+def test_lifts_by_foreman_answer_data_not_500(
+    client_with_db, as_role, world, db_session
+):
+    """Регрессия: ручка звала `get_user_by_id` без области и падала с 500.
+
+    Область у неё объявлена, поэтому мета-проверка на объявление области
+    оставалась зелёной — а дальше по коду она просто не передавалась.
+    """
+    foreman = as_role(Role.FOREMAN, division_id=world["division_a"].id)
+    world["own_lift"].foreman_id = foreman.id
+    db_session.flush()
+
+    as_role(Role.ADMIN)
+
+    seen = _ids(client_with_db.get(f"{API}/object/by-foreman/?foreman_id={foreman.id}"))
+    assert seen == {world["own_lift"].id}
+
+
+@pytest.mark.integration
+def test_lifts_by_mechanic_answer_data_not_500(
+    client_with_db, as_role, world, db_session
+):
+    """То же самое у соседней ручки: ошибка была скопирована в обе."""
+    mechanic = as_role(Role.MECHANIC, division_id=world["division_a"].id)
+    world["own_lift"].mechanic_id = mechanic.id
+    db_session.flush()
+
+    as_role(Role.ADMIN)
+
+    seen = _ids(
+        client_with_db.get(f"{API}/object/by-mechanic/?mechanic_id={mechanic.id}")
+    )
+    assert seen == {world["own_lift"].id}
+
+
+@pytest.mark.integration
+def test_lifts_by_foreman_are_cut_to_the_asking_person(
+    client_with_db, as_role, world, db_session
+):
+    """Список режется областью спрашивающего, а не отдаётся целиком.
+
+    Прораб ведёт оба лифта, механик назначен только на один — значит и в
+    ответе должен быть один.
+    """
+    foreman = as_role(Role.FOREMAN, division_id=world["division_a"].id)
+    world["own_lift"].foreman_id = foreman.id
+    world["other_lift"].foreman_id = foreman.id
+    db_session.flush()
+
+    mechanic = as_role(Role.MECHANIC, division_id=world["division_a"].id)
+    world["own_lift"].mechanic_id = mechanic.id
+    db_session.flush()
+
+    seen = _ids(client_with_db.get(f"{API}/object/by-foreman/?foreman_id={foreman.id}"))
+    assert seen == {world["own_lift"].id}, "механику видны лифты, куда его не назначали"
+
+
 # --- прямой запрос чужой записи -------------------------------------------
 
 

@@ -64,7 +64,7 @@ def get_objects_by_foreman(
     scope=Depends(deps.get_read_scope),
 ):
     user, code, indexes = crud_universal_users.get_user_by_id(
-        db=session, user_id=foreman_id
+        db=session, user_id=foreman_id, scope=scope
     )
     get_raise(code=code)
     data, paginator = crud_objects.get_objects_by_foreman_id(
@@ -96,7 +96,7 @@ def get_objects_by_mechanic(
     scope=Depends(deps.get_read_scope),
 ):
     user, code, indexes = crud_universal_users.get_user_by_id(
-        db=session, user_id=mechanic_id
+        db=session, user_id=mechanic_id, scope=scope
     )
     get_raise(code=code)
     data, paginator = crud_objects.get_objects_by_mechanic_id(
