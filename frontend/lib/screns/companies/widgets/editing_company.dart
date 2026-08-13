@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import '../../home_page/home_page.dart';
 import '../view/companies_screen.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 
 
@@ -196,8 +197,7 @@ class _EditingCompanyState extends State<EditingCompany> {
                         radius: 30.0,
                         backgroundColor: Colors.grey.shade200,
                         backgroundImage: const AssetImage('assets/comp.jpeg'),
-                        foregroundImage: NetworkImage(
-                            '${ApiConfig.scheme}://${listSelectedCompany['data']['photo']}'),
+                        foregroundImage: apiImage(listSelectedCompany['data']['photo']),
                       ),
                       const SizedBox(width: 20.0),
                       const Text(

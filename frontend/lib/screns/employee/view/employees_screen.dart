@@ -14,6 +14,7 @@ import '../bloc/employee_bloc.dart';
 import '../widgets/add_employee.dart';
 import 'employees_archive_screen.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 ///Сотрудники
 
@@ -485,8 +486,8 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                                                   builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
                                                     return CircleAvatar(
                                                       foregroundImage:
-                                                      // newPhotoSelectEmployee != '' ? NetworkImage('${ApiConfig.scheme}://$newPhotoSelectEmployee') :
-                                                      NetworkImage('${ApiConfig.scheme}://${dataEmployee[index]['photo']}'),
+                                                      // newPhotoSelectEmployee != '' ? apiImage(newPhotoSelectEmployee) :
+                                                      apiImage(dataEmployee[index]['photo']),
                                                       backgroundImage: const AssetImage('assets/user.png'),
                                                     );
                                                   },

@@ -8,6 +8,7 @@ import '../../home_page/home_page.dart';
 import 'package:http/http.dart' as http;
 import 'object_screen.dart';
 import 'package:els/helper/api_config.dart';
+import 'package:els/helper/api_image.dart';
 
 ///ОБЬЕКТЫ Архив
 
@@ -310,7 +311,7 @@ class _ObjectScreenArchiveState extends State<ObjectScreenArchive> {
                                                     child: Row(
                                                       children: [
                                                         CircleAvatar(
-                                                            foregroundImage:  NetworkImage(dataObjectScreen['company_id'] == null ? '' : '${ApiConfig.scheme}://${dataObjectScreen['company_id']['photo'].toString()}'),
+                                                            foregroundImage:  apiImage(dataObjectScreen['company_id']['photo'].toString()),
                                                             backgroundImage: const AssetImage('assets/comp.jpeg')),
                                                         const SizedBox(width: 10.0),
                                                         dataObjectScreen['company_id'] == null ? const Text('') :

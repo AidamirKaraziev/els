@@ -11,6 +11,7 @@ import 'company_class_foreman/add_object_selected_company.dart';
 import 'company_class_foreman/add_account_foreman.dart';
 import 'company_class_foreman/contact_faces_foreman.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Окно выбранной компании
 
@@ -231,8 +232,7 @@ class _CompanyPageForemanState extends State<CompanyPageForeman> {
                                         radius: 230.0,
                                         backgroundColor: Colors.grey.shade200,
                                         backgroundImage: const AssetImage('assets/comp.jpeg'),
-                                        foregroundImage: NetworkImage(
-                                            '${ApiConfig.scheme}://${viewCompanyList['photo']}'),
+                                        foregroundImage: apiImage(viewCompanyList['photo']),
                                       ),
                                     ),
                                   )
@@ -257,8 +257,7 @@ class _CompanyPageForemanState extends State<CompanyPageForeman> {
                                           child: CircleAvatar(
                                             backgroundColor: Colors.grey.shade200,
                                             backgroundImage: const AssetImage('assets/comp.jpeg'),
-                                            foregroundImage: NetworkImage(
-                                                '${ApiConfig.scheme}://${viewCompanyList['photo']}'),
+                                            foregroundImage: apiImage(viewCompanyList['photo']),
                                           ),
                                         ),
                                       ),

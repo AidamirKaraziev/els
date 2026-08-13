@@ -15,6 +15,7 @@ import 'companies_screen.dart';
 import 'companies_screen_archive.dart';
 import 'company_page.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Окно выбранной компании Архив
 
@@ -199,7 +200,7 @@ class _CompanyPageArchiveState extends State<CompanyPageArchive> {
                                           child: CircleAvatar(
                                             backgroundColor: Colors.grey.shade200,
                                             backgroundImage: const AssetImage('assets/comp.jpeg'),
-                                            foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewCompanyListArchive['photo']}'),
+                                            foregroundImage: apiImage(viewCompanyListArchive['photo']),
                                           ),
                                         ),
                                       ),
@@ -816,7 +817,7 @@ class _CompanyPageArchiveState extends State<CompanyPageArchive> {
                                                               children: [
                                                                 CircleAvatar(
                                                                     minRadius: 25.0,
-                                                                    foregroundImage: NetworkImage('${ApiConfig.scheme}://${listTest['photo']}'),
+                                                                    foregroundImage: apiImage(listTest['photo']),
                                                                     backgroundImage: const AssetImage('assets/user.png')
                                                                 ),
                                                                 const SizedBox(width: 20.0),

@@ -10,6 +10,7 @@ import '../screns/home_page/home_page.dart';
 import '../screns/user/user_contact.dart';
 import 'drawer_owner.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 
 ///Получение данных одного обьекта =======
@@ -467,7 +468,7 @@ class _ObjectScreenForemanState extends State<ObjectScreenOwner> {
                                                     child: Row(
                                                       children: [
                                                         CircleAvatar(
-                                                            foregroundImage:  NetworkImage(dataObjectScreen['company_id'] == null ? '' : '${ApiConfig.scheme}://${dataObjectScreen['company_id']['photo'].toString()}'),
+                                                            foregroundImage:  apiImage(dataObjectScreen['company_id']['photo'].toString()),
                                                             backgroundImage: const AssetImage('assets/comp.jpeg')),
                                                         const SizedBox(width: 10.0),
                                                         dataObjectScreen['company_id'] == null ? const Text('') :

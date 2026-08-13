@@ -14,6 +14,7 @@ import '../../screns/user/user_contact.dart';
 import '../drawer_foreman.dart';
 import '../user_page_foreman.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 ///ОБЬЕКТЫ
 
@@ -410,7 +411,7 @@ class _ObjectScreenForemanState extends State<ObjectScreenForeman> {
                                                     child: Row(
                                                       children: [
                                                         CircleAvatar(
-                                                            foregroundImage:  NetworkImage(dataObjectScreen['company_id'] == null ? '' : '${ApiConfig.scheme}://${dataObjectScreen['company_id']['photo'].toString()}'),
+                                                            foregroundImage:  apiImage(dataObjectScreen['company_id']['photo'].toString()),
                                                             backgroundImage: const AssetImage('assets/comp.jpeg')),
                                                         const SizedBox(width: 10.0),
                                                         dataObjectScreen['company_id'] == null ? const Text('') :

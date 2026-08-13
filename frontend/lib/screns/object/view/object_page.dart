@@ -16,6 +16,7 @@ import 'object_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Окно выбранного обьекта
 
@@ -1193,7 +1194,7 @@ class _ObjectPageState extends State<ObjectPage> {
                                                                                 10.0),
                                                                             child: CircleAvatar(
                                                                                 backgroundImage: const NetworkImage('assets/user.png'),
-                                                                                foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['foreman_id']['photo']}'))),
+                                                                                foregroundImage: apiImage(viewObjectPage['foreman_id']['photo']))),
                                                                         Expanded(
                                                                             child: Text(
                                                                                 '${viewObjectPage['foreman_id']['name']}',
@@ -1427,7 +1428,7 @@ class _ObjectPageState extends State<ObjectPage> {
                                                                                   10.0),
                                                                               child: CircleAvatar(
                                                                                   backgroundImage: const NetworkImage('assets/user.png'),
-                                                                                  foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['mechanic_id']['photo']}'))),
+                                                                                  foregroundImage: apiImage(viewObjectPage['mechanic_id']['photo']))),
                                                                           Expanded(child:
                                                                           Text('${viewObjectPage['mechanic_id']['name']}',
                                                                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
@@ -1903,7 +1904,7 @@ class _ObjectPageState extends State<ObjectPage> {
                                                         //       builder: (context) =>
                                                         //           AlertDialog(
                                                         //             content: Stack(children: [
-                                                        //               Image.network('${ApiConfig.scheme}://${listSelectedObject['data']['letter_of_appointment']}',fit: BoxFit.cover),
+                                                        //               apiImageWidget(listSelectedObject['data']['letter_of_appointment'],fit: BoxFit.cover),
                                                         //               Positioned(
                                                         //                   top: 0,
                                                         //                   right: 0,
@@ -1966,7 +1967,7 @@ class _ObjectPageState extends State<ObjectPage> {
                                                                     builder: (context) =>
                                                                         AlertDialog(
                                                                           content: Stack(children: [
-                                                                            Image.network('${ApiConfig.scheme}://${listSelectedObject['data']['letter_of_appointment']}',fit: BoxFit.cover),
+                                                                            apiImageWidget(listSelectedObject['data']['letter_of_appointment'],fit: BoxFit.cover),
                                                                             Positioned(
                                                                                 top: 0,
                                                                                 right: 0,
@@ -2238,7 +2239,7 @@ class _ObjectPageState extends State<ObjectPage> {
                                                         //       builder: (context) =>
                                                         //           AlertDialog(
                                                         //             content: Stack(children: [
-                                                        //               Image.network('${ApiConfig.scheme}://${listSelectedObject['data']['letter_of_appointment']}',fit: BoxFit.cover),
+                                                        //               apiImageWidget(listSelectedObject['data']['letter_of_appointment'],fit: BoxFit.cover),
                                                         //               Positioned(
                                                         //                   top: 0,
                                                         //                   right: 0,
@@ -2301,7 +2302,7 @@ class _ObjectPageState extends State<ObjectPage> {
                                                                     builder: (context) =>
                                                                         AlertDialog(
                                                                           content: Stack(children: [
-                                                                            Image.network('${ApiConfig.scheme}://${listSelectedObject['data']['act_pto']}',fit: BoxFit.cover),
+                                                                            apiImageWidget(listSelectedObject['data']['act_pto'],fit: BoxFit.cover),
                                                                             Positioned(
                                                                                 top: 0,
                                                                                 right: 0,

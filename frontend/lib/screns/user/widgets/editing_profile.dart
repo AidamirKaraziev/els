@@ -15,6 +15,7 @@ import '../../home_page/home_page.dart';
 import '../user_contact.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Изменение сотрудника
 
@@ -173,8 +174,7 @@ class _EditingProfileState extends State<EditingProfile> {
                         SizedBox(
                           height: 100.0,
                           width: 100.0,
-                          child: Image.network(
-                              '${ApiConfig.scheme}://${userProfile[0]['photo']}'),
+                          child: apiImageWidget(userProfile[0]['photo']),
                         ),
                         const SizedBox(width: 20.0),
                         const Text(

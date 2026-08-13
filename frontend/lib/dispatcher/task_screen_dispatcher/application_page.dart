@@ -9,6 +9,7 @@ import '../../screns/task/view/task_screen.dart';
 import '../../screns/user/user_contact.dart';
 import 'application_screen.dart';
 import 'package:els/helper/api_config.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Выбранная Заявка
 
@@ -383,7 +384,7 @@ class _ApplicationPageState extends State<ApplicationPage> {
                                                 builder: (context) =>
                                                     AlertDialog(
                                                       content: Stack(children: [
-                                                        Image.network('${ApiConfig.scheme}://$onePhotoSelectedTaskId',fit: BoxFit.cover),
+                                                        apiImageWidget(onePhotoSelectedTaskId,fit: BoxFit.cover),
                                                         Positioned(
                                                             top: 0,
                                                             right: 0,
@@ -397,7 +398,7 @@ class _ApplicationPageState extends State<ApplicationPage> {
                                             padding: const EdgeInsets.only(right: 20.0),
                                             width: 230,
                                             height: 230,
-                                            child: photoTask['photo'] == null ? const CircularProgressIndicator() : Image.network('${ApiConfig.scheme}://${photoTask['photo']}',fit: BoxFit.cover)
+                                            child: photoTask['photo'] == null ? const CircularProgressIndicator() : apiImageWidget(photoTask['photo'],fit: BoxFit.cover)
                                         ),
                                       );
                                     },

@@ -10,6 +10,7 @@ import '../../screns/home_page/home_page.dart';
 import '../drawer_foreman.dart';
 import '../user_page_foreman.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 ///Сотрудники
 
@@ -442,8 +443,8 @@ class _EmployeesScreenForemanState extends State<EmployeesScreenForeman> {
                                                   builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
                                                     return CircleAvatar(
                                                       foregroundImage:
-                                                      // newPhotoSelectEmployee != '' ? NetworkImage('${ApiConfig.scheme}://$newPhotoSelectEmployee') :
-                                                      NetworkImage('${ApiConfig.scheme}://${dataEmployeeForeman[index]['photo']}'),
+                                                      // newPhotoSelectEmployee != '' ? apiImage(newPhotoSelectEmployee) :
+                                                      apiImage(dataEmployeeForeman[index]['photo']),
                                                       backgroundImage: const AssetImage('assets/user.png'),
                                                     );
                                                   },

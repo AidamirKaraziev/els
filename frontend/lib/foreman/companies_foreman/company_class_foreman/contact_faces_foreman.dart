@@ -13,6 +13,7 @@ import '../../../screns/companies/widgets/add_companies.dart';
 import '../../../screns/home_page/home_page.dart';
 import '../../../screns/object/widgets/add_contact_person_object.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Контактные лица ///
 
@@ -179,7 +180,7 @@ class _ContactFacesForemanState extends State<ContactFacesForeman> {
                                               children: [
                                                 CircleAvatar(
                                                   minRadius: 25.0,
-                                                    foregroundImage: NetworkImage('${ApiConfig.scheme}://${listTest['photo']}'),
+                                                    foregroundImage: apiImage(listTest['photo']),
                                                     backgroundImage: const AssetImage('assets/user.png')
                                                 ),
                                                 const SizedBox(width: 20.0),
@@ -285,7 +286,7 @@ class _ViewContactPersonForemanState extends State<ViewContactPersonForeman> {
                   CircleAvatar(
                     radius: 50.0,
                     backgroundImage: const AssetImage('assets/user.png'),
-                    foregroundImage: NetworkImage('${ApiConfig.scheme}://${dataAccount['photo']}'),
+                    foregroundImage: apiImage(dataAccount['photo']),
                   ),
                   const SizedBox(width: 50.0),
                   /// Имя Телефон Адресс
@@ -416,7 +417,7 @@ class _EditingContactPersonForemanState extends State<EditingContactPersonForema
           CircleAvatar(
             radius: 50.0,
             backgroundImage: const AssetImage('assets/user.png'),
-            foregroundImage: NetworkImage('${ApiConfig.scheme}://${selectedContactFacesForeman['data']['photo']}'),
+            foregroundImage: apiImage(selectedContactFacesForeman['data']['photo']),
           ),
           const Gap(20.0),
           /// ФИО

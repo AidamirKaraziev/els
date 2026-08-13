@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../../../screns/home_page/home_page.dart';
 import '../../user_page_foreman.dart';
 import 'package:els/helper/api_config.dart';
+import 'package:els/helper/api_image.dart';
 
 ///Компании  Архив
 
@@ -300,7 +301,7 @@ class _CompaniesScreenArchiveForemanState extends State<CompaniesScreenArchiveFo
                                                 child: CircleAvatar(
                                                   backgroundColor: Colors.grey.shade200,
                                                   backgroundImage: const AssetImage('assets/comp.jpeg'),
-                                                  foregroundImage: NetworkImage('${ApiConfig.scheme}://${company['photo']}'),
+                                                  foregroundImage: apiImage(company['photo']),
                                                 ),
                                               ),
                                               Expanded(

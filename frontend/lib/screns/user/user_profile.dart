@@ -13,6 +13,7 @@ import '../home_page/home_page.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 
 /// Блок User Profile
@@ -129,9 +130,8 @@ class _UserProfileState extends State<UserProfile> {
                             radius: 70.0,
                             backgroundImage: const AssetImage('assets/user.png'),
                             foregroundImage: newPhoto != ''
-                                ? NetworkImage('${ApiConfig.scheme}://$newPhoto')
-                                : NetworkImage(
-                                    '${ApiConfig.scheme}://${userProfile[0]['photo']}'),
+                                ? apiImage(newPhoto)
+                                : apiImage(userProfile[0]['photo']),
                           )),
                       const SizedBox(height: 10.0),
                       /// Имя сотрудника

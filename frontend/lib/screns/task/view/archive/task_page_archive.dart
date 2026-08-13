@@ -9,6 +9,7 @@ import '../../../object/view/object_page.dart';
 import '../../../user/user_contact.dart';
 import '../../widget/editing_tesk.dart';
 import 'package:els/helper/api_config.dart';
+import 'package:els/helper/api_image.dart';
 
 
 /// Выбранная Задача Архив
@@ -347,7 +348,7 @@ class _TaskPageArchiveState extends State<TaskPageArchive> {
                                                 builder: (context) =>
                                                     AlertDialog(
                                                       content: Stack(children: [
-                                                        Image.network('${ApiConfig.scheme}://$onePhotoSelectedTaskId',fit: BoxFit.cover),
+                                                        apiImageWidget(onePhotoSelectedTaskId,fit: BoxFit.cover),
                                                         Positioned(
                                                             top: 0,
                                                             right: 0,
@@ -361,7 +362,7 @@ class _TaskPageArchiveState extends State<TaskPageArchive> {
                                             padding: const EdgeInsets.only(right: 20.0),
                                             width: 230,
                                             height: 230,
-                                            child: Image.network('${ApiConfig.scheme}://${photoTask['photo']}',fit: BoxFit.cover)
+                                            child: apiImageWidget(photoTask['photo'],fit: BoxFit.cover)
                                         ),
                                       );
                                     },

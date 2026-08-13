@@ -18,6 +18,7 @@ import '../view/employees_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Изменение сотрудника
 
@@ -271,8 +272,7 @@ class _EditingEmployeeState extends State<EditingEmployee> {
                                       child: SizedBox.fromSize(
                                           size: const Size.fromRadius(48),
                                           // Image radius
-                                          child: Image.network(
-                                              '${ApiConfig.scheme}://${listSelectedEmployee['data']['photo']}',
+                                          child: apiImageWidget(listSelectedEmployee['data']['photo'],
                                               fit: BoxFit.cover)))
                                   : Image.asset('assets/user.png')),
                           const SizedBox(width: 20.0),

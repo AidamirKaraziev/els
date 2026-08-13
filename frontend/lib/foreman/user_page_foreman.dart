@@ -12,6 +12,7 @@ import '../screns/user/user_contact.dart';
 
 import 'employee_foreman/employee_widget_foreman/editing_employee_foreman.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 
 /// Окно User
@@ -441,7 +442,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                             child: CircleAvatar(
                                                 radius: 70.0,
                                                 backgroundImage: const AssetImage('assets/user.png'),
-                                                foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeList['photo']}'))),
+                                                foregroundImage: apiImage(viewEmployeeList['photo']))),
                                         const SizedBox(height: 10.0),
                                         /// Имя сотрудника
                                         Center(
@@ -547,7 +548,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                                 child: CircleAvatar(
                                                   radius: 70.0,
                                                   backgroundImage: const AssetImage('assets/user.png'),
-                                                  foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeList['photo']}'),
+                                                  foregroundImage: apiImage(viewEmployeeList['photo']),
                                                   backgroundColor: ColorApp.myColorGray,
                                                 )),
                                             const SizedBox(height: 10.0),
@@ -1017,7 +1018,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                                     ),
                                                   ),
                                                 )
-                                                    : Image.network('${ApiConfig.scheme}://${viewEmployeeList['identity_card']}'),
+                                                    : apiImageWidget(viewEmployeeList['identity_card']),
                                               ),
                                             ),
                                             const SizedBox(width: 20.0),
@@ -1069,8 +1070,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                                   context,
                                                       AsyncSnapshot<dynamic>
                                                       snapshot) {
-                                                    return Image.network(
-                                                        '${ApiConfig.scheme}://${viewEmployeeList['qualification_file']}');
+                                                    return apiImageWidget(viewEmployeeList['qualification_file']);
                                                   },
                                                 ),
                                               ),
@@ -1193,7 +1193,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
 //                       color: Colors.green,
 //                       size: 40.0,
 //                     ))
-//                 : Image.network('${ApiConfig.scheme}://${listSelectedEmployeeForeman['data']['identity_card']}'),
+//                 : apiImageWidget(listSelectedEmployeeForeman['data']['identity_card']),
 //           ],
 //         ));
 //   }
@@ -1321,7 +1321,7 @@ class _MyUserForemanState extends State<MyUserForeman> {
                 radius: size.width > 350 ? 29.0 : 20.0,
                 backgroundColor: Colors.transparent,
                 backgroundImage: const AssetImage('assets/user.png'),
-                foregroundImage:  NetworkImage('${ApiConfig.scheme}://${userProfile[0]['photo']}'),
+                foregroundImage:  apiImage(userProfile[0]['photo']),
               );
             },
           )

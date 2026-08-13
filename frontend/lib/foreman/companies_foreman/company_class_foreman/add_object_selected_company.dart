@@ -12,6 +12,7 @@ import '../../../screns/object/view/object_page.dart';
 import '../../../screns/object/view/object_screen.dart';
 import '../company_page_foreman.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 /// отображения списка обьектов компании  Просмотр объекта
 
@@ -470,7 +471,7 @@ class _ViewSelectedObjectForemanState extends State<ViewSelectedObjectForeman> {
                                                 Padding(padding: const EdgeInsets.symmetric(horizontal: 10.0),
                                                     child: CircleAvatar(
                                                         backgroundImage: const NetworkImage('assets/user.png'),
-                                                        foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['foreman_id']['photo']}'))),
+                                                        foregroundImage: apiImage(viewObjectPage['foreman_id']['photo']))),
                                                 viewObjectPage['foreman_id'] == null ? const Expanded(child: Text('')) :
                                                 Expanded(
                                                     child: Text('${viewObjectPage['foreman_id']['name']}',
@@ -541,7 +542,7 @@ class _ViewSelectedObjectForemanState extends State<ViewSelectedObjectForeman> {
                                                     child:
                                                     CircleAvatar(
                                                         backgroundImage: const NetworkImage('assets/user.png'),
-                                                        foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['mechanic_id']['photo']}'))),
+                                                        foregroundImage: apiImage(viewObjectPage['mechanic_id']['photo']))),
                                                 viewObjectPage['mechanic_id'] == null ? const Expanded(child: Text('')) :
                                                 Expanded(
                                                   child: Text('${viewObjectPage['mechanic_id']['name']}',

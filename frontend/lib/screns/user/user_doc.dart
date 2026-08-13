@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../helper/class_colors.dart';
 import '../home_page/home_page.dart';
 import 'package:els/helper/api_config.dart';
+import 'package:els/helper/api_image.dart';
 
 ///Блок User Doc
 
@@ -82,7 +83,7 @@ class UserDoc extends StatelessWidget {
                             ),
                           ),
                         )
-                            : Image.network('${ApiConfig.scheme}://${userProfile[0]['identity_card']}'),
+                            : apiImageWidget(userProfile[0]['identity_card']),
                       ),
                     ),
                     const SizedBox(width: 20.0),
@@ -135,8 +136,7 @@ class UserDoc extends StatelessWidget {
                           context,
                               AsyncSnapshot<dynamic>
                               snapshot) {
-                            return Image.network(
-                                '${ApiConfig.scheme}://${userProfile[0]['qualification_file']}');
+                            return apiImageWidget(userProfile[0]['qualification_file']);
                           },
                         ),
                       ),

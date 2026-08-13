@@ -14,6 +14,7 @@ import '../user_page_foreman.dart';
 import 'employee_widget_foreman/editing_employee_foreman.dart';
 import 'employees_screen_foreman.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Окно выбранного сотрудника
 
@@ -406,7 +407,7 @@ class _OpenViewEmployeeForemanState extends State<OpenViewEmployeeForeman> {
                                             child: CircleAvatar(
                                                 radius: 70.0,
                                                 backgroundImage: const AssetImage('assets/user.png'),
-                                                foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeList['photo']}'))),
+                                                foregroundImage: apiImage(viewEmployeeList['photo']))),
                                         const SizedBox(height: 10.0),
                                         /// Имя сотрудника
                                         Center(
@@ -512,7 +513,7 @@ class _OpenViewEmployeeForemanState extends State<OpenViewEmployeeForeman> {
                                                 child: CircleAvatar(
                                                   radius: 70.0,
                                                   backgroundImage: const AssetImage('assets/user.png'),
-                                                  foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeList['photo']}'),
+                                                  foregroundImage: apiImage(viewEmployeeList['photo']),
                                                   backgroundColor: ColorApp.myColorGray,
                                                 )),
                                             const SizedBox(height: 10.0),
@@ -989,7 +990,7 @@ class _OpenViewEmployeeForemanState extends State<OpenViewEmployeeForeman> {
                                                     ),
                                                   ),
                                                 )
-                                                    : Image.network('${ApiConfig.scheme}://${viewEmployeeList['identity_card']}'),
+                                                    : apiImageWidget(viewEmployeeList['identity_card']),
                                               ),
                                             ),
                                             const SizedBox(width: 20.0),
@@ -1041,8 +1042,7 @@ class _OpenViewEmployeeForemanState extends State<OpenViewEmployeeForeman> {
                                                   context,
                                                       AsyncSnapshot<dynamic>
                                                       snapshot) {
-                                                    return Image.network(
-                                                        '${ApiConfig.scheme}://${viewEmployeeList['qualification_file']}');
+                                                    return apiImageWidget(viewEmployeeList['qualification_file']);
                                                   },
                                                 ),
                                               ),
@@ -1164,7 +1164,7 @@ class _WorksPhotoDocUdoState extends State<WorksPhotoDocUdo> {
                       color: Colors.green,
                       size: 40.0,
                     ))
-                : Image.network('${ApiConfig.scheme}://${listSelectedEmployeeForeman['data']['identity_card']}'),
+                : apiImageWidget(listSelectedEmployeeForeman['data']['identity_card']),
           ],
         ));
   }
@@ -1252,9 +1252,7 @@ class _WorksPhotoDocState extends State<WorksPhotoDoc> {
                         const Icon(Icons.close_outlined, color: Colors.green)),
               ],
             ),
-            Image.network(
-                fit: BoxFit.cover,
-                '${ApiConfig.scheme}://${listSelectedEmployeeForeman['data']['qualification_file']}'),
+            apiImageWidget(listSelectedEmployeeForeman['data']['qualification_file'], fit: BoxFit.cover),
           ],
         ));
   }

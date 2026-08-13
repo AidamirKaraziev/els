@@ -13,6 +13,7 @@ import 'object_page.dart';
 import 'object_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:els/helper/api_config.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Окно выбранного обьекта Архив
 
@@ -420,7 +421,7 @@ class _ObjectPageArchiveState extends State<ObjectPageArchive> {
                                                                             10.0),
                                                                     child: CircleAvatar(
                                                                         backgroundImage: const NetworkImage('assets/user.png'),
-                                                                        foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['foreman_id']['photo']}'))),
+                                                                        foregroundImage: apiImage(viewObjectPage['foreman_id']['photo']))),
                                                                 Expanded(
                                                                         child: Text(
                                                                             '${viewObjectPage['foreman_id']['name']}',
@@ -492,7 +493,7 @@ class _ObjectPageArchiveState extends State<ObjectPageArchive> {
                                                                             10.0),
                                                                     child: CircleAvatar(
                                                                         backgroundImage: const NetworkImage('assets/user.png'),
-                                                                        foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewObjectPage['mechanic_id']['photo']}'))),
+                                                                        foregroundImage: apiImage(viewObjectPage['mechanic_id']['photo']))),
                                                                 Expanded(child:
                                                                             Text('${viewObjectPage['mechanic_id']['name']}',
                                                                           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),

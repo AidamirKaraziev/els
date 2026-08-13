@@ -13,6 +13,7 @@ import 'employees_archive_screen.dart';
 import 'employees_screen.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Окно выбранного сотрудника Архив
 
@@ -301,7 +302,7 @@ class _OpenViewEmployeeArchiveState extends State<OpenViewEmployeeArchive> {
                                             CircleAvatar(
                                               radius: 70.0,
                                               backgroundImage: const AssetImage('assets/user.png'),
-                                              foregroundImage: NetworkImage('${ApiConfig.scheme}://${viewEmployeeListArchived['photo']}'),
+                                              foregroundImage: apiImage(viewEmployeeListArchived['photo']),
                                               backgroundColor: ColorApp.myColorGray,
                                             ),
                                             const SizedBox(height: 10.0),
@@ -771,7 +772,7 @@ class _OpenViewEmployeeArchiveState extends State<OpenViewEmployeeArchive> {
                                                     ),
                                                   ),
                                                 )
-                                                    : Image.network('${ApiConfig.scheme}://${viewEmployeeListArchived['identity_card']}'),
+                                                    : apiImageWidget(viewEmployeeListArchived['identity_card']),
                                               ),
                                             ),
                                             const SizedBox(width: 20.0),
@@ -810,8 +811,7 @@ class _OpenViewEmployeeArchiveState extends State<OpenViewEmployeeArchive> {
                                                   context,
                                                       AsyncSnapshot<dynamic>
                                                       snapshot) {
-                                                    return Image.network(
-                                                        '${ApiConfig.scheme}://${viewEmployeeListArchived['qualification_file']}');
+                                                    return apiImageWidget(viewEmployeeListArchived['qualification_file']);
                                                   },
                                                 ),
                                               ),
@@ -933,7 +933,7 @@ class _WorksPhotoDocUdoState extends State<WorksPhotoDocUdo> {
                   color: Colors.green,
                   size: 40.0,
                 ))
-                : Image.network('${ApiConfig.scheme}://${listSelectedEmployee['data']['identity_card']}'),
+                : apiImageWidget(listSelectedEmployee['data']['identity_card']),
           ],
         ));
   }
@@ -1021,9 +1021,7 @@ class _WorksPhotoDocState extends State<WorksPhotoDoc> {
                     const Icon(Icons.close_outlined, color: Colors.green)),
               ],
             ),
-            Image.network(
-                fit: BoxFit.cover,
-                '${ApiConfig.scheme}://${listSelectedEmployee['data']['qualification_file']}'),
+            apiImageWidget(listSelectedEmployee['data']['qualification_file'], fit: BoxFit.cover),
           ],
         ));
   }

@@ -10,6 +10,7 @@ import '../screns/user/user_contact.dart';
 import '../screns/user/user_profile.dart';
 import 'class_colors.dart';
 import 'package:els/helper/api_config.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Иконка с фото ============================
 class MyUser extends StatefulWidget {
@@ -46,7 +47,7 @@ class _MyUserState extends State<MyUser> {
                       radius: size.width > 350 ? 29.0 : 20.0,
                       backgroundColor: Colors.transparent,
                       backgroundImage: const AssetImage('assets/user.png'),
-                      foregroundImage: newPhoto != '' ?  NetworkImage('${ApiConfig.scheme}://$newPhoto') : NetworkImage('${ApiConfig.scheme}://${userProfile[0]['photo']}'),
+                      foregroundImage: newPhoto != '' ? apiImage(newPhoto) : apiImage(userProfile[0]['photo']),
                     );
                   },
                 )

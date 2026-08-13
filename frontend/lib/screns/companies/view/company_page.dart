@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'companies_screen.dart';
 import 'companies_screen_archive.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/api_image.dart';
 
 /// Окно выбранной компании
 
@@ -286,8 +287,7 @@ class _CompanyPageState extends State<CompanyPage> {
                                         radius: 230.0,
                                         backgroundColor: Colors.grey.shade200,
                                         backgroundImage: const AssetImage('assets/comp.jpeg'),
-                                        foregroundImage: NetworkImage(
-                                            '${ApiConfig.scheme}://${viewCompanyList['photo']}'),
+                                        foregroundImage: apiImage(viewCompanyList['photo']),
                                       ),
                                     ),
                                   )
@@ -312,8 +312,7 @@ class _CompanyPageState extends State<CompanyPage> {
                                           child: CircleAvatar(
                                             backgroundColor: Colors.grey.shade200,
                                             backgroundImage: const AssetImage('assets/comp.jpeg'),
-                                            foregroundImage: NetworkImage(
-                                                '${ApiConfig.scheme}://${viewCompanyList['photo']}'),
+                                            foregroundImage: apiImage(viewCompanyList['photo']),
                                           ),
                                         ),
                                       ),
