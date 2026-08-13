@@ -1,9 +1,10 @@
 """Статистика для главной страницы.
 
-Здесь топ поломок и выполнение графика ТО. Рядом встанут просроченные ТО и
+Здесь топ поломок, выполнение графика ТО и просроченные ТО. Рядом встанет
 топ сотрудников — период и фильтры у них общие.
 """
 
+import datetime
 import logging
 from io import BytesIO
 from urllib.parse import quote
@@ -15,8 +16,16 @@ from src.api import deps
 from src.core.permissions import Permission, permissions_for
 from src.core.response import SingleEntityResponse
 from src.crud.crud_statistics import crud_statistics, month_period, previous_month
-from src.getters.statistics import get_breakdowns_report, get_schedule_execution_report
-from src.schemas.statistics import BreakdownsReport, ScheduleExecutionReport
+from src.getters.statistics import (
+    get_breakdowns_report,
+    get_overdue_maintenance_report,
+    get_schedule_execution_report,
+)
+from src.schemas.statistics import (
+    BreakdownsReport,
+    OverdueMaintenanceReport,
+    ScheduleExecutionReport,
+)
 from src.services.breakdowns_pdf import build_breakdowns_pdf
 
 router = APIRouter()
@@ -193,6 +202,70 @@ def get_schedule_execution_statistics(
     )
     return SingleEntityResponse(
         data=get_schedule_execution_report(period=period, rows=rows, foremen=foremen)
+    )
+
+
+@router.get(
+    "/statistics/overdue-maintenance",
+    response_model=SingleEntityResponse[OverdueMaintenanceReport],
+    name="overdue_maintenance_statistics",
+    summary="Просроченные ТО на сегодня",
+    description=(
+        "ТО, заведённые в графике, чей плановый месяц уже закончился, а акт "
+        "так и не закрыт (`finished_at` пуст).\n\n"
+        "Месяца в параметрах нет намеренно: просрочка — это состояние на "
+        "сегодня, а не срез периода. Смотрим два года, текущий и предыдущий, "
+        "иначе первого января долги обнулялись бы сами собой.\n\n"
+        "Строка — одно ТО, то есть пара «объект и плановый месяц». Объект с "
+        "тремя пропущенными месяцами придёт тремя строками.\n\n"
+        "Сортировка: самые старые сверху. `total_count` считается по всей "
+        "выдаче, а не по обрезанному `limit` списку."
+    ),
+    tags=["Статистика"],
+)
+def get_overdue_maintenance_statistics(
+    session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.STATISTICS_READ)),
+    limit: int = Query(
+        5,
+        ge=1,
+        le=200,
+        title="Сколько ТО вернуть",
+        description="Карточке на главной хватает пяти.",
+    ),
+    offset: int = Query(0, ge=0, title="Сколько ТО пропустить"),
+    division_id: int = Query(None, title="Только объекты этого участка"),
+    organization_id: int = Query(None, title="Только объекты этой организации"),
+    company_id: int = Query(None, title="Только объекты этой компании"),
+    scope=Depends(deps.get_read_scope),
+):
+    today = datetime.date.today()
+    reference = month_period(today.year, today.month)
+    filters = {
+        "division_id": division_id,
+        "organization_id": organization_id,
+        "company_id": company_id,
+    }
+
+    rows = crud_statistics.overdue_maintenance(
+        db=session,
+        reference=reference,
+        scope=scope,
+        limit=limit,
+        offset=offset,
+        **filters,
+    )
+    total_count, objects_affected = crud_statistics.count_overdue_maintenance(
+        db=session, reference=reference, scope=scope, **filters
+    )
+
+    return SingleEntityResponse(
+        data=get_overdue_maintenance_report(
+            reference=reference,
+            rows=rows,
+            total_count=total_count,
+            objects_affected=objects_affected,
+        )
     )
 
 

@@ -7,6 +7,8 @@ from src.schemas.statistics import (
     BreakdownObjectItem,
     BreakdownPeriod,
     BreakdownsReport,
+    OverdueMaintenanceItem,
+    OverdueMaintenanceReport,
     ScheduleExecutionDivision,
     ScheduleExecutionReport,
     SeverityCount,
@@ -159,3 +161,51 @@ def get_schedule_execution_report(
         completion_percent=_share(total_completed, total_planned),
         items=items,
     )
+
+
+def get_overdue_maintenance_report(
+    *,
+    reference: MonthPeriod,
+    rows,
+    total_count: int,
+    objects_affected: int,
+) -> OverdueMaintenanceReport:
+    items = [
+        OverdueMaintenanceItem(
+            act_id=row.act_id,
+            object_id=row.object_id,
+            object_name=row.object_name,
+            registration_number=row.registration_number,
+            factory_number=row.factory_number,
+            address=row.address,
+            client=row.client,
+            division=row.division,
+            responsible_mechanic=row.responsible_mechanic,
+            # Год в базе строковый, наружу отдаём числом: фронту он нужен для
+            # подписи «Март 2026», а не для сравнения строк.
+            year=int(row.year),
+            month=int(row.month),
+            months_overdue=_months_between(
+                year=int(row.year), month=int(row.month), reference=reference
+            ),
+        )
+        for row in rows
+    ]
+
+    return OverdueMaintenanceReport(
+        generated_for=BreakdownPeriod(year=reference.year, month=reference.month),
+        total_count=total_count,
+        objects_affected=objects_affected,
+        items=items,
+    )
+
+
+def _months_between(*, year: int, month: int, reference: MonthPeriod) -> int:
+    """Сколько месяцев прошло с планового месяца до текущего.
+
+    В выдачу попадает только то, что строго раньше текущего месяца, поэтому
+    результат всегда не меньше единицы — но в отчёт он идёт как данные, а не
+    как утверждение о запросе, так что нижнюю границу держим здесь.
+    """
+    distance = (reference.year - year) * 12 + (reference.month - month)
+    return max(distance, 1)

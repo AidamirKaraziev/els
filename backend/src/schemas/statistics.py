@@ -178,3 +178,60 @@ class ScheduleExecutionReport(BaseModel):
     items: List[ScheduleExecutionDivision] = Field(
         [], title="Участки, от худшего процента к лучшему"
     )
+
+
+class OverdueMaintenanceItem(BaseModel):
+    """Одно просроченное ТО: объект и плановый месяц.
+
+    Объект с тремя пропущенными месяцами придёт тремя строками — иначе не
+    видно, за какие именно месяцы долг.
+    """
+
+    act_id: int = Field(..., title="ID акта, заведённого на этот месяц")
+    object_id: int = Field(..., title="ID объекта")
+    object_name: Optional[str] = Field(None, title="Название объекта")
+    registration_number: Optional[str] = Field(None, title="Регистрационный номер")
+    factory_number: Optional[str] = Field(None, title="Заводской номер")
+    address: Optional[str] = Field(None, title="Адрес объекта")
+    client: Optional[str] = Field(
+        None, title="Клиент: организация объекта, либо компания, если организации нет"
+    )
+    division: Optional[str] = Field(None, title="Участок")
+    responsible_mechanic: Optional[str] = Field(
+        None, title="Механик, закреплённый за объектом"
+    )
+
+    year: int = Field(..., title="Год планового ТО")
+    month: int = Field(..., ge=1, le=12, title="Месяц планового ТО")
+    months_overdue: int = Field(
+        ...,
+        ge=1,
+        title="На сколько месяцев просрочено",
+        description=(
+            "Считается от текущего месяца: ТО за март, если сейчас август, "
+            "просрочено на 5 месяцев. Минимум 1 — текущий месяц не просрочен."
+        ),
+    )
+
+
+class OverdueMaintenanceReport(BaseModel):
+    """Просроченные ТО на сегодня.
+
+    Периода у отчёта нет намеренно: просрочка — это состояние, а не срез
+    месяца. `generated_for` говорит, от какого месяца отсчитывалась
+    просрочка, чтобы `months_overdue` можно было проверить.
+    """
+
+    generated_for: BreakdownPeriod = Field(
+        ..., title="Текущий месяц, от которого считалась просрочка"
+    )
+    total_count: int = Field(
+        ...,
+        ge=0,
+        title="Всего просроченных ТО",
+        description="По всей выдаче, а не по обрезанному limit списку.",
+    )
+    objects_affected: int = Field(..., ge=0, title="Объектов с просрочкой")
+    items: List[OverdueMaintenanceItem] = Field(
+        [], title="Просроченные ТО, самые старые сверху"
+    )

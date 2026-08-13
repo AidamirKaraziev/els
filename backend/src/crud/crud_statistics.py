@@ -1,8 +1,18 @@
 """Запросы для статистики на главной.
 
-Здесь живут топ поломок и выполнение графика ТО. Рядом встанут просроченные
-ТО и топ сотрудников — у них общий период и общие фильтры, поэтому модуль
+Здесь живут топ поломок, выполнение графика ТО и просроченные ТО. Рядом
+встанет топ сотрудников — у них общий период и общие фильтры, поэтому модуль
 отдельный, а не внутри `crud_order`.
+
+Что считается просрочкой
+------------------------
+Плановая ячейка месяца заполнена, плановый месяц уже **закончился**, а
+`finished_at` у связанного акта пуст. Текущий месяц не просрочен: он ещё идёт.
+
+В отличие от двух других виджетов, у этого нет выбора месяца: просрочка — это
+состояние на сегодня, а не срез периода. Смотрим на два года — текущий и
+предыдущий: иначе первого января долги обнулялись бы сами собой, а копать
+глубже смысла нет, ТО двухлетней давности уже никто не закроет.
 
 Что считается выполнением графика
 ---------------------------------
@@ -40,7 +50,7 @@
 import datetime
 from typing import Dict, List, NamedTuple, Optional, Tuple
 
-from sqlalchemy import func
+from sqlalchemy import and_, func, literal, or_, select, union_all
 from sqlalchemy.orm import Session
 
 from src.core.access import AccessScope, apply_order_scope, object_scope_filter
@@ -503,6 +513,187 @@ class CrudStatistics:
             )
             .all()
         )
+
+    # ------------------------------------------------------------------
+    # Просроченные ТО
+    # ------------------------------------------------------------------
+
+    def _planned_cells(self, *, years: List[int]):
+        """Двенадцать колонок месяцев, развёрнутые в строки.
+
+        `planned_to` хранит месяц колонкой, а не строкой таблицы, поэтому
+        «все просроченные ТО» одним `WHERE` не выражаются: нужен `UNION ALL`
+        из двенадцати выборок. У выполнения графика этой проблемы нет — там
+        месяц ровно один и колонка выбирается по карте.
+
+        Ветки узкие: каждая отсекает пустые ячейки и чужие годы до слияния,
+        так что до объединения доходит только то, что заведено.
+        """
+        year_strings = [str(year) for year in years]
+
+        branches = [
+            select(
+                PlannedTO.object_id.label("object_id"),
+                PlannedTO.year.label("year"),
+                literal(month_number).label("month"),
+                column.label("act_id"),
+            ).where(
+                column.isnot(None),
+                # Год в модели строковый. Сравниваем перечислением заведомо
+                # известных значений, а не приведением типа: в колонке живут
+                # данные, набитые руками, и `CAST` уронил бы запрос целиком на
+                # первой же строке вроде «2025 г.».
+                PlannedTO.year.in_(year_strings),
+            )
+            for month_number, column in _PLANNED_MONTH_COLUMN.items()
+        ]
+
+        return union_all(*branches).subquery("planned_cells")
+
+    def _overdue_query(
+        self,
+        *,
+        db: Session,
+        reference: MonthPeriod,
+        scope: AccessScope,
+        division_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+    ):
+        """Незакрытые ТО, чей плановый месяц уже прошёл.
+
+        `reference` — месяц, который идёт сейчас; он сам не просрочен.
+        Передаётся снаружи, а не берётся из `datetime.now()` здесь, иначе
+        тесты этой арифметики зависели бы от дня прогона.
+
+        Возвращает `Query` с присоединёнными объектом и актом; вызывающий
+        добавляет свою выборку — список или счётчик.
+        """
+        cells = self._planned_cells(years=[reference.year - 1, reference.year])
+
+        # Плановый месяц строго раньше текущего. Прошлый год просрочен весь,
+        # текущий — до предыдущего месяца включительно. В январе вторая ветка
+        # не даёт ничего сама собой, отдельного случая не нужно.
+        overdue = or_(
+            cells.c.year == str(reference.year - 1),
+            and_(
+                cells.c.year == str(reference.year),
+                cells.c.month < reference.month,
+            ),
+        )
+
+        query = (
+            db.query(Object)
+            .select_from(cells)
+            # Внутренние соединения намеренно: ячейка без объекта — осиротевший
+            # график (`object_id` уходит в NULL при удалении объекта), а ячейка
+            # с несуществующим актом — мусор. Ни то, ни другое не долг.
+            .join(Object, Object.id == cells.c.object_id)
+            .join(ActFact, ActFact.id == cells.c.act_id)
+            .filter(overdue, ActFact.finished_at.is_(None))
+        )
+
+        if division_id is not None:
+            query = query.filter(Object.division_id == division_id)
+        if organization_id is not None:
+            query = query.filter(Object.organization_id == organization_id)
+        if company_id is not None:
+            query = query.filter(Object.company_id == company_id)
+
+        # Граница, за которую человек выйти не может — той же функцией, что и
+        # выполнение графика: объект здесь присоединён явно.
+        return query.filter(object_scope_filter(scope)), cells
+
+    def overdue_maintenance(
+        self,
+        *,
+        db: Session,
+        reference: MonthPeriod,
+        scope: AccessScope,
+        limit: Optional[int] = 5,
+        offset: int = 0,
+        division_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+    ) -> List:
+        """Список просроченных ТО, самые старые сверху.
+
+        Строка — одно ТО, то есть пара «объект и плановый месяц». Объект с
+        тремя пропущенными месяцами даёт три строки: свернуть их в одну
+        значило бы потерять, за какие именно месяцы долг.
+        """
+        query, cells = self._overdue_query(
+            db=db,
+            reference=reference,
+            scope=scope,
+            division_id=division_id,
+            organization_id=organization_id,
+            company_id=company_id,
+        )
+
+        query = (
+            query.outerjoin(Organization, Object.organization_id == Organization.id)
+            .outerjoin(Company, Object.company_id == Company.id)
+            .outerjoin(Division, Object.division_id == Division.id)
+            .outerjoin(UniversalUser, Object.mechanic_id == UniversalUser.id)
+            .with_entities(
+                cells.c.act_id.label("act_id"),
+                cells.c.year.label("year"),
+                cells.c.month.label("month"),
+                Object.id.label("object_id"),
+                Object.name.label("object_name"),
+                Object.registration_number.label("registration_number"),
+                Object.factory_number.label("factory_number"),
+                Object.address.label("address"),
+                func.coalesce(Organization.title, Company.name).label("client"),
+                Division.title.label("division"),
+                UniversalUser.name.label("responsible_mechanic"),
+            )
+            .order_by(
+                # Год строковый, но здесь их всего два и оба четырёхзначные —
+                # текстовый порядок совпадает с числовым.
+                cells.c.year.asc(),
+                cells.c.month.asc(),
+                Object.id.asc(),
+            )
+        )
+
+        if offset:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
+
+        return query.all()
+
+    def count_overdue_maintenance(
+        self,
+        *,
+        db: Session,
+        reference: MonthPeriod,
+        scope: AccessScope,
+        division_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+    ) -> Tuple[int, int]:
+        """(просроченных ТО, объектов с просрочкой).
+
+        Нужно счётчику в шапке карточки: `len(items)` там соврёт, потому что
+        список обрезан `limit`.
+        """
+        query, cells = self._overdue_query(
+            db=db,
+            reference=reference,
+            scope=scope,
+            division_id=division_id,
+            organization_id=organization_id,
+            company_id=company_id,
+        )
+
+        row = query.with_entities(
+            func.count(cells.c.act_id).label("total"),
+            func.count(func.distinct(Object.id)).label("objects"),
+        ).one()
+        return int(row.total or 0), int(row.objects or 0)
 
     def foremen_by_division(
         self, *, db: Session, division_ids: List[int]

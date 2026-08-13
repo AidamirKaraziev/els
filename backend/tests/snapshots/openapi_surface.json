@@ -435,6 +435,10 @@
       "year"
     ]
   },
+  "GET /api/v1/statistics/overdue-maintenance": {
+    "required_body": [],
+    "required_params": []
+  },
   "GET /api/v1/statistics/schedule-execution": {
     "required_body": [],
     "required_params": [
