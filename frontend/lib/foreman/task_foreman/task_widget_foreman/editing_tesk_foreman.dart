@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../../../screns/home_page/home_page.dart';
 import '../task_screen_foreman.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/session.dart';
 
 ///Редактирование Задачи
 
@@ -317,7 +318,9 @@ class _EditingTaskForemanState extends State<EditingTaskForeman> {
                         statusTitle!.indexOf(newValue1!);
                       });
                     },
-                    items: statusList.map((jobTitleList) {
+                    // См. `canPickStatus`: экраны в этом коде переиспользуются
+                    // между ролями, поэтому правило применяется и здесь.
+                    items: statusList.where(canPickStatus).map((jobTitleList) {
                       return DropdownMenuItem(
                         value: jobTitleList['id'].toString(),
                         child: SizedBox(

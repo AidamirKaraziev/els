@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 import '../view/task_screen.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/session.dart';
 
 
 ///Редактирование Задачи
@@ -319,7 +320,10 @@ class _EditingTaskState extends State<EditingTask> {
                         statusTitle!.indexOf(newValue1!);
                       });
                     },
-                    items: statusList.map((jobTitleList) {
+                    // Диспетчеру «Выполнено» не показываем: бэкенд ответит
+                    // отказом, а кнопка, которая всегда ругается, — хуже,
+                    // чем её отсутствие.
+                    items: statusList.where(canPickStatus).map((jobTitleList) {
                       return DropdownMenuItem(
                         value: jobTitleList['id'].toString(),
                         child: SizedBox(

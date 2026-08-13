@@ -11,6 +11,7 @@ import '../screns/user/user_contact.dart';
 import 'drawer_owner.dart';
 import 'package:els/helper/api_client.dart';
 import 'package:els/helper/api_image.dart';
+import 'package:els/helper/empty_list.dart';
 
 
 ///Получение данных одного обьекта =======
@@ -401,7 +402,14 @@ class _ObjectScreenForemanState extends State<ObjectScreenOwner> {
                           ),
                         ),
                         Expanded(
-                            child:ListView.builder(
+                            child: dataObjectOwner.every((o) => o['is_actual'] == false)
+                                ? const EmptyList(
+                                    title: 'Объектов пока нет',
+                                    hint: 'Здесь появятся лифты вашей компании. '
+                                        'Если их быть должно — сообщите '
+                                        'обслуживающей организации.',
+                                  )
+                                : ListView.builder(
                                 itemCount: dataObjectOwner.length,
                                 itemBuilder: (context, index) {
                                   final dataObjectScreen = dataObjectOwner[index];

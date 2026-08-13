@@ -13,6 +13,7 @@ import '../../screns/home_page/home_page.dart';
 import '../drawer_foreman.dart';
 import '../user_page_foreman.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/empty_list.dart';
 
 ///Задачи Прораба
 
@@ -539,7 +540,14 @@ class _TaskScreenForemanState extends State<TaskScreenForeman> {
 
                 /// Body ====
                Expanded(
-                     child: ListView.builder(
+                     child: getTaskForeman.every((t) => t['status_id']?['id'] == 4)
+                         ? const EmptyList(
+                             title: 'Заявок нет',
+                             hint: 'Показываются заявки по вашим объектам и '
+                                 'те, где вы автор или исполнитель.',
+                             icon: Icons.list_alt,
+                           )
+                         : ListView.builder(
                              // controller: employeeScrollController,
                              itemCount: getTaskForeman.length,
                              itemBuilder: (context, index) {

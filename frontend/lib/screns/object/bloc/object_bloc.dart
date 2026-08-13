@@ -34,12 +34,12 @@ class MyObjectBloc extends Bloc<MyObjectEvent, MyObjectState> {
     // print(dataObject[0]);
     // print('Механик ======================================');
     // print(dataObject[0]['mechanic_id']);
-    // print(dataObject[0]['mechanic_id']['is_actual']);
+    // print(dataObject[0]['mechanic_id']['is_active']);
     // print('===============================================');
 
     // print('Прораб ========================================');
     // print(dataObject[0]['foreman_id']);
-    // print(dataObject[0]['foreman_id']['is_actual']);
+    // print(dataObject[0]['foreman_id']['is_active']);
     // print('===============================================');
     myStream.add(IntTest.indexScreens);
   }

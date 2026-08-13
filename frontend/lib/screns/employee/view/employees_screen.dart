@@ -434,7 +434,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                     itemBuilder: (context, index) {
                       // dataEmployee.sort((a, b) => a['name'].compareTo(b['name']));
                       final employee = dataEmployee[index];
-                      return employee['is_actual'] == false ? Container() : Padding(
+                      return employee['is_active'] == false ? Container() : Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20.0),
                         child: Card(
                           key: ValueKey(dataEmployee[index]),

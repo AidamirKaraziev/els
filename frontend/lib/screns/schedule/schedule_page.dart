@@ -744,7 +744,7 @@ class _SchedulePageState extends State<SchedulePage> {
                                                 fontWeight: FontWeight.w600,
                                                 color: ColorApp.myColorWhite)))))
                                         : Expanded(
-                                      child: listSelectedObject['data']['foreman_id']['is_actual'] == false
+                                      child: listSelectedObject['data']['foreman_id']['is_active'] == false
                                           ? Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                                           height: 70,
@@ -843,7 +843,7 @@ class _SchedulePageState extends State<SchedulePage> {
                                                 fontWeight: FontWeight.w600,
                                                 color: ColorApp.myColorWhite)))))
                                         : Expanded(
-                                      child: listSelectedObject['data']['mechanic_id']['is_actual'] == false
+                                      child: listSelectedObject['data']['mechanic_id']['is_active'] == false
                                           ? Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                                           height: 70,

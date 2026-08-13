@@ -232,7 +232,7 @@ class _TaskPageState extends State<TaskPage> {
                                                   : '${viewTaskPage['executor_id']['name']}' ?? '',
                                                   overflow: TextOverflow.ellipsis,
                                                   style: TextStyle(
-                                                      fontWeight: FontWeight.w600, fontSize: 15, color: viewTaskPage['executor_id']?['is_actual'] == false ? Colors.blue[300] : viewTaskPage['executor_id'] == null ? Colors.red[400] : Colors.black)),
+                                                      fontWeight: FontWeight.w600, fontSize: 15, color: viewTaskPage['executor_id']?['is_active'] == false ? Colors.blue[300] : viewTaskPage['executor_id'] == null ? Colors.red[400] : Colors.black)),
                                             ),
                                           ],
                                         )

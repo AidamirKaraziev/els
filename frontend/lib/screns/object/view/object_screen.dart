@@ -14,6 +14,7 @@ import '../bloc/object_bloc.dart';
 import '../widgets/add_object.dart';
 import 'package:els/helper/api_client.dart';
 import 'package:els/helper/api_image.dart';
+import 'package:els/helper/empty_list.dart';
 
 ///ОБЬЕКТЫ
 
@@ -95,7 +96,7 @@ getListObjectInfo(int userId) async {
     // print(listSelectedObject['data']['mechanic_id']);
     // print(listSelectedObject['data']['foreman_id']['name']);
     // print(listSelectedObject['data']['mechanic_id']['id']);
-    // print(listSelectedObject['data']['mechanic_id']['is_actual']);
+    // print(listSelectedObject['data']['mechanic_id']['is_active']);
     //
     // print(listSelectedObject['data']['factory_model_id']['type_object_id']['title']);
 
@@ -438,7 +439,14 @@ class _ObjectScreenState extends State<ObjectScreen> {
                           child: TopWidgetObject(),
                         ),
                         Expanded(
-                            child:ListView.builder(
+                            child: dataObject.every((o) => o['is_actual'] == false)
+                                ? const EmptyList(
+                                    title: 'Объектов нет',
+                                    hint: 'Здесь показываются действующие '
+                                        'объекты. Архивные — по кнопке архива '
+                                        'в шапке.',
+                                  )
+                                : ListView.builder(
                                 itemCount: dataObject.length,
                                 itemBuilder: (context, index) {
                                   dataObject.sort((a, b) => a['name'].compareTo(b['name']));
@@ -464,8 +472,8 @@ class _ObjectScreenState extends State<ObjectScreen> {
                                             color: Colors.red[200])
                                               : BoxDecoration(
                                               borderRadius: BorderRadius.circular(5.0),
-                                              color: dataObjectScreen['mechanic_id']['is_actual'] == false || dataObjectScreen['mechanic_id'] == null
-                                                  || dataObjectScreen['foreman_id']['is_actual'] == false
+                                              color: dataObjectScreen['mechanic_id']['is_active'] == false || dataObjectScreen['mechanic_id'] == null
+                                                  || dataObjectScreen['foreman_id']['is_active'] == false
                                                   ? Colors.red[200] : ColorApp.myColorWhite),
                                           child: Padding(
                                             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),

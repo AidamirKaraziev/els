@@ -443,7 +443,7 @@ class _EmployeesArchiveScreenState extends State<EmployeesArchiveScreen> {
                     itemCount: listArchivedEmployees.length,
                     itemBuilder: (context, index) {
                       final employeeArchived = listArchivedEmployees[index];
-                      return  employeeArchived['is_actual'] != false
+                      return  employeeArchived['is_active'] != false
                           ? Container()
                           : Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20.0),

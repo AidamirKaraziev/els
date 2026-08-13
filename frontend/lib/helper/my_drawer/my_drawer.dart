@@ -173,7 +173,7 @@ class _MyDrawerState extends State<MyDrawer> {
                             ),
                             if(getAllObject.isNotEmpty)
                               for(var i = 0; i < getAllObject.length; i++)
-                                if(getAllObject[i]['foreman_id'] ? ['is_actual'] == false || getAllObject[i]['foreman_id'] == null || getAllObject[i]['mechanic_id'] ? ['is_actual'] == false || getAllObject[i]['mechanic_id'] == null)
+                                if(getAllObject[i]['foreman_id'] ? ['is_active'] == false || getAllObject[i]['foreman_id'] == null || getAllObject[i]['mechanic_id'] ? ['is_active'] == false || getAllObject[i]['mechanic_id'] == null)
                                   Positioned(
                                       right: 8.0,
                                       top: 8.0,

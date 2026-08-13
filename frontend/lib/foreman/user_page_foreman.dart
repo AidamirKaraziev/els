@@ -399,14 +399,14 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                   style: TextStyle(fontWeight: FontWeight.w600),
                                 ),
                                 const SizedBox(height: 20.0),
-                                if (viewEmployeeList['is_actual'] == true)
+                                if (viewEmployeeList['is_active'] == true)
                                   Container(
                                     height: 250,
                                     width: 250,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(5.0),
                                       color:
-                                          viewEmployeeList['is_actual'] == true
+                                          viewEmployeeList['is_active'] == true
                                               ? ColorApp.myColorWhite
                                               : Colors.grey[300],
                                       boxShadow: const [
@@ -637,7 +637,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(5.0),
                                       color:
-                                          viewEmployeeList['is_actual'] == true
+                                          viewEmployeeList['is_active'] == true
                                               ? ColorApp.myColorWhite
                                               : Colors.grey[400],
                                       boxShadow: const [
@@ -869,7 +869,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(5.0),
                                       color:
-                                          viewEmployeeList['is_actual'] == true
+                                          viewEmployeeList['is_active'] == true
                                               ? ColorApp.myColorWhite
                                               : Colors.grey[400],
                                       boxShadow: const [
@@ -964,7 +964,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                         height: 250,
                                         decoration: BoxDecoration(
                                           borderRadius: BorderRadius.circular(5.0),
-                                          color: viewEmployeeList['is_actual'] == true
+                                          color: viewEmployeeList['is_active'] == true
                                               ? ColorApp.myColorWhite
                                               : Colors.grey[400],
                                           boxShadow: const [
@@ -979,7 +979,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                             /// Удостоверение
                                             Expanded(
                                               child: GestureDetector(
-                                                onTap: viewEmployeeList['is_actual'] == false ?  null : () async {
+                                                onTap: viewEmployeeList['is_active'] == false ?  null : () async {
 
                                                   // await openGalleryDocUserCertificate();
                                                   setState(() {});
@@ -1026,7 +1026,7 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                                             /// ЦОК
                                             Expanded(
                                               child: GestureDetector(
-                                                onTap: viewEmployeeList['is_actual'] == false ?  null :  () async {
+                                                onTap: viewEmployeeList['is_active'] == false ?  null :  () async {
                                                   // await openGalleryDocUserQualifications();
                                                   myStream.add(IntTest.indexScreens);
                                                   setState(() {});

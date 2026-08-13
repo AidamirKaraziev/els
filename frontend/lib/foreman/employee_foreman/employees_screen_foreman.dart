@@ -392,7 +392,7 @@ class _EmployeesScreenForemanState extends State<EmployeesScreenForeman> {
                     itemCount: dataEmployeeForeman.length,
                     itemBuilder: (context, index) {
                       final employee = dataEmployeeForeman[index];
-                      return employee['is_actual'] == false ? Container() : Padding(
+                      return employee['is_active'] == false ? Container() : Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20.0),
                         child: Card(
                           key: ValueKey(dataEmployeeForeman[index]),

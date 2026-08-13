@@ -14,6 +14,7 @@ import '../../widgets_create/organization_greate.dart';
 import '../user_page_dispatcher.dart';
 import '../widgets/add_application.dart';
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/empty_list.dart';
 
 /// Домашняя диспетчера
 
@@ -422,7 +423,13 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
 
               /// Body ====
               Expanded(
-                  child: ListView.builder(
+                  child: dataApplication.every((t) => t['status_id']?['id'] == 4)
+                      ? const EmptyList(
+                          title: 'Заявок нет',
+                          hint: 'Здесь появятся заявки, которые вы создали.',
+                          icon: Icons.list_alt,
+                        )
+                      : ListView.builder(
                     // controller: employeeScrollController,
                     itemCount: dataApplication.length,
                     itemBuilder: (context, index) {

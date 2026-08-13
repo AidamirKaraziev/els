@@ -382,7 +382,7 @@ class _ObjectPageState extends State<ObjectPage> {
 
                                                     /// Изменить
 
-                                                    if(viewObjectPage['foreman_id'] ? ['is_actual'] != false && viewObjectPage['foreman_id'] != null && viewObjectPage['mechanic_id'] ? ['is_actual'] != false && viewObjectPage['mechanic_id'] != null)
+                                                    if(viewObjectPage['foreman_id'] ? ['is_active'] != false && viewObjectPage['foreman_id'] != null && viewObjectPage['mechanic_id'] ? ['is_active'] != false && viewObjectPage['mechanic_id'] != null)
                                                     IconButton(
                                                         onPressed: () {
                                                           setState(() {
@@ -1055,7 +1055,7 @@ class _ObjectPageState extends State<ObjectPage> {
                                                     : Expanded(
                                                   child: Row(
                                                       children: [
-                                                        listSelectedObject['data']['foreman_id']['is_actual'] == false
+                                                        listSelectedObject['data']['foreman_id']['is_active'] == false
                                                             ? Expanded(child: InkWell(
                                                           onTap: (){
                                                             setState(() {
@@ -1300,7 +1300,7 @@ class _ObjectPageState extends State<ObjectPage> {
                                                     : Expanded(
                                                       child: Row(
                                                         children: [
-                                                          listSelectedObject['data']['mechanic_id']['is_actual'] == false
+                                                          listSelectedObject['data']['mechanic_id']['is_active'] == false
                                                               ? Expanded(child: InkWell(
                                                             onTap: (){
                                                               setState(() {

@@ -421,7 +421,7 @@ class _EmployeesArchiveScreenForemanState extends State<EmployeesArchiveScreenFo
                     itemCount: dataEmployeeForeman.length,
                     itemBuilder: (context, index) {
                       final employeeArchived = dataEmployeeForeman[index];
-                      return  employeeArchived['is_actual'] != false
+                      return  employeeArchived['is_active'] != false
                           ? Container()
                           : Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20.0),

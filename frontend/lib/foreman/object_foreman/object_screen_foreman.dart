@@ -15,6 +15,7 @@ import '../drawer_foreman.dart';
 import '../user_page_foreman.dart';
 import 'package:els/helper/api_client.dart';
 import 'package:els/helper/api_image.dart';
+import 'package:els/helper/empty_list.dart';
 
 ///ОБЬЕКТЫ
 
@@ -344,7 +345,14 @@ class _ObjectScreenForemanState extends State<ObjectScreenForeman> {
                           child: TopWidgetObject(),
                         ),
                         Expanded(
-                            child:ListView.builder(
+                            child: dataObjectForeman.every((o) => o['is_actual'] == false)
+                                ? const EmptyList(
+                                    title: 'Объектов нет',
+                                    hint: 'Здесь показываются действующие '
+                                        'объекты. Архивные — по кнопке архива '
+                                        'в шапке.',
+                                  )
+                                : ListView.builder(
                                 itemCount: dataObjectForeman.length,
                                 itemBuilder: (context, index) {
                                   final dataObjectScreen = dataObjectForeman[index];

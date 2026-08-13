@@ -13,6 +13,7 @@ import '../../home_page/home_page.dart';
 import '../widget/add_task.dart';
 import 'package:http/http.dart' as http;
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/empty_list.dart';
 
 ///Задачи
 
@@ -550,7 +551,14 @@ class _TaskScreenState extends State<TaskScreen> {
 
                 /// Body ====
                 Expanded(
-                    child: ListView.builder(
+                    child: dataListTask.every((t) => t['status_id']?['id'] == 4)
+                        ? const EmptyList(
+                            title: 'Заявок нет',
+                            hint: 'Показываются заявки по вашим объектам и '
+                                'те, где вы автор или исполнитель.',
+                            icon: Icons.list_alt,
+                          )
+                        : ListView.builder(
                       // controller: employeeScrollController,
                       itemCount: dataListTask.length,
                       itemBuilder: (context, index) {
@@ -647,10 +655,10 @@ class _TaskScreenState extends State<TaskScreen> {
                                                     vertical: 10.0),
                                                 decoration: BoxDecoration(
                                                     borderRadius: BorderRadius.circular(5.0),
-                                                    color:  myListTask['executor_id']?['is_actual'] == false ? Colors.blue[300] : myListTask['creator_id'] ? ['role_id'] ? ['id'] == 5 ? Colors.orange[200] : ColorApp.myColorGrayShadow),
+                                                    color:  myListTask['executor_id']?['is_active'] == false ? Colors.blue[300] : myListTask['creator_id'] ? ['role_id'] ? ['id'] == 5 ? Colors.orange[200] : ColorApp.myColorGrayShadow),
                                                 child:  myListTask['executor_id'] == null
                                                     ? const Center(child: Text('Удален',style: TextStyle(color: Colors.red,fontWeight: FontWeight.bold),))
-                                                    : Text('${myListTask['executor_id']['name']}', style: TextStyle(color: myListTask['executor_id']['is_actual'] == false ? Colors.white : Colors.black),))),
+                                                    : Text('${myListTask['executor_id']['name']}', style: TextStyle(color: myListTask['executor_id']['is_active'] == false ? Colors.white : Colors.black),))),
 
                                       /// Статус
                                       Expanded(
