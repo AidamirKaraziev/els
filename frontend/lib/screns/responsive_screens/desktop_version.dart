@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../home/overdue_maintenance/overdue_maintenance.dart';
 import '../home/schedule_execution/schedule_execution.dart';
 import '../home/top_breakdowns/top_breakdowns.dart';
+import '../home/top_employees/top_employees.dart';
 
 ///Главная
 
@@ -25,6 +26,10 @@ class DesktopVersion extends StatelessWidget {
 
           ///Просроченные ТО
           OverdueMaintenance(),
+          SizedBox(height: 20.0),
+
+          ///Топ сотрудников
+          TopEmployees(),
         ],
       ),
     );

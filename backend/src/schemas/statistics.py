@@ -214,6 +214,129 @@ class OverdueMaintenanceItem(BaseModel):
     )
 
 
+class EmployeeMetrics(BaseModel):
+    """Разбивка балла по сторонам работы, 0–100 каждая.
+
+    `null` означает «не считалось»: у механика не было в этом месяце ни
+    одного планового ТО, ни одной аварии, и так далее. Вес непосчитанной
+    метрики распределяется между остальными, а не превращается в ноль.
+    """
+
+    timeliness: Optional[float] = Field(
+        None, ge=0, le=100, title="Своевременность плановых ТО"
+    )
+    reaction: Optional[float] = Field(
+        None, ge=0, le=100, title="Скорость реакции на аварии, против норматива"
+    )
+    workload: Optional[float] = Field(
+        None, ge=0, le=100, title="Объём и сложность выполненных работ"
+    )
+    reliability: Optional[float] = Field(
+        None, ge=0, le=100, title="Надёжность парка: поломки на его лифтах"
+    )
+
+
+class ForemanMetrics(BaseModel):
+    """Разбивка балла прораба."""
+
+    team: Optional[float] = Field(
+        None, ge=0, le=100, title="Средний балл механиков его участков"
+    )
+    schedule: Optional[float] = Field(
+        None, ge=0, le=100, title="Выполнение графика ТО по его участкам"
+    )
+    overdue: Optional[float] = Field(
+        None, ge=0, le=100, title="Отсутствие просроченных ТО на его участках"
+    )
+
+
+class EmployeeScoreItem(BaseModel):
+    """Строка рейтинга сотрудников."""
+
+    user_id: int = Field(..., title="ID сотрудника")
+    name: Optional[str] = Field(None, title="ФИО")
+    role_id: Optional[int] = Field(None, title="Роль: 2 прораб, 3 механик, 4 инженер")
+    division: Optional[str] = Field(None, title="Участок")
+
+    score: Optional[float] = Field(
+        None,
+        ge=0,
+        le=100,
+        title="Итоговый балл",
+        description=(
+            "null — посчитать было не из чего: у человека нет ни работ, ни "
+            "закреплённых объектов за период."
+        ),
+    )
+    is_provisional: bool = Field(
+        ...,
+        title="Мало данных",
+        description=(
+            "Работ за месяц меньше порога. Строка показывается с пометкой, "
+            "уезжает в конец списка и не попадает ни в лучших, ни в худших."
+        ),
+    )
+
+    works_count: int = Field(0, ge=0, title="Работ за месяц: заявки плюс ТО")
+    orders_closed: int = Field(0, ge=0, title="Закрытых заявок")
+    maintenance_total: int = Field(0, ge=0, title="Плановых ТО за месяц")
+    maintenance_on_time: int = Field(0, ge=0, title="Из них закрыто в свой месяц")
+    work_units: float = Field(
+        0,
+        ge=0,
+        title="Объём работ в условных единицах",
+        description=(
+            "Авария весит по тяжести категории, ТО — по числу пунктов "
+            "чек-листа, работа на чужом объекте — с коэффициентом 1,25."
+        ),
+    )
+    objects_count: int = Field(0, ge=0, title="Закреплённых лифтов")
+    breakdowns_on_objects: int = Field(0, ge=0, title="Поломок за месяц на его лифтах")
+    repeat_count: int = Field(
+        0,
+        ge=0,
+        title="Повторных вызовов после его ремонта",
+        description="Новая авария на том же лифте в течение 14 дней.",
+    )
+    repeat_penalty: float = Field(0, ge=0, title="Штраф за повторы, баллы")
+    reacted_count: int = Field(
+        0, ge=0, title="По скольким авариям посчитано время реакции"
+    )
+    avg_reaction_hours: Optional[float] = Field(
+        None, ge=0, title="Среднее время реакции, часы"
+    )
+
+    metrics: EmployeeMetrics = Field(..., title="Разбивка балла")
+    foreman_metrics: Optional[ForemanMetrics] = Field(
+        None, title="Разбивка балла прораба; у механиков пусто"
+    )
+
+
+class TopEmployeesReport(BaseModel):
+    """Рейтинг сотрудников за месяц."""
+
+    period: BreakdownPeriod = Field(..., title="Период отчёта")
+    kind: str = Field(
+        ...,
+        title="Кого ранжировали: mechanic или foreman",
+        description="Прорабов может смотреть только админ.",
+    )
+    order: str = Field(..., title="Порядок: best — лучшие сверху, worst — худшие")
+    min_works: int = Field(
+        ..., ge=0, title="Порог активности, ниже которого строка помечена «мало данных»"
+    )
+    total_count: int = Field(
+        ...,
+        ge=0,
+        title="Всего сотрудников в выдаче",
+        description="По всей выборке, а не по обрезанному limit списку.",
+    )
+    ranked_count: int = Field(
+        ..., ge=0, title="Из них с полноценным баллом, без пометки «мало данных»"
+    )
+    items: List[EmployeeScoreItem] = Field([], title="Строки рейтинга")
+
+
 class OverdueMaintenanceReport(BaseModel):
     """Просроченные ТО на сегодня.
 

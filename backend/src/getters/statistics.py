@@ -7,12 +7,17 @@ from src.schemas.statistics import (
     BreakdownObjectItem,
     BreakdownPeriod,
     BreakdownsReport,
+    EmployeeMetrics,
+    EmployeeScoreItem,
+    ForemanMetrics,
     OverdueMaintenanceItem,
     OverdueMaintenanceReport,
     ScheduleExecutionDivision,
     ScheduleExecutionReport,
     SeverityCount,
+    TopEmployeesReport,
 )
+from src.services.employee_score import sort_scores
 
 _SECONDS_IN_HOUR = 3600
 
@@ -198,6 +203,92 @@ def get_overdue_maintenance_report(
         objects_affected=objects_affected,
         items=items,
     )
+
+
+def get_top_employees_report(
+    *,
+    period: MonthPeriod,
+    scores,
+    kind: str,
+    worst_first: bool,
+    min_works: int,
+    limit: Optional[int],
+    offset: int,
+) -> TopEmployeesReport:
+    """Рейтинг сотрудников: порядок, обрезка страницы и счётчики.
+
+    Сортировка и обрезка живут здесь, а не в SQL: балл считается в Python,
+    и отсортировать в базе то, чего в ней нет, всё равно нельзя.
+    """
+    ordered = sort_scores(scores, worst_first=worst_first)
+
+    total_count = len(ordered)
+    ranked_count = sum(
+        1 for score in ordered if score.score is not None and not score.is_provisional
+    )
+
+    page = ordered[offset:] if offset else ordered
+    if limit is not None:
+        page = page[:limit]
+
+    return TopEmployeesReport(
+        period=BreakdownPeriod(year=period.year, month=period.month),
+        kind=kind,
+        order="worst" if worst_first else "best",
+        min_works=min_works,
+        total_count=total_count,
+        ranked_count=ranked_count,
+        items=[_employee_item(score, kind=kind) for score in page],
+    )
+
+
+def _employee_item(score, *, kind: str) -> EmployeeScoreItem:
+    metrics = score.metrics or {}
+    is_foreman = kind == "foreman"
+
+    return EmployeeScoreItem(
+        user_id=score.user_id,
+        name=score.name,
+        role_id=score.role_id,
+        division=score.division,
+        score=_rounded(score.score),
+        is_provisional=score.is_provisional,
+        works_count=score.works_count,
+        orders_closed=score.orders_closed,
+        maintenance_total=score.maintenance_total,
+        maintenance_on_time=score.maintenance_on_time,
+        work_units=round(float(score.work_units), 2),
+        objects_count=score.objects_count,
+        breakdowns_on_objects=score.breakdowns_on_objects,
+        repeat_count=score.repeat_count,
+        repeat_penalty=round(float(score.repeat_penalty), 1),
+        reacted_count=score.reacted_count,
+        avg_reaction_hours=_hours(score.avg_reaction_seconds),
+        # У прораба и механика метрики разные, но строка одна: так карточка на
+        # главной переключает режим, не меняя разбор ответа.
+        metrics=EmployeeMetrics(
+            timeliness=_rounded(metrics.get("timeliness")),
+            reaction=_rounded(metrics.get("reaction")),
+            workload=_rounded(metrics.get("workload")),
+            reliability=_rounded(metrics.get("reliability")),
+        )
+        if not is_foreman
+        else EmployeeMetrics(),
+        foreman_metrics=ForemanMetrics(
+            team=_rounded(metrics.get("team")),
+            schedule=_rounded(metrics.get("schedule")),
+            overdue=_rounded(metrics.get("overdue")),
+        )
+        if is_foreman
+        else None,
+    )
+
+
+def _rounded(value: Optional[float]) -> Optional[float]:
+    """Балл с одним знаком. None остаётся None: «нет данных» — не ноль."""
+    if value is None:
+        return None
+    return round(float(value), 1)
 
 
 def _months_between(*, year: int, month: int, reference: MonthPeriod) -> int:

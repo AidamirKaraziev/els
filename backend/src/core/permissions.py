@@ -72,6 +72,10 @@ class Permission(str, Enum):
 
     # Статистика на главной
     STATISTICS_READ = "statistics:read"
+    # Рейтинг сотрудников — отдельно от остальной статистики. Клиенту
+    # внутренний рейтинг подрядчика не показываем, механику — его собственное
+    # место в списке худших.
+    EMPLOYEE_STATS_READ = "employee_stats:read"
 
     # Файлы: фото заявок, сканы, PDF
     FILE_READ = "file:read"
@@ -126,6 +130,9 @@ ROLE_PERMISSIONS: Dict[Role, FrozenSet[Permission]] = {
         Permission.USER_CREATE,
         Permission.USER_UPDATE,
         Permission.USER_ARCHIVE,
+        # Рейтинг своих механиков: прораб видит людей своих участков, режет
+        # выдачу область видимости.
+        Permission.EMPLOYEE_STATS_READ,
     },
     Role.MECHANIC: _FIELD_WORK,
     Role.ENGINEER: _FIELD_WORK,

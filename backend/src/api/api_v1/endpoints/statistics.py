@@ -1,12 +1,13 @@
 """Статистика для главной страницы.
 
-Здесь топ поломок, выполнение графика ТО и просроченные ТО. Рядом встанет
-топ сотрудников — период и фильтры у них общие.
+Здесь все четыре виджета: топ поломок, выполнение графика ТО, просроченные ТО
+и топ сотрудников. Период и фильтры у них общие, запрос у каждого свой.
 """
 
 import datetime
 import logging
 from io import BytesIO
+from typing import List, NamedTuple
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -15,18 +16,27 @@ from fastapi.responses import StreamingResponse
 from src.api import deps
 from src.core.permissions import Permission, permissions_for
 from src.core.response import SingleEntityResponse
+from src.core.roles import ADMIN, FIELD_ROLES, FOREMAN
 from src.crud.crud_statistics import crud_statistics, month_period, previous_month
 from src.getters.statistics import (
     get_breakdowns_report,
     get_overdue_maintenance_report,
     get_schedule_execution_report,
+    get_top_employees_report,
 )
 from src.schemas.statistics import (
     BreakdownsReport,
     OverdueMaintenanceReport,
     ScheduleExecutionReport,
+    TopEmployeesReport,
 )
 from src.services.breakdowns_pdf import build_breakdowns_pdf
+from src.services.employee_score import (
+    MIN_WORKS_FOR_RANKING,
+    REPEAT_WINDOW_DAYS,
+    score_employees,
+    score_foremen,
+)
 
 router = APIRouter()
 
@@ -267,6 +277,237 @@ def get_overdue_maintenance_statistics(
             objects_affected=objects_affected,
         )
     )
+
+
+@router.get(
+    "/statistics/top-employees",
+    response_model=SingleEntityResponse[TopEmployeesReport],
+    name="top_employees_statistics",
+    summary="Топ сотрудников за месяц",
+    description=(
+        "Рейтинг сотрудников баллом 0–100 за выбранный месяц.\n\n"
+        "Балл собирается из четырёх метрик и одного штрафа: своевременность "
+        "плановых ТО (вес 25), скорость реакции на аварии против норматива "
+        "(25), объём и сложность работ (30), надёжность закреплённого парка "
+        "(20), минус до 15 баллов за повторные вызовы на тот же лифт в "
+        "течение 14 дней после ремонта.\n\n"
+        "Шкала — по нормативам, а не относительно лучшего: цифра сравнима "
+        "между месяцами. Метрика, которую не из чего посчитать, выпадает, а "
+        "её вес распределяется между остальными.\n\n"
+        "`kind=mechanic` — механики и инженеры, `kind=foreman` — прорабы, и "
+        "он доступен только админу: балл прораба наполовину состоит из "
+        "среднего балла его людей.\n\n"
+        "Сотрудник с числом работ меньше `min_works` помечается "
+        "`is_provisional` и уезжает в конец списка в обоих порядках."
+    ),
+    tags=["Статистика"],
+)
+def get_top_employees_statistics(
+    session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.EMPLOYEE_STATS_READ)),
+    year: int = Query(..., ge=1990, le=2100, title="Год отчёта"),
+    month: int = Query(..., ge=1, le=12, title="Месяц отчёта (1–12)"),
+    kind: str = Query(
+        "mechanic",
+        regex="^(mechanic|foreman)$",
+        title="Кого ранжировать",
+        description="mechanic — механики и инженеры, foreman — прорабы (только админ).",
+    ),
+    order: str = Query(
+        "best",
+        regex="^(best|worst)$",
+        title="Порядок",
+        description="best — лучшие сверху, worst — худшие сверху.",
+    ),
+    limit: int = Query(
+        5,
+        ge=1,
+        le=200,
+        title="Сколько сотрудников вернуть",
+        description="Карточке на главной хватает пяти.",
+    ),
+    offset: int = Query(0, ge=0, title="Сколько сотрудников пропустить"),
+    min_works: int = Query(
+        MIN_WORKS_FOR_RANKING,
+        ge=0,
+        le=100,
+        title="Порог активности",
+        description=(
+            "Меньше этого числа работ за месяц — строка помечается «мало "
+            "данных». Ноль отключает порог."
+        ),
+    ),
+    division_id: int = Query(None, title="Только объекты и люди этого участка"),
+    organization_id: int = Query(None, title="Только объекты этой организации"),
+    company_id: int = Query(None, title="Только объекты этой компании"),
+    scope=Depends(deps.get_read_scope),
+):
+    if kind == "foreman" and current_user.role_id != ADMIN:
+        # Прораб не смотрит рейтинг прорабов: половина этого балла — оценка
+        # чужих бригад, а сравнение руководителей между собой заказчик
+        # оставил за админом.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Рейтинг прорабов доступен только администратору",
+        )
+
+    period = month_period(year, month)
+    filters = {
+        "division_id": division_id,
+        "organization_id": organization_id,
+        "company_id": company_id,
+    }
+
+    scores = _collect_employee_scores(
+        session=session,
+        scope=scope,
+        period=period,
+        kind=kind,
+        min_works=min_works,
+        filters=filters,
+    )
+
+    return SingleEntityResponse(
+        data=get_top_employees_report(
+            period=period,
+            scores=scores,
+            kind=kind,
+            worst_first=order == "worst",
+            min_works=min_works,
+            limit=limit,
+            offset=offset,
+        )
+    )
+
+
+def _collect_employee_scores(
+    *,
+    session,
+    scope,
+    period,
+    kind: str,
+    min_works: int,
+    filters: dict,
+):
+    """Сбор фактов и расчёт балла.
+
+    Механиков считаем всегда — даже когда спросили прорабов: половина балла
+    прораба и есть средний балл его людей. Второй раз то же самое считать
+    было бы и дороже, и опаснее: два расчёта разошлись бы при первой же
+    правке весов.
+    """
+    median_steps = crud_statistics.median_checklist_steps(db=session)
+
+    mechanics = crud_statistics.rateable_employees(
+        db=session,
+        scope=scope,
+        role_ids=FIELD_ROLES,
+        division_id=filters["division_id"],
+    )
+    orders = crud_statistics.employee_orders(
+        db=session, period=period, scope=scope, **filters
+    )
+    maintenance = crud_statistics.employee_maintenance(
+        db=session, period=period, scope=scope, **filters
+    )
+    objects_per_mechanic = crud_statistics.objects_per_mechanic(
+        db=session, scope=scope, **filters
+    )
+    breakdowns_per_mechanic = crud_statistics.breakdowns_per_mechanic(
+        db=session, period=period, scope=scope, **filters
+    )
+    # Окно поиска повторов шире месяца: авария первого числа следующего
+    # месяца — это переделка ремонта, сделанного в конце этого.
+    events = crud_statistics.breakdown_events(
+        db=session,
+        start=period.start,
+        end=period.end + datetime.timedelta(days=REPEAT_WINDOW_DAYS),
+        scope=scope,
+        **filters,
+    )
+
+    mechanic_scores = score_employees(
+        employees=mechanics,
+        orders=orders,
+        maintenance=maintenance,
+        objects_per_mechanic=objects_per_mechanic,
+        breakdowns_per_mechanic=breakdowns_per_mechanic,
+        breakdown_events=events,
+        median_steps=median_steps,
+        period_end=period.end,
+        min_works=min_works,
+    )
+
+    if kind == "mechanic":
+        return mechanic_scores
+
+    foremen = crud_statistics.rateable_employees(
+        db=session,
+        scope=scope,
+        role_ids=frozenset({int(FOREMAN)}),
+        division_id=filters["division_id"],
+    )
+    divisions_by_user = crud_statistics.divisions_by_user(
+        db=session, user_ids=[row.user_id for row in foremen]
+    )
+    all_divisions = sorted(
+        {
+            division_id
+            for divisions in divisions_by_user.values()
+            for division_id in divisions
+        }
+    )
+
+    schedule_rows = crud_statistics.schedule_execution_by_division(
+        db=session, period=period, scope=scope, **filters
+    )
+    schedule_by_division = {
+        row.division_id: (int(row.completed_count) / int(row.planned_count))
+        for row in schedule_rows
+        if row.division_id is not None and int(row.planned_count) > 0
+    }
+
+    today = datetime.date.today()
+    overdue_by_division = crud_statistics.overdue_per_division(
+        db=session,
+        reference=month_period(today.year, today.month),
+        scope=scope,
+        **filters,
+    )
+    objects_by_division = crud_statistics.objects_per_division(
+        db=session, scope=scope, **filters
+    )
+
+    return score_foremen(
+        foremen=[
+            _ForemanInput(
+                user_id=row.user_id,
+                name=row.name,
+                role_id=row.role_id,
+                division=row.division,
+                division_ids=divisions_by_user.get(row.user_id, []),
+            )
+            for row in foremen
+        ],
+        mechanics_by_division=crud_statistics.mechanics_by_division(
+            db=session, division_ids=all_divisions
+        ),
+        mechanic_scores=mechanic_scores,
+        schedule_by_division=schedule_by_division,
+        overdue_by_division=overdue_by_division,
+        objects_by_division=objects_by_division,
+        min_works=min_works,
+    )
+
+
+class _ForemanInput(NamedTuple):
+    """Прораб со списком участков — строки запроса такого поля не несут."""
+
+    user_id: int
+    name: str
+    role_id: int
+    division: str
+    division_ids: List[int]
 
 
 def _collect_report(

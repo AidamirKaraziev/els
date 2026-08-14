@@ -7,10 +7,10 @@ import '../../helper/my_user.dart';
 import '../employee/view/employees_screen.dart';
 import '../home_page/home_page.dart';
 import '../responsive_screens/responsive.dart';
-import 'best_employee.dart';
 import 'overdue_maintenance/overdue_maintenance.dart';
 import 'schedule_execution/schedule_execution.dart';
 import 'top_breakdowns/top_breakdowns.dart';
+import 'top_employees/top_employees.dart';
 
 ///Главная
 
@@ -140,13 +140,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         children: [
                           /// Выполнение графика
-                          Expanded(flex: 4, child: ScheduleExecution()),
-                          // SizedBox(height: 20.0),
-                          /// Лучший сотрудник
-                          // Expanded(
-                          //   flex: 3,
-                          //   child: BestEmployee(),
-                          // ),
+                          Expanded(child: ScheduleExecution()),
+                          SizedBox(height: 20.0),
+                          /// Топ сотрудников
+                          Expanded(child: TopEmployees()),
                         ],
                       ),
                     ),
@@ -230,13 +227,8 @@ class _HomeScreenState extends State<HomeScreen> {
               const ScheduleExecution(),
               const SizedBox(height: 10.0),
               const OverdueMaintenance(),
-              // const SizedBox(height: 10.0),
-              // StreamBuilder(
-              //   stream: myStream.stream,
-              //   builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
-              //     return const BestEmployee();
-              //   },
-              // ),
+              const SizedBox(height: 10.0),
+              const TopEmployees(),
             ],
           ),
         ),

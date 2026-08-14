@@ -48,14 +48,20 @@
 """
 
 import datetime
-from typing import Dict, List, NamedTuple, Optional, Tuple
+from typing import Dict, FrozenSet, List, NamedTuple, Optional, Tuple
 
 from sqlalchemy import and_, func, literal, or_, select, union_all
 from sqlalchemy.orm import Session
 
-from src.core.access import AccessScope, apply_order_scope, object_scope_filter
-from src.core.roles import FOREMAN
+from src.core.access import (
+    AccessScope,
+    apply_order_scope,
+    apply_user_scope,
+    object_scope_filter,
+)
+from src.core.roles import FIELD_ROLES, FOREMAN
 from src.models import (
+    ActBase,
     ActFact,
     Company,
     Division,
@@ -74,6 +80,17 @@ from src.models import (
 # заявки без категории отсутствует всегда. Чтобы такие заявки не выигрывали
 # сортировку по тяжести, подставляем заведомо больший ранг.
 _UNKNOWN_SEVERITY_RANK = 10**6
+
+# «Выполнено» в таблице `statuses`. Статусы засеяны при первом старте и в
+# коде уже зашиты числами (`crud_order.update` ставит по ним отметки времени),
+# так что константа здесь только называет число, а не вводит новое.
+_STATUS_DONE = 4
+
+# Чек-лист акта хранится строкой, похожей на JSON: список словарей с ключами
+# `text`, `bool`, `comment`, `photo`. Число пунктов — это число вхождений
+# ключа `text`; считать его в SQL дешевле, чем разбирать строку в Python на
+# каждой из трёхсот заготовок.
+_STEP_MARKER = '"text":'
 
 # Месяц в `planned_to` — это отдельная колонка, а не строка таблицы. Разложить
 # её в нормальную форму значило бы переписать экран графика ТО, который в неё
@@ -110,6 +127,17 @@ def month_period(year: int, month: int) -> MonthPeriod:
     else:
         end = datetime.datetime(year, month + 1, 1)
     return MonthPeriod(year=year, month=month, start=start, end=end)
+
+
+def _checklist_steps():
+    """Число пунктов в чек-листе заготовки акта, выражением SQL.
+
+    Считаем вхождения ключа `text`: строка хранится питоновским `repr`-подобным
+    текстом, и разбирать её ради одного числа дорого. Пустая заготовка даёт
+    ноль — деления на это число нигде нет.
+    """
+    stripped = func.length(func.replace(ActBase.step_list, _STEP_MARKER, ""))
+    return (func.length(ActBase.step_list) - stripped) / len(_STEP_MARKER)
 
 
 def previous_month(year: int, month: int) -> Tuple[int, int]:
@@ -694,6 +722,466 @@ class CrudStatistics:
             func.count(func.distinct(Object.id)).label("objects"),
         ).one()
         return int(row.total or 0), int(row.objects or 0)
+
+    # ------------------------------------------------------------------
+    # Топ сотрудников
+    # ------------------------------------------------------------------
+    #
+    # Здесь запросы отдают строки, а не готовые агрегаты, — в отличие от трёх
+    # виджетов выше. Причина в том, что балл сотрудника считается по
+    # нормативам, разным для разной тяжести аварии, и живёт формулой в
+    # `src/services/employee_score.py`. Сложить её в SQL значило бы размазать
+    # правило по двум местам и потерять возможность проверить его тестом без
+    # базы. Строк при этом немного: заявки и ТО одного месяца в границах
+    # области видимости.
+
+    def rateable_employees(
+        self,
+        *,
+        db: Session,
+        scope: AccessScope,
+        role_ids: FrozenSet[int],
+        division_id: Optional[int] = None,
+    ) -> List:
+        """Сотрудники, которых вообще можно поставить в рейтинг.
+
+        Только действующие: уволенный не должен всплывать в «худших» через
+        месяц после ухода. Список режется тем же фильтром, что и обычный
+        список людей — см. [[список людей режется по участкам]].
+        """
+        query = (
+            db.query(UniversalUser)
+            .outerjoin(Division, UniversalUser.division_id == Division.id)
+            .filter(
+                UniversalUser.role_id.in_(sorted(role_ids)),
+                UniversalUser.is_active.is_(True),
+            )
+        )
+        query = apply_user_scope(query, scope)
+
+        if division_id is not None:
+            # Участок берём и из основного поля, и из связи: у человека их
+            # может быть несколько, а фильтр в шапке карточки один.
+            query = query.filter(
+                or_(
+                    UniversalUser.division_id == division_id,
+                    UniversalUser.id.in_(
+                        select(UserDivision.user_id)
+                        .where(UserDivision.division_id == division_id)
+                        .correlate(None)
+                        .scalar_subquery()
+                    ),
+                )
+            )
+
+        return (
+            query.with_entities(
+                UniversalUser.id.label("user_id"),
+                UniversalUser.name.label("name"),
+                UniversalUser.role_id.label("role_id"),
+                Division.title.label("division"),
+            )
+            .order_by(UniversalUser.id)
+            .all()
+        )
+
+    def employee_orders(
+        self,
+        *,
+        db: Session,
+        period: MonthPeriod,
+        scope: AccessScope,
+        division_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+    ) -> List:
+        """Закрытые заявки периода построчно, с исполнителем и тяжестью.
+
+        Дата закрытия — `coalesce(done_at, created_at)`. Честнее был бы один
+        `done_at`, но он начал заполняться только после починки опечатки
+        (`dane_at` в `OrderUpdate`), и по историческим заявкам пуст у всех до
+        одной. Без запасного варианта карточка на проде оказалась бы пустой
+        не потому, что люди не работали, а потому что поле не писалось.
+
+        Отметки времени отдаются как есть: считать разницы и отбрасывать
+        битые — дело скоринга, там же лежат нормативы.
+        """
+        closed_at = func.coalesce(Order.done_at, Order.created_at)
+
+        query = (
+            db.query(Order)
+            .join(Object, Order.object_id == Object.id)
+            .outerjoin(FaultCategory, Order.fault_category_id == FaultCategory.id)
+            .filter(
+                Order.executor_id.isnot(None),
+                Order.status_id == _STATUS_DONE,
+                Order.created_at.isnot(None),
+                closed_at >= period.start,
+                closed_at < period.end,
+            )
+        )
+
+        if division_id is not None:
+            query = query.filter(Object.division_id == division_id)
+        if organization_id is not None:
+            query = query.filter(Object.organization_id == organization_id)
+        if company_id is not None:
+            query = query.filter(Object.company_id == company_id)
+
+        return (
+            apply_order_scope(query, scope)
+            .with_entities(
+                Order.id.label("order_id"),
+                Order.executor_id.label("executor_id"),
+                Order.object_id.label("object_id"),
+                Order.created_at.label("created_at"),
+                func.coalesce(Order.accepted_at, Order.in_progress_at).label(
+                    "reacted_at"
+                ),
+                Order.done_at.label("done_at"),
+                closed_at.label("closed_at"),
+                FaultCategory.code.label("category_code"),
+                # Заявка без категории считается поломкой — то же правило, что
+                # и в топе поломок, иначе два виджета разошлись бы в цифрах.
+                func.coalesce(FaultCategory.counts_as_breakdown, True).label(
+                    "is_breakdown"
+                ),
+                # Свой лифт или чужой: за выезд на чужой объект в скоринге
+                # положен коэффициент.
+                (Object.mechanic_id == Order.executor_id).label("is_own_object"),
+            )
+            .order_by(Order.id)
+            .all()
+        )
+
+    def employee_maintenance(
+        self,
+        *,
+        db: Session,
+        period: MonthPeriod,
+        scope: AccessScope,
+        division_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+    ) -> List:
+        """Плановые ТО месяца построчно: чьё, закрыто ли и насколько объёмно.
+
+        План и «вовремя» понимаются ровно как у виджета выполнения графика:
+        план — заполненная ячейка месяца, вовремя — `finished_at` раньше
+        конца планового месяца. Расхождение между двумя карточками главной
+        стоило бы дороже любой находки.
+
+        Объём чек-листа едет строкой: у ТО-12 пунктов вчетверо больше, чем у
+        ТО-3, и скоринг взвешивает работу по этому числу.
+        """
+        month_column = _PLANNED_MONTH_COLUMN[period.month]
+
+        query = (
+            db.query(PlannedTO)
+            .join(Object, PlannedTO.object_id == Object.id)
+            .join(ActFact, ActFact.id == month_column)
+            .outerjoin(ActBase, ActFact.act_base_id == ActBase.id)
+            .filter(PlannedTO.year == str(period.year))
+        )
+
+        if division_id is not None:
+            query = query.filter(Object.division_id == division_id)
+        if organization_id is not None:
+            query = query.filter(Object.organization_id == organization_id)
+        if company_id is not None:
+            query = query.filter(Object.company_id == company_id)
+
+        query = query.filter(object_scope_filter(scope))
+
+        return (
+            query.with_entities(
+                ActFact.id.label("act_id"),
+                ActFact.main_mechanic_id.label("mechanic_id"),
+                ActFact.finished_at.label("finished_at"),
+                Object.id.label("object_id"),
+                (Object.mechanic_id == ActFact.main_mechanic_id).label("is_own_object"),
+                _checklist_steps().label("steps_count"),
+            )
+            .order_by(ActFact.id)
+            .all()
+        )
+
+    def median_checklist_steps(self, *, db: Session) -> float:
+        """Медианное число пунктов в заготовке акта.
+
+        Нужна, чтобы вес ТО был безразмерным: акт с пунктами по медиане
+        весит единицу, вчетверо длиннее — четыре. Считаем в Python: заготовок
+        три сотни, а `percentile_cont` в SQLAlchemy 1.4 читается хуже, чем
+        стоит.
+        """
+        counts = sorted(
+            int(row[0] or 0)
+            for row in db.query(_checklist_steps())
+            .filter(ActBase.step_list.isnot(None))
+            .all()
+        )
+        counts = [count for count in counts if count > 0]
+        if not counts:
+            return 0.0
+
+        middle = len(counts) // 2
+        if len(counts) % 2:
+            return float(counts[middle])
+        return (counts[middle - 1] + counts[middle]) / 2
+
+    def objects_per_mechanic(
+        self,
+        *,
+        db: Session,
+        scope: AccessScope,
+        division_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+    ) -> Dict[int, int]:
+        """{mechanic_id: сколько лифтов на нём закреплено}.
+
+        Знаменатель аварийности парка. Считается по нынешнему закреплению, а
+        не по тому, кто обслуживал лифт в тот месяц: истории закреплений в
+        базе нет.
+        """
+        query = db.query(Object).filter(Object.mechanic_id.isnot(None))
+
+        if division_id is not None:
+            query = query.filter(Object.division_id == division_id)
+        if organization_id is not None:
+            query = query.filter(Object.organization_id == organization_id)
+        if company_id is not None:
+            query = query.filter(Object.company_id == company_id)
+
+        rows = (
+            query.filter(object_scope_filter(scope))
+            .with_entities(
+                Object.mechanic_id.label("mechanic_id"),
+                func.count(Object.id).label("objects"),
+            )
+            .group_by(Object.mechanic_id)
+            .all()
+        )
+        return {int(row.mechanic_id): int(row.objects) for row in rows}
+
+    def breakdowns_per_mechanic(
+        self,
+        *,
+        db: Session,
+        period: MonthPeriod,
+        scope: AccessScope,
+        division_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+    ) -> Dict[int, int]:
+        """{mechanic_id: поломок за месяц на его лифтах}.
+
+        Числитель аварийности парка. Поломка определяется тем же подзапросом,
+        что и в топе поломок, — включая заявки категории «Д (Заказчик или
+        другие)». Разойтись в определении поломки между двумя виджетами
+        главной было бы дороже, чем эта неточность.
+        """
+        rows = (
+            self._breakdowns_query(
+                db=db,
+                period=period,
+                scope=scope,
+                division_id=division_id,
+                organization_id=organization_id,
+                company_id=company_id,
+            )
+            .filter(Object.mechanic_id.isnot(None))
+            .with_entities(
+                Object.mechanic_id.label("mechanic_id"),
+                func.count(Order.id).label("breakdowns"),
+            )
+            .group_by(Object.mechanic_id)
+            .all()
+        )
+        return {int(row.mechanic_id): int(row.breakdowns) for row in rows}
+
+    def breakdown_events(
+        self,
+        *,
+        db: Session,
+        start: datetime.datetime,
+        end: datetime.datetime,
+        scope: AccessScope,
+        division_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+    ) -> List:
+        """Поломки за произвольное окно: (объект, когда случилась).
+
+        Нужны, чтобы найти повторный вызов на тот же лифт после ремонта.
+        Окно шире отчётного месяца — на длину срока повтора, иначе авария
+        первого числа следующего месяца не нашлась бы и переделка в конце
+        месяца прощалась бы сама собой.
+        """
+        query = (
+            db.query(Order)
+            .join(Object, Order.object_id == Object.id)
+            .outerjoin(FaultCategory, Order.fault_category_id == FaultCategory.id)
+            .filter(
+                Order.created_at.isnot(None),
+                Order.created_at >= start,
+                Order.created_at < end,
+                (
+                    (Order.fault_category_id.is_(None))
+                    | (FaultCategory.counts_as_breakdown.is_(True))
+                ),
+            )
+        )
+
+        if division_id is not None:
+            query = query.filter(Object.division_id == division_id)
+        if organization_id is not None:
+            query = query.filter(Object.organization_id == organization_id)
+        if company_id is not None:
+            query = query.filter(Object.company_id == company_id)
+
+        return (
+            apply_order_scope(query, scope)
+            .with_entities(
+                Order.object_id.label("object_id"),
+                Order.created_at.label("created_at"),
+            )
+            .order_by(Order.created_at)
+            .all()
+        )
+
+    def mechanics_by_division(
+        self, *, db: Session, division_ids: List[int]
+    ) -> Dict[int, List[int]]:
+        """{division_id: [id механиков и инженеров]}.
+
+        Нужно баллу прораба: половина его оценки — средний балл людей его
+        участков. Через `user_divisions`, как и прорабы: участков у человека
+        бывает несколько.
+        """
+        if not division_ids:
+            return {}
+
+        rows = (
+            db.query(UserDivision.division_id, UniversalUser.id)
+            .join(UniversalUser, UniversalUser.id == UserDivision.user_id)
+            .filter(
+                UserDivision.division_id.in_(division_ids),
+                UniversalUser.role_id.in_(sorted(FIELD_ROLES)),
+                UniversalUser.is_active.is_(True),
+            )
+            .order_by(UserDivision.division_id, UniversalUser.id)
+            .all()
+        )
+
+        result: Dict[int, List[int]] = {}
+        for division_id, user_id in rows:
+            result.setdefault(division_id, []).append(user_id)
+        return result
+
+    def divisions_by_user(
+        self, *, db: Session, user_ids: List[int]
+    ) -> Dict[int, List[int]]:
+        """{user_id: [участки]} — связь плюс основной участок.
+
+        Тем же правилом, что и `division_ids_of` в проверках доступа: основное
+        поле добавляется на случай, если связь не заполнена. Прораб, у
+        которого участок проставлен только в карточке, иначе оценивался бы по
+        пустому списку объектов.
+        """
+        if not user_ids:
+            return {}
+
+        result: Dict[int, List[int]] = {}
+
+        rows = (
+            db.query(UserDivision.user_id, UserDivision.division_id)
+            .filter(UserDivision.user_id.in_(user_ids))
+            .order_by(UserDivision.user_id, UserDivision.division_id)
+            .all()
+        )
+        for user_id, division_id in rows:
+            result.setdefault(user_id, []).append(division_id)
+
+        primary = (
+            db.query(UniversalUser.id, UniversalUser.division_id)
+            .filter(
+                UniversalUser.id.in_(user_ids),
+                UniversalUser.division_id.isnot(None),
+            )
+            .all()
+        )
+        for user_id, division_id in primary:
+            divisions = result.setdefault(user_id, [])
+            if division_id not in divisions:
+                divisions.append(division_id)
+
+        return result
+
+    def objects_per_division(
+        self,
+        *,
+        db: Session,
+        scope: AccessScope,
+        division_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+    ) -> Dict[int, int]:
+        """{division_id: сколько лифтов на участке}. Знаменатель для долгов."""
+        query = db.query(Object).filter(Object.division_id.isnot(None))
+
+        if division_id is not None:
+            query = query.filter(Object.division_id == division_id)
+        if organization_id is not None:
+            query = query.filter(Object.organization_id == organization_id)
+        if company_id is not None:
+            query = query.filter(Object.company_id == company_id)
+
+        rows = (
+            query.filter(object_scope_filter(scope))
+            .with_entities(
+                Object.division_id.label("division_id"),
+                func.count(Object.id).label("objects"),
+            )
+            .group_by(Object.division_id)
+            .all()
+        )
+        return {int(row.division_id): int(row.objects) for row in rows}
+
+    def overdue_per_division(
+        self,
+        *,
+        db: Session,
+        reference: MonthPeriod,
+        scope: AccessScope,
+        division_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+    ) -> Dict[int, int]:
+        """{division_id: сколько ТО просрочено на сегодня}.
+
+        Тем же запросом, что и карточка просроченных ТО, — чтобы долг у
+        прораба в рейтинге и долг в соседней карточке были одним числом.
+        """
+        query, cells = self._overdue_query(
+            db=db,
+            reference=reference,
+            scope=scope,
+            division_id=division_id,
+            organization_id=organization_id,
+            company_id=company_id,
+        )
+
+        rows = (
+            query.filter(Object.division_id.isnot(None))
+            .with_entities(
+                Object.division_id.label("division_id"),
+                func.count(cells.c.act_id).label("overdue"),
+            )
+            .group_by(Object.division_id)
+            .all()
+        )
+        return {int(row.division_id): int(row.overdue) for row in rows}
 
     def foremen_by_division(
         self, *, db: Session, division_ids: List[int]
