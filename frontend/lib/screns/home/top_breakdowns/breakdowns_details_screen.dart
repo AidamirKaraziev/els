@@ -242,6 +242,11 @@ class _DetailsViewState extends State<_DetailsView> {
                   descending: _descending,
                   onSort: _onSort,
                   onTap: _openOrders,
+                  // Тот же отбор уходит в выгрузку: файл обязан совпадать с
+                  // тем, что на экране.
+                  month: _month,
+                  divisionId: _divisionId,
+                  organizationId: _organizationId,
                 );
               },
             ),
@@ -366,6 +371,9 @@ class _Table extends StatefulWidget {
     required this.descending,
     required this.onSort,
     required this.onTap,
+    required this.month,
+    required this.divisionId,
+    required this.organizationId,
   }) : super(key: key);
 
   final BreakdownsReport report;
@@ -374,6 +382,9 @@ class _Table extends StatefulWidget {
   final bool descending;
   final ValueChanged<_SortColumn> onSort;
   final ValueChanged<BreakdownObject> onTap;
+  final DateTime month;
+  final int? divisionId;
+  final int? organizationId;
 
   /// Ниже этой ширины десять колонок превращаются в кашу из переносов.
   /// Уже — таблица едет вбок, шире — растягивается на всю карточку.
@@ -420,7 +431,11 @@ class _TableState extends State<_Table> {
               ),
             ),
             const SizedBox(width: 12.0),
-            const ExportReportButton(),
+            ExportReportButton(
+              month: widget.month,
+              divisionId: widget.divisionId,
+              organizationId: widget.organizationId,
+            ),
           ],
         ),
         const SizedBox(height: 16.0),

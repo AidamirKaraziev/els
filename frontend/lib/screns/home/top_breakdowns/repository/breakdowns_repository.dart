@@ -118,24 +118,62 @@ class BreakdownsRepository {
   /// Файл собирает бэкенд — тем же кодом, что считает отчёт на экране, иначе
   /// цифры в отправленном заказчику файле однажды разошлись бы с виджетом.
   ///
-  /// ВАЖНО: по этому адресу нужен заголовок `Authorization`, поэтому просто
-  /// открыть его в новой вкладке нельзя — придёт 403. Способ скачивания на
-  /// фронте пока не выбран, см. кнопку на экране подробностей.
-  String exportUrl({
+  /// Прямо к ручке выгрузки обратиться нельзя: ей нужен заголовок
+  /// `Authorization`, а новая вкладка его не отправит — придёт 403. Поэтому
+  /// сервер подписывает короткоживущую ссылку, а ключ выгрузки берётся из
+  /// закрытого списка на бэкенде: подставить свой адрес клиент не может.
+  ///
+  /// Ссылка живёт минуту. Открывать её надо сразу.
+  Future<String> exportLink({
     required int year,
     required int month,
     int? divisionId,
     int? organizationId,
-  }) {
-    final Map<String, String> query = <String, String>{
-      'year': '$year',
-      'month': '$month',
-      if (divisionId != null) 'division_id': '$divisionId',
-      if (organizationId != null) 'organization_id': '$organizationId',
-    };
-    return Uri.parse('${ApiConfig.base}/statistics/breakdowns/export')
-        .replace(queryParameters: query)
-        .toString();
+  }) async {
+    http.Response response;
+    try {
+      response = await Api.post(
+        Uri.parse('${ApiConfig.base}/files/export-link'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'export': 'breakdowns',
+          'params': <String, String>{
+            'year': '$year',
+            'month': '$month',
+            if (divisionId != null) 'division_id': '$divisionId',
+            if (organizationId != null) 'organization_id': '$organizationId',
+          },
+        }),
+      ).timeout(timeout);
+    } catch (_) {
+      throw const BreakdownsException('Не удалось связаться с сервером');
+    }
+
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      throw const BreakdownsException('Недостаточно прав или истёк вход');
+    }
+    if (response.statusCode != 200) {
+      throw BreakdownsException(
+        'Сервер ответил ошибкой ${response.statusCode}',
+      );
+    }
+
+    final dynamic decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    final dynamic data = decoded is Map ? decoded['data'] : null;
+    final Object? url = data is Map ? data['url'] : null;
+    if (url is! String || url.isEmpty) {
+      throw const BreakdownsException('Сервер не вернул ссылку на файл');
+    }
+
+    // Бэкенд отдаёт адрес **без схемы** — как ссылки на фото и сканы. Схему
+    // дописывает клиент, см. `ApiConfig.scheme`. Без этого браузер считает
+    // адрес относительным и приклеивает его к текущему пути: получается
+    // `https://домен/домен/api/v1/…`, и скачивание молча не работает.
+    if (url.contains('://')) return url;
+    return '${ApiConfig.scheme}://$url';
   }
 
   /// Справочник участков для фильтра.
