@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../helper/class_colors.dart';
 import '../../helper/header/header.dart';
+import '../../helper/hints/start_here_card.dart';
 import '../../helper/my_drawer/my_drawer.dart';
 import '../../helper/my_user.dart';
 import '../employee/view/employees_screen.dart';
@@ -113,11 +114,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             /// ===========
-            const Expanded(
+            Expanded(
               child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Row(
-                  children: [
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: <Widget>[
+                    const StartHereCard(),
+                    Expanded(
+                      child: Row(
+                        children: const <Widget>[
                     ///Топ поломок
                     Expanded(
                       child: Column(
@@ -142,6 +147,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           //   flex: 3,
                           //   child: BestEmployee(),
                           // ),
+                        ],
+                      ),
+                    ),
                         ],
                       ),
                     ),

@@ -411,6 +411,28 @@
       "reason_fault_id"
     ]
   },
+  "GET /api/v1/reports/object/{object_id}/works": {
+    "required_body": [],
+    "required_params": [
+      "date_from",
+      "date_to",
+      "object_id"
+    ]
+  },
+  "GET /api/v1/reports/works": {
+    "required_body": [],
+    "required_params": [
+      "date_from",
+      "date_to"
+    ]
+  },
+  "GET /api/v1/reports/works/export": {
+    "required_body": [],
+    "required_params": [
+      "date_from",
+      "date_to"
+    ]
+  },
   "GET /api/v1/roles/": {
     "required_body": [],
     "required_params": []

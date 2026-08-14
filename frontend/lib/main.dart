@@ -1,4 +1,5 @@
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/hints/hint_settings.dart';
 import 'package:els/helper/session.dart';
 import 'package:els/helper/splash_screen.dart';
 import 'package:els/screns/auth/auth.dart';
@@ -20,6 +21,11 @@ void main() {
   // Обновить токен не удалось — значит сессии больше нет, и решение здесь
   // ровно одно: экран входа. Клиент API сам до навигатора не дотянется.
   Api.onSessionExpired = goToLogin;
+
+  // Настройки подсказок читаются один раз и дальше живут в памяти.
+  // Не ждём результата: подсказки — украшение, и задерживать из-за них
+  // первый кадр приложения незачем.
+  HintSettings.instance.load();
 
   runApp(const MyApp());
 }

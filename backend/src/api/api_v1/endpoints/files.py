@@ -26,6 +26,7 @@ from src.services.file_access import can_download
 #: путь берётся отсюда — подставить свой адрес клиент не может.
 EXPORTS = {
     "breakdowns": "/statistics/breakdowns/export",
+    "works": "/reports/works/export",
 }
 
 router = APIRouter()

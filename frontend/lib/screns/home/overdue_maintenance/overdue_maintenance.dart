@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../helper/hints/hints.dart';
+import '../../../helper/hints/hint_icon.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../helper/class_colors.dart';
@@ -142,6 +144,7 @@ class _Header extends StatelessWidget {
             ),
           ),
         ),
+        const HintIcon(id: HintIds.overdueIsUnclosed),
         if (total > 0) ...[
           const SizedBox(width: 8.0),
           Row(

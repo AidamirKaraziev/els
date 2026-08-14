@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/user_bloc/user_bloc.dart';
 import '../../helper/class_colors.dart';
 import '../../helper/header/header.dart';
+import '../../helper/hints/hints_switch.dart';
 import '../../helper/my_drawer/my_drawer.dart';
 import '../../helper/my_user.dart';
 import '../home_page/home_page.dart';
@@ -139,6 +140,8 @@ class _MyProfileState extends State<MyProfile> {
                           Expanded(child: UserDoc()),
                         ],
                       ),
+                      const SizedBox(height: 20.0),
+                      const HintsSwitch(),
                     ],
                   ),
                 )

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../helper/hints/hints.dart';
+import '../../../helper/hints/hint_icon.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
@@ -148,6 +150,7 @@ class _Header extends StatelessWidget {
             ),
           ),
         ),
+        const HintIcon(id: HintIds.completionByFinishDate),
         MonthPicker(value: month, enabled: enabled, onChanged: onMonthChanged),
       ],
     );

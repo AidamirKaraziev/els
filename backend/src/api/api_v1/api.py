@@ -24,6 +24,7 @@ from src.api.api_v1.endpoints import (
     organization,
     planned_to,
     reason_fault,
+    reports,
     role,
     statistics,
     status,
@@ -72,4 +73,5 @@ api_router.include_router(step.router)
 api_router.include_router(order_photo.router)
 api_router.include_router(order.router)
 api_router.include_router(statistics.router)
+api_router.include_router(reports.router)
 api_router.include_router(files.router)
