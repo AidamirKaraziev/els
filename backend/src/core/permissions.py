@@ -53,6 +53,12 @@ class Permission(str, Enum):
     ACT_UPDATE = "act:update"
     ACT_DELETE = "act:delete"
 
+    # Отметка «проверил» на сданной работе. Отдельно от `act:update` и
+    # `order:update`: править акт и заявку по работе может тот, кто её делал,
+    # а отмечать проверенной — только тот, кто проверяет. Иначе механик
+    # закрывал бы собственный счётчик у прораба.
+    WORK_REVIEW = "work:review"
+
     # Плановые ТО
     PLANNED_TO_READ = "planned_to:read"
     PLANNED_TO_WRITE = "planned_to:write"
@@ -133,6 +139,9 @@ ROLE_PERMISSIONS: Dict[Role, FrozenSet[Permission]] = {
         # Рейтинг своих механиков: прораб видит людей своих участков, режет
         # выдачу область видимости.
         Permission.EMPLOYEE_STATS_READ,
+        # Лента сданных работ: прораб смотрит, что сдали за него люди, и
+        # гасит счётчик отметкой «проверил».
+        Permission.WORK_REVIEW,
     },
     Role.MECHANIC: _FIELD_WORK,
     Role.ENGINEER: _FIELD_WORK,

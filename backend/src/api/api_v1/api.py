@@ -31,6 +31,7 @@ from src.api.api_v1.endpoints import (
     status,
     step,
     sub_step,
+    submitted_works,
     type_act,
     type_contract,
     type_object,
@@ -75,5 +76,6 @@ api_router.include_router(step.router)
 api_router.include_router(order_photo.router)
 api_router.include_router(order.router)
 api_router.include_router(statistics.router)
+api_router.include_router(submitted_works.router)
 api_router.include_router(reports.router)
 api_router.include_router(files.router)

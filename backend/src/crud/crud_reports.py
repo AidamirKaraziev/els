@@ -46,7 +46,6 @@ from sqlalchemy import and_, case, func, literal, or_, select, union_all
 from sqlalchemy.orm import Session, aliased
 
 from src.core.access import AccessScope, object_scope_filter
-from src.core.roles import Role
 from src.crud.crud_statistics import _PLANNED_MONTH_COLUMN
 from src.models import (
     ActFact,
@@ -65,6 +64,7 @@ from src.models import (
     Status,
     UniversalUser,
 )
+from src.services.work_kind import order_kind_flags
 
 
 class ReportRange(NamedTuple):
@@ -305,15 +305,12 @@ class CrudReports:
         return query, creator
 
     def _kind_flags(self, creator):
-        """Три взаимоисключающих условия «авария / клиент / прочее»."""
-        is_breakdown = (Order.fault_category_id.is_(None)) | (
-            FaultCategory.counts_as_breakdown.is_(True)
-        )
-        is_client = (~is_breakdown) & (creator.role_id == Role.CLIENT)
-        is_other = (~is_breakdown) & (
-            (creator.role_id.is_(None)) | (creator.role_id != Role.CLIENT)
-        )
-        return is_breakdown, is_client, is_other
+        """Три взаимоисключающих условия «авария / клиент / прочее».
+
+        Само правило живёт в `services/work_kind`: по нему же лента сданных
+        работ называет вид заявки, и разъехаться им нельзя.
+        """
+        return order_kind_flags(creator)
 
     def _defects_query(
         self,

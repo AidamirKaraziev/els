@@ -529,6 +529,14 @@
       "role_id"
     ]
   },
+  "GET /api/v1/work/submitted": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/work/submitted/unreviewed-count": {
+    "required_body": [],
+    "required_params": []
+  },
   "GET /api/v1/working-specialty/": {
     "required_body": [],
     "required_params": []
@@ -760,6 +768,13 @@
       "name"
     ],
     "required_params": []
+  },
+  "POST /api/v1/work/{kind}/{work_id}/reviewed/": {
+    "required_body": [],
+    "required_params": [
+      "kind",
+      "work_id"
+    ]
   },
   "POST /api/v1/working-specialty/": {
     "required_body": [

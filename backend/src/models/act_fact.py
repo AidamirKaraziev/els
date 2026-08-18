@@ -41,8 +41,17 @@ class ActFact(Base):
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True
     )
 
+    #: Отметка прораба «работу проверил». Приёмки, блокирующей зачёт, нет:
+    #: работа считается сделанной сразу, а отметка лишь гасит счётчик
+    #: непросмотренного в ленте сданных работ.
+    reviewed_at = Column(DateTime, index=True)
+    reviewed_by_id = Column(
+        Integer, ForeignKey("universal_users.id", ondelete="SET NULL")
+    )
+
     object = relationship(Object)
     act_base = relationship(ActBase)
+    reviewed_by = relationship("UniversalUser", foreign_keys=[reviewed_by_id])
     foreman = relationship("UniversalUser", foreign_keys=[foreman_id])
     main_mechanic = relationship("UniversalUser", foreign_keys=[main_mechanic_id])
     status = relationship(Status)

@@ -31,6 +31,7 @@ SCOPED_PREFIXES = (
     "/api/v1/defective-act/",
     "/api/v1/defective-act-photo/",
     "/api/v1/statistics/",
+    "/api/v1/work/",
     "/api/v1/cp/all-users",
     "/api/v1/cp/all-employee",
     "/api/v1/cp/all-client",

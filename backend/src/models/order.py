@@ -37,8 +37,15 @@ class Order(Base):
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True
     )
 
+    #: Отметка прораба «работу проверил». Приёмки, блокирующей зачёт, нет:
+    #: работа считается сделанной сразу, а отметка лишь гасит счётчик
+    #: непросмотренного в ленте сданных работ.
+    reviewed_at = Column(DateTime, index=True)
+    reviewed_by_id = Column(Integer, ForeignKey(UniversalUser.id, ondelete="SET NULL"))
+
     object = relationship(Object)
     creator = relationship("UniversalUser", foreign_keys=[creator_id])
+    reviewed_by = relationship("UniversalUser", foreign_keys=[reviewed_by_id])
     fault_category = relationship(FaultCategory)
     executor = relationship("UniversalUser", foreign_keys=[executor_id])
     reason_fault = relationship(ReasonFault)

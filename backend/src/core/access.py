@@ -226,22 +226,26 @@ def apply_order_photo_scope(query, scope: AccessScope):
     return query.filter(OrderPhoto.order_id.in_(visible_order_ids(scope)))
 
 
-def apply_act_fact_scope(query, scope: AccessScope):
-    """Список фактических актов: от объекта плюс свои акты."""
-    if scope.kind is ScopeKind.ALL:
-        return query
-    if scope.kind is ScopeKind.NOTHING:
-        return query.filter(false())
-    return query.filter(act_fact_scope_filter(scope))
-
-
 def act_fact_scope_filter(scope: AccessScope):
-    """Условие «этот акт человеку доступен» — от объекта плюс своё участие."""
+    """SQL-условие «этот акт человеку виден» — от объекта плюс своё участие.
+
+    Условие отдельно от `apply_act_fact_scope`, потому что лента сданных
+    работ строит `UNION` и фильтрует ветку сама, а не через `Query`.
+    """
+    if scope.kind is ScopeKind.ALL:
+        return true()
+    if scope.kind is ScopeKind.NOTHING:
+        return false()
     return or_(
         ActFact.object_id.in_(visible_object_ids(scope)),
         ActFact.foreman_id == scope.user_id,
         ActFact.main_mechanic_id == scope.user_id,
     )
+
+
+def apply_act_fact_scope(query, scope: AccessScope):
+    """Список фактических актов: от объекта плюс свои акты."""
+    return query.filter(act_fact_scope_filter(scope))
 
 
 def visible_act_fact_ids(scope: AccessScope):
