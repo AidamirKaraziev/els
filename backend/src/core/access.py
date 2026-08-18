@@ -21,6 +21,7 @@ from sqlalchemy import false, or_, select, true
 from src.core.roles import Role
 from src.models import (
     ActFact,
+    ActFactStepPhoto,
     DefectiveAct,
     Object,
     Order,
@@ -231,13 +232,32 @@ def apply_act_fact_scope(query, scope: AccessScope):
         return query
     if scope.kind is ScopeKind.NOTHING:
         return query.filter(false())
-    return query.filter(
-        or_(
-            ActFact.object_id.in_(visible_object_ids(scope)),
-            ActFact.foreman_id == scope.user_id,
-            ActFact.main_mechanic_id == scope.user_id,
-        )
+    return query.filter(act_fact_scope_filter(scope))
+
+
+def act_fact_scope_filter(scope: AccessScope):
+    """Условие «этот акт человеку доступен» — от объекта плюс своё участие."""
+    return or_(
+        ActFact.object_id.in_(visible_object_ids(scope)),
+        ActFact.foreman_id == scope.user_id,
+        ActFact.main_mechanic_id == scope.user_id,
     )
+
+
+def visible_act_fact_ids(scope: AccessScope):
+    """Подзапрос с id доступных актов — для фотографий шагов."""
+    return (
+        select(ActFact.id).where(act_fact_scope_filter(scope)).correlate(None)
+    ).scalar_subquery()
+
+
+def apply_act_fact_step_photo_scope(query, scope: AccessScope):
+    """Снимки шагов чек-листа. Наследуют доступ от акта целиком."""
+    if scope.kind is ScopeKind.ALL:
+        return query
+    if scope.kind is ScopeKind.NOTHING:
+        return query.filter(false())
+    return query.filter(ActFactStepPhoto.act_fact_id.in_(visible_act_fact_ids(scope)))
 
 
 def apply_planned_to_scope(query, scope: AccessScope):

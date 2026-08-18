@@ -25,6 +25,7 @@ SCOPED_PREFIXES = (
     "/api/v1/order-photo/",
     "/api/v1/all-acts-fact",
     "/api/v1/act-fact/",
+    "/api/v1/act-fact-photo/",
     "/api/v1/all-planned-to",
     "/api/v1/planned-to/",
     "/api/v1/defective-act/",

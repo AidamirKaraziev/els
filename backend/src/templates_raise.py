@@ -98,6 +98,10 @@ defective_act_photo_not_found = -1341
 defective_act_photo_file_is_none = -1342
 defective_act_invalid_month = -1343
 
+act_fact_step_photo_not_found = -1350
+act_fact_step_photo_file_is_none = -1351
+act_fact_step_not_found = -1352
+
 password_too_weak = -135
 
 # Запись существует, но лежит вне области видимости человека. 403, а не 404:
@@ -522,6 +526,30 @@ def get_raise(code: Any):
             num=1343,
             description="Укажите месяц в диапазоне 1–12",
             path="$.body",
+        )
+    if code == -1350:
+        raise UnfoundEntity(
+            message="Такой фотографии шага ТО не существует!",
+            num=1350,
+            description="Выберете существующую фотографию шага ТО!",
+            path="$.body",
+        )
+    if code == -1351:
+        raise UnprocessableEntity(
+            message="Не отправлен загружаемый файл",
+            num=1351,
+            description="Попробуйте загрузить файл еще раз",
+            path="$.body",
+        )
+    if code == -1352:
+        raise UnfoundEntity(
+            message="В чек-листе этого ТО нет такого шага!",
+            num=1352,
+            description=(
+                "Номер шага берётся из поля checklist в ответе по акту. "
+                "Если чек-лист не заполнен, прикладывать фотографии некуда."
+            ),
+            path="$.path",
         )
     if code == -135:
         raise UnprocessableEntity(

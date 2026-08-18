@@ -174,9 +174,20 @@ def create_act_fact(
 - **act_fact_id**: Идентификатор фактического акта.
 - **update_data**: Объект с данными для обновления фактического акта.
 
+### Чек-лист
+Присылать `checklist` — разобранный список пунктов с номерами. Номер шага
+живёт вместе с актом: на него ссылается фотография шага
+(`POST /act-fact/{id}/step/{step_id}/photo/`), поэтому переставлять и удалять
+пункты после начала работ нельзя, а пункт без `id` считается новым.
+
+Поле `step_list_fact` **устарело**, но принимается: экран графика у прораба
+пишет чек-лист именно строкой. В базе оно всё равно сохраняется приведённым к
+канонической форме, а в ответе отдаётся обратно в форме старых экранов.
+
 ### Схемы:
 **ActFactUpdate**:
-- `step_list_fact` (Optional[str]): Список выполненных шагов.
+- `checklist` (Optional[ChecklistSet]): Чек-лист целиком, с номерами шагов.
+- `step_list_fact` (Optional[str]): **Устарело.** Список шагов строкой.
 - `started_at` (Optional[int]): Время начала в формате timestamp.
 - `finished_at` (Optional[int]): Время окончания в формате timestamp.
 - `foreman_id` (Optional[int]): Идентификатор ответственного прораба.
@@ -187,7 +198,8 @@ def create_act_fact(
 - `id` (int): Идентификатор фактического акта.
 - `object_id` (Optional[int]): Идентификатор объекта.
 - `act_base_id` (Optional[int]): Идентификатор базового акта.
-- `step_list_fact` (Optional[str]): Список выполненных шагов.
+- `checklist` (Optional[ChecklistGet]): Разобранный чек-лист.
+- `step_list_fact` (Optional[str]): **Устарело.** Он же строкой, в форме старых экранов.
 - `created_at` (Optional[datetime]): Время создания акта.
 - `started_at` (Optional[datetime]): Время начала.
 - `finished_at` (Optional[datetime]): Время окончания.

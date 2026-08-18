@@ -60,7 +60,9 @@ def can_download(
         order = db.query(Order).filter(Order.id == owner.record_id).first()
         return can_access_order(scope, order)
 
-    if owner.entity == "act_fact":
+    if owner.entity in ("act_fact", "act_fact_step_photo"):
+        # У снимка шага каталог назван по фотографии, а `id` в пути — акта:
+        # так же, как у фотографий заявок. Проверяем именно акт.
         act = db.query(ActFact).filter(ActFact.id == owner.record_id).first()
         return can_access_act_fact(scope, act)
 

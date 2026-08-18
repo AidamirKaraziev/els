@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from src.api.api_v1.endpoints import (
     act_base,
     act_fact,
+    act_fact_step_photo,
     admin,
     auth,
     client,
@@ -68,6 +69,7 @@ api_router.include_router(organization.router)
 api_router.include_router(object.router)
 api_router.include_router(act_base.router)
 api_router.include_router(act_fact.router)
+api_router.include_router(act_fact_step_photo.router)
 api_router.include_router(sub_step.router)
 api_router.include_router(step.router)
 api_router.include_router(order_photo.router)

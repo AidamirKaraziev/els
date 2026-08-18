@@ -6,33 +6,58 @@ from src.config import Settings, settings
 from src.getters.static_url import static_base_url
 from src.getters.status import get_statuses
 from src.models import ActFact
-from src.schemas.act_fact import ActFactGet
+from src.schemas.act_fact import ActFactGet, ChecklistGet, ChecklistStepGet
 from src.schemas.maintenance import MaintenanceObject, MyMaintenanceItem
-from src.services.checklist import parse_checklist
+from src.services.checklist import dump_legacy, parse_checklist
 from src.utils.time_stamp import utc_to_timestamp
 
 
 def get_acts_facts(
     obj: ActFact, request: Optional[Request], config: Settings = settings
 ) -> ActFactGet:
-    if request is not None:
-        url = static_base_url(request, config)
-        if obj.file is not None:
-            obj.file = url + str(obj.file)
-        else:
-            obj.file = None
+    """Фактический акт наружу.
+
+    Чек-лист уходит сразу в двух видах. `checklist` — каноническая форма, в
+    которой акт и хранится; `step_list_fact` — та же самая, но собранная
+    обратно в форму старых экранов. Экран графика у прораба работает в проде и
+    читает именно её, поэтому хранение поменять можно, а ответ — нельзя.
+
+    Считаем в переменные, а не в поля записи: присвоение в `obj.file` пометило
+    бы акт изменённым, ближайший `flush` сохранил бы в базу полную ссылку
+    вместо относительного пути, а `updated_at` двинулся бы от простого чтения —
+    и телефон механика при каждой синхронизации качал бы всё заново.
+    """
+    file = obj.file
+    if request is not None and file is not None:
+        file = static_base_url(request, config) + str(file)
+
+    checklist = parse_checklist(obj.step_list_fact)
 
     return ActFactGet(
         id=obj.id,
         object_id=obj.object_id,
         act_base_id=obj.act_base_id,
-        step_list_fact=obj.step_list_fact,
+        step_list_fact=(
+            dump_legacy(checklist) if obj.step_list_fact is not None else None
+        ),
+        checklist=ChecklistGet(
+            title=checklist.title,
+            steps=[
+                ChecklistStepGet(
+                    id=step.id,
+                    title=step.title,
+                    done=step.done,
+                    comment=step.comment,
+                )
+                for step in checklist.steps
+            ],
+        ),
         created_at=obj.created_at,
         started_at=obj.started_at,
         finished_at=obj.finished_at,
         foreman_id=obj.foreman_id,
         main_mechanic_id=obj.main_mechanic_id,
-        file=obj.file,
+        file=file,
         status_id=get_statuses(obj.status) if obj.status is not None else None,
     )
 

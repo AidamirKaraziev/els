@@ -1,4 +1,10 @@
 {
+  "DELETE /api/v1/act-fact-photo/{photo_id}/": {
+    "required_body": [],
+    "required_params": [
+      "photo_id"
+    ]
+  },
   "DELETE /api/v1/auth/sessions/{session_id}": {
     "required_body": [],
     "required_params": [
@@ -46,6 +52,12 @@
     "required_params": []
   },
   "GET /api/v1/act-fact/{act_fact_id}/": {
+    "required_body": [],
+    "required_params": [
+      "act_fact_id"
+    ]
+  },
+  "GET /api/v1/act-fact/{act_fact_id}/photos/": {
     "required_body": [],
     "required_params": [
       "act_fact_id"
@@ -539,6 +551,13 @@
       "object_id"
     ],
     "required_params": []
+  },
+  "POST /api/v1/act-fact/{act_fact_id}/step/{step_id}/photo/": {
+    "required_body": [],
+    "required_params": [
+      "act_fact_id",
+      "step_id"
+    ]
   },
   "POST /api/v1/auth/login": {
     "required_body": [

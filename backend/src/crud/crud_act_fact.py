@@ -19,6 +19,7 @@ from src.models import (
     UniversalUser,
 )
 from src.schemas.act_fact import ActFactCreate, ActFactUpdate
+from src.services.checklist import canonical_from_items, to_canonical
 from src.utils import pagination
 from src.utils.time_stamp import datetime_from_timestamp
 
@@ -184,9 +185,19 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
         )
         if code != 0:
             return None, code, None
-        # обновление выполненных шагов
-        if update_data.step_list_fact:
-            update_data.step_list_fact = update_data.step_list_fact
+        # Чек-лист хранится в одной канонической форме, кто бы его ни прислал:
+        # старый экран графика шлёт `step_list_fact` строкой в своей форме,
+        # телефон механика — разобранный `checklist`. Приводим здесь, чтобы в
+        # базе не заводилась четвёртая форма, а номера шагов, на которые
+        # ссылаются фотографии, оставались на месте. Разбор — только через
+        # `services/checklist`, руками поле не трогаем нигде.
+        if update_data.checklist is not None:
+            update_data.step_list_fact = canonical_from_items(
+                update_data.checklist.title,
+                [step.dict() for step in update_data.checklist.steps],
+            )
+        elif update_data.step_list_fact is not None:
+            update_data.step_list_fact = to_canonical(update_data.step_list_fact)
         # Перевод дат в нужный формат. `datetime`, а не `date`: обе колонки
         # объявлены DateTime, и прежний перевод в дату молча ронял время
         # закрытия акта на полночь.
