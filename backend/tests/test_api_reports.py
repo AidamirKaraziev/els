@@ -347,6 +347,47 @@ class TestObjectWorks:
         assert [step["done"] for step in steps] == [True, False]
 
     @pytest.mark.integration
+    def test_checklist_in_the_shape_both_fronts_actually_write(
+        self, client_with_db, as_role, make_object, plan_to
+    ):
+        """Форма, которая лежит в базе на самом деле.
+
+        Экран графика у прораба и мобильное приложение механика пишут не
+        список шагов, а словарь с названием ТО, внутри которого список шагов
+        лежит **ещё одной строкой**. Разбор искал `step_name` и на этой форме
+        молча отдавал пустой список — то есть отчёт заказчику показывал
+        «чек-лист не заполнен» по каждому сделанному ТО.
+        """
+        as_role(ADMIN)
+        obj = make_object()
+        checklist = json.dumps(
+            {
+                "numberTo": "ТО-1",
+                "stepListTO": json.dumps(
+                    [
+                        {"text": "Выключить вводное устройство", "bool": True},
+                        {"text": "Осмотр станции управления", "bool": False},
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+            ensure_ascii=False,
+        )
+        plan_to(obj, months={3: datetime.datetime(this_year(), 3, 20)}, step_list_fact=checklist)
+
+        data = _data(
+            client_with_db.get(
+                f"{settings.API_V1_STR}/reports/object/{obj.id}/works",
+                params=_params(),
+            )
+        )
+
+        assert data["maintenance"][0]["steps"] == [
+            {"title": "Выключить вводное устройство", "done": True},
+            {"title": "Осмотр станции управления", "done": False},
+        ]
+
+    @pytest.mark.integration
     def test_unreadable_checklist_gives_empty_steps(
         self, client_with_db, as_role, make_object, plan_to
     ):

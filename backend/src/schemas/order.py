@@ -87,3 +87,7 @@ class OrderGet(BaseModel):
 
     status_id: Optional[StatusGet]
     is_viewed: Optional[bool]
+
+    #: Метка последней правки. Клиент запоминает наибольшую из полученных и
+    #: присылает её обратно в `changed_since`.
+    updated_at: Optional[int]

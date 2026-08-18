@@ -7,6 +7,9 @@ from src.getters.static_url import static_base_url
 from src.getters.status import get_statuses
 from src.models import ActFact
 from src.schemas.act_fact import ActFactGet
+from src.schemas.maintenance import MaintenanceObject, MyMaintenanceItem
+from src.services.checklist import parse_checklist
+from src.utils.time_stamp import utc_to_timestamp
 
 
 def get_acts_facts(
@@ -31,6 +34,37 @@ def get_acts_facts(
         main_mechanic_id=obj.main_mechanic_id,
         file=obj.file,
         status_id=get_statuses(obj.status) if obj.status is not None else None,
+    )
+
+
+def get_my_maintenance(obj: ActFact, year: str, month: int) -> MyMaintenanceItem:
+    """Строка списка «мои ТО».
+
+    Чек-лист разбирается здесь и наружу уходит только счётчиком: в поле лежит
+    строка на сотни килобайт, и гнать её в список из тридцати ТО ради двух
+    чисел — верный способ сделать экран механика неоткрываемым на телефоне.
+
+    Год в графике строковый и набит руками, поэтому нечисловой разбирается в
+    ноль, а не роняет весь список.
+    """
+    checklist = parse_checklist(obj.step_list_fact)
+
+    return MyMaintenanceItem(
+        act_id=obj.id,
+        object=MaintenanceObject(
+            id=obj.object.id, name=obj.object.name, address=obj.object.address
+        )
+        if obj.object is not None
+        else None,
+        year=int(year) if str(year).strip().isdigit() else 0,
+        month=month,
+        title=checklist.title,
+        steps_total=checklist.total,
+        steps_done=checklist.done,
+        started_at=utc_to_timestamp(obj.started_at),
+        finished_at=utc_to_timestamp(obj.finished_at),
+        status_id=obj.status_id,
+        updated_at=utc_to_timestamp(obj.updated_at),
     )
 
 

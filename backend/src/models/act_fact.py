@@ -35,6 +35,12 @@ class ActFact(Base):
         default=1,
     )
 
+    #: Метка последней правки — по ней телефон механика спрашивает «что
+    #: изменилось с момента T» и не тянет весь список заново.
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True
+    )
+
     object = relationship(Object)
     act_base = relationship(ActBase)
     foreman = relationship("UniversalUser", foreign_keys=[foreman_id])

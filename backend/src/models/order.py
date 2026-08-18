@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
@@ -28,6 +30,12 @@ class Order(Base):
 
     status_id = Column(Integer, ForeignKey(Status.id, ondelete="CASCADE"), default=1)
     is_viewed = Column(Boolean, default=False)
+
+    #: Метка последней правки — по ней телефон механика спрашивает «что
+    #: изменилось с момента T» и не тянет весь список заново.
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True
+    )
 
     object = relationship(Object)
     creator = relationship("UniversalUser", foreign_keys=[creator_id])

@@ -8,9 +8,12 @@ from src.core.permissions import Permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, FOREMAN
 from src.crud.crud_act_fact import crud_acts_fact
-from src.getters.act_fact import get_acts_facts
+from src.exceptions import UnprocessableEntity
+from src.getters.act_fact import get_acts_facts, get_my_maintenance
 from src.schemas.act_fact import ActFactCreate, ActFactGet, ActFactUpdate
+from src.schemas.maintenance import MyMaintenanceItem
 from src.templates_raise import get_raise
+from src.utils.time_stamp import datetime_from_timestamp
 
 ROLES_ELIGIBLE = [ADMIN, FOREMAN]
 PATH_MODEL = "act_fact"
@@ -37,6 +40,76 @@ def get_data(
 
     return ListOfEntityResponse(
         data=[get_acts_facts(obj=datum, request=request) for datum in data],
+        meta=Meta(paginator=paginator),
+    )
+
+
+@router.get(
+    path="/act-fact/for-me",
+    response_model=ListOfEntityResponse[MyMaintenanceItem],
+    name="Мои плановые ТО",
+    summary="Плановые ТО механика",
+    description=(
+        "🔧 Список плановых ТО, назначенных на текущего пользователя.\n\n"
+        "Главный экран механика в телефоне. Механик привязан к ТО через "
+        "механика объекта — отдельного назначения на конкретное ТО в системе "
+        "нет.\n\n"
+        "Чек-лист наружу не отдаётся: в списке приходит только «сделано N из "
+        "M», а сами пункты — по адресу конкретного акта. Строка чек-листа "
+        "весит сотни килобайт, и в списке из тридцати ТО экран бы не открылся."
+        "\n\n"
+        "`only_open` — незакрытые: те, у которых нет даты окончания. "
+        "`changed_since` — для синхронизации офлайн-клиента; вместе с "
+        "`only_open` его слать не нужно, иначе закрытое ТО просто исчезнет из "
+        "ответа и телефон не узнает, что оно закрылось."
+    ),
+    tags=["Админ панель / Фактические Акты"],
+)
+def get_my_maintenance_list(
+    session=Depends(deps.get_db),
+    page: int = Query(
+        None,
+        ge=1,
+        title="Номер страницы",
+        description="Без параметра выдача полная, без разбивки на страницы.",
+    ),
+    year: int = Query(None, ge=1990, le=2100, title="Год графика, вместе с month"),
+    month: int = Query(None, ge=1, le=12, title="Месяц (1–12), вместе с year"),
+    only_open: bool = Query(False, title="Только незакрытые ТО"),
+    changed_since: int = Query(
+        None,
+        ge=0,
+        title="Изменённые после этого времени",
+        description="Время в секундах эпохи, как и остальные даты в ответах.",
+    ),
+    current_universal_user=Depends(deps.require(Permission.ACT_READ)),
+    scope=Depends(deps.get_read_scope),
+):
+    # Год и месяц описывают одну ячейку графика, поодиночке они бессмысленны.
+    if (year is None) != (month is None):
+        raise UnprocessableEntity(
+            message="Год и месяц задаются только вместе",
+            num=1292,
+            description="Параметры year и month описывают один месяц графика.",
+            path="$.query",
+        )
+
+    rows, paginator = crud_acts_fact.get_my_maintenance(
+        db=session,
+        mechanic_id=current_universal_user.id,
+        scope=scope,
+        page=page,
+        year=year,
+        month=month,
+        only_open=only_open,
+        changed_since=datetime_from_timestamp(changed_since),
+    )
+
+    return ListOfEntityResponse(
+        data=[
+            get_my_maintenance(act, cell_year, cell_month)
+            for act, cell_year, cell_month in rows
+        ],
         meta=Meta(paginator=paginator),
     )
 

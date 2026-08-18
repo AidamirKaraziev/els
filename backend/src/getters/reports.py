@@ -6,9 +6,7 @@
 двенадцать ячеек превратятся в три и колонки разъедутся между строками.
 """
 
-import ast
 import datetime
-import json
 from typing import Dict, List, Optional, Tuple
 
 from src.crud.crud_reports import ReportRange, days_late
@@ -29,13 +27,9 @@ from src.schemas.reports import (
     WorksReport,
     WorkStep,
 )
+from src.services.checklist import parse_checklist
 
 _SECONDS_IN_HOUR = 3600
-
-#: Значения `step_status`, которые считаем «сделано». Список нарочно широкий:
-#: поле пишет фронт подрядчика, единого справочника у него нет, и встречаются
-#: и булевы, и строки. Всё, чего здесь нет, считается невыполненным.
-_DONE_MARKS = frozenset({"1", "true", "yes", "done", "выполнено", "ok"})
 
 
 def _hours(seconds: Optional[float]) -> Optional[float]:
@@ -91,60 +85,17 @@ def maintenance_status(
 def work_steps(step_list_fact: Optional[str]) -> List[WorkStep]:
     """Чек-лист акта из `step_list_fact`.
 
-    Поле хранится **строкой**, и формат её не гарантирован никем: схема
-    объявляет `Optional[str]`, справочника статусов нет, а фронт подрядчика
-    перед разбором менял одинарные кавычки на двойные — значит в базе лежит
-    питоновский repr, а не JSON. Поэтому пробуем сначала JSON, потом
-    `literal_eval`, и на любой неудаче возвращаем пустой список.
+    Разбор живёт в `services/checklist.py`: форм у поля три, и держать их
+    разбор здесь означало бы, что отчёт заказчику и экран механика считают
+    выполненные пункты по-разному.
 
     Пустой список означает «чек-лист не заполнен», а не «работ не было», и
     экран обязан показывать это разными словами.
-
-    Подшаги разворачиваются в те же строки, что и шаги: в отчёте клиенту
-    важен перечень сделанного, а не глубина вложенности бланка.
     """
-    if not step_list_fact:
-        return []
-
-    raw = None
-    for parse in (json.loads, ast.literal_eval):
-        try:
-            raw = parse(step_list_fact)
-            break
-        except (ValueError, SyntaxError, TypeError):
-            continue
-
-    if not isinstance(raw, list):
-        return []
-
-    steps: List[WorkStep] = []
-    for item in raw:
-        if not isinstance(item, dict):
-            continue
-        name = item.get("step_name")
-        if name:
-            steps.append(
-                WorkStep(title=str(name), done=_is_done(item.get("step_status")))
-            )
-        for sub in item.get("substeps") or []:
-            if not isinstance(sub, dict):
-                continue
-            sub_name = sub.get("substep_name")
-            if sub_name:
-                steps.append(
-                    WorkStep(
-                        title=str(sub_name), done=_is_done(sub.get("substep_status"))
-                    )
-                )
-    return steps
-
-
-def _is_done(status) -> bool:
-    if isinstance(status, bool):
-        return status
-    if status is None:
-        return False
-    return str(status).strip().lower() in _DONE_MARKS
+    return [
+        WorkStep(title=step.title, done=step.done)
+        for step in parse_checklist(step_list_fact).steps
+    ]
 
 
 def get_report_period(period: ReportRange) -> ReportPeriod:

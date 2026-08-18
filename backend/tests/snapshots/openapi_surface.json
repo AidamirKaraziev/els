@@ -41,6 +41,10 @@
       "object_id"
     ]
   },
+  "GET /api/v1/act-fact/for-me": {
+    "required_body": [],
+    "required_params": []
+  },
   "GET /api/v1/act-fact/{act_fact_id}/": {
     "required_body": [],
     "required_params": [

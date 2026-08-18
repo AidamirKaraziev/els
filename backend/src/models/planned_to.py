@@ -1,4 +1,13 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
+from datetime import datetime
+
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from src.models import Object
@@ -22,6 +31,12 @@ class PlannedTO(Base):
     october_to_id = Column(Integer, ForeignKey("acts_fact.id", ondelete="SET NULL"))
     november_to_id = Column(Integer, ForeignKey("acts_fact.id", ondelete="SET NULL"))
     december_to_id = Column(Integer, ForeignKey("acts_fact.id", ondelete="SET NULL"))
+
+    #: Метка последней правки — по ней телефон механика спрашивает «что
+    #: изменилось с момента T» и не тянет весь список заново.
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True
+    )
 
     object = relationship(Object)
     january_to = relationship("ActFact", foreign_keys=[january_to_id])

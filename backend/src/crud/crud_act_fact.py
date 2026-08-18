@@ -1,5 +1,7 @@
-from typing import Optional
+import datetime
+from typing import List, Optional, Tuple
 
+from sqlalchemy import literal, select, union_all
 from sqlalchemy.orm import Session
 from starlette import status
 
@@ -8,10 +10,12 @@ from src.core.roles import ADMIN, FOREMAN, MECHANIC
 from src.crud.base import CRUDBase
 from src.crud.crud_act_base import crud_acts_bases
 from src.crud.crud_object import crud_objects
+from src.crud.crud_statistics import _PLANNED_MONTH_COLUMN
 from src.crud.crud_status import crud_status
 from src.models import (
     ActFact,
     Object,
+    PlannedTO,
     UniversalUser,
 )
 from src.schemas.act_fact import ActFactCreate, ActFactUpdate
@@ -48,6 +52,75 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
     def get_multi(self, db: Session, *, scope: AccessScope, page: Optional[int] = None):
         """Перекрывает `CRUDBase.get_multi` ради обязательной области."""
         return pagination.get_page(self.scoped_query(db, scope), page)
+
+    def _planned_cells(self):
+        """Ячейки графика, развёрнутые из колонок в строки.
+
+        Плановый месяц в `planned_to` — это колонка, а не значение, поэтому
+        «когда это ТО по плану» одним `WHERE` не спросить: нужен `UNION ALL`
+        из двенадцати выборок. Карта «номер месяца → колонка» берётся из
+        статистики — двенадцать имён колонок, продублированных по модулям,
+        разъедутся при первой же правке графика.
+
+        Год в модели строковый и таким и остаётся: в колонке лежат данные,
+        набитые руками, и `CAST` уронил бы запрос на первой же строке вроде
+        «2025 г.». Приводим уже в Python, на разобранной строке.
+        """
+        branches = [
+            select(
+                PlannedTO.year.label("year"),
+                literal(month).label("month"),
+                _PLANNED_MONTH_COLUMN[month].label("act_id"),
+            ).where(_PLANNED_MONTH_COLUMN[month].isnot(None))
+            for month in sorted(_PLANNED_MONTH_COLUMN)
+        ]
+        return union_all(*branches).subquery("my_to_cells")
+
+    def get_my_maintenance(
+        self,
+        *,
+        db: Session,
+        mechanic_id: int,
+        scope: AccessScope,
+        page: Optional[int] = None,
+        year: Optional[int] = None,
+        month: Optional[int] = None,
+        only_open: bool = False,
+        changed_since: Optional[datetime.datetime] = None,
+    ) -> Tuple[List, Optional[object]]:
+        """Плановые ТО, назначенные на механика.
+
+        Механик привязан к акту через `main_mechanic_id`, а тот проставляется
+        из механика объекта при создании графика. Отдельного назначения на
+        конкретное ТО в системе нет, и выдумывать его здесь не нужно.
+        """
+        cells = self._planned_cells()
+
+        query = (
+            self.scoped_query(db, scope)
+            .add_columns(cells.c.year, cells.c.month)
+            .join(cells, cells.c.act_id == ActFact.id)
+            .outerjoin(Object, ActFact.object_id == Object.id)
+            .filter(ActFact.main_mechanic_id == mechanic_id)
+        )
+
+        if year is not None and month is not None:
+            query = query.filter(cells.c.year == str(year), cells.c.month == month)
+
+        if only_open:
+            # Незакрытое ТО — то, у которого нет даты окончания. Статус здесь
+            # не спрашиваем: выполнение графика считается именно по
+            # `finished_at`, и второй признак разошёлся бы с ним.
+            query = query.filter(ActFact.finished_at.is_(None))
+
+        if changed_since is not None:
+            query = query.filter(ActFact.updated_at > changed_since)
+
+        # Сначала ближайшее по плану: механику нужен текущий месяц, а не
+        # январь позапрошлого года.
+        query = query.order_by(cells.c.year.desc(), cells.c.month.desc())
+
+        return pagination.get_page(query, page)
 
     def get_act_fact_by_id(self, db: Session, id: int, scope: AccessScope):
         act_fact = super().get(db=db, id=id)

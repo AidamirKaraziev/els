@@ -7,20 +7,33 @@ from src.api import deps
 from src.core.permissions import Permission, has_permission
 from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.core.roles import ADMIN, DISPATCHER, ENGINEER, FOREMAN, MECHANIC
-from src.crud.crud_order import _object_display_label, crud_orders
+from src.crud.crud_order import STATUS_DONE, _object_display_label, crud_orders
 from src.exceptions import InaccessibleEntity, UnprocessableEntity
 from src.getters.order import getting_order
 from src.schemas.order import OrderCreate, OrderGet, OrderUpdate
 from src.schemas.statistics import TopBreakdownItem
 from src.templates_raise import get_raise
+from src.utils.time_stamp import datetime_from_timestamp
 
 ROLES_ELIGIBLE = [ADMIN, FOREMAN, DISPATCHER]
 ALL_EMPLOYER = [ADMIN, FOREMAN, MECHANIC, ENGINEER, DISPATCHER]
 
-#: «Выполнено» — см. `core/db/init_db.py:check_statuses`.
-STATUS_DONE = 4
-
 router = APIRouter()
+
+
+def _check_year_month_pair(year, month) -> None:
+    """Год и месяц описывают один период, поодиночке они бессмысленны.
+
+    Молча игнорировать половину фильтра нельзя: человек увидит не тот список
+    и не поймёт, почему.
+    """
+    if (year is None) != (month is None):
+        raise UnprocessableEntity(
+            message="Год и месяц задаются только вместе",
+            num=1292,
+            description="Параметры year и month описывают один период.",
+            path="$.query",
+        )
 
 
 @router.get(
@@ -96,16 +109,7 @@ def get_orders(
     current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
     scope=Depends(deps.get_read_scope),
 ):
-    # Год и месяц описывают один период, поодиночке они бессмысленны.
-    # Молча игнорировать половину фильтра нельзя: человек увидит не тот
-    # список и не поймёт, почему.
-    if (year is None) != (month is None):
-        raise UnprocessableEntity(
-            message="Год и месяц задаются только вместе",
-            num=1292,
-            description="Параметры year и month описывают один период.",
-            path="$.query",
-        )
+    _check_year_month_pair(year, month)
 
     data, paginator = crud_orders.get_orders_filtered(
         db=session,
@@ -218,22 +222,66 @@ def update_order(
     "/order/for-me",
     response_model=ListOfEntityResponse,
     name="get_orders",
-    description="📋 Получение списка всех задач, которые назначены на пользователя",
+    description=(
+        "📋 Получение списка задач, которые назначены на пользователя.\n\n"
+        "Все фильтры необязательные: без них ручка отдаёт всё за всё время, "
+        "как раньше. Это главный список механика в телефоне, поэтому он "
+        "обычно запрашивается с `only_open=true` и страницами — иначе через "
+        "год работы в ответ уезжают сотни закрытых заявок.\n\n"
+        "`year` и `month` задаются только вместе — период считается по дате "
+        "создания заявки.\n\n"
+        "`changed_since` — для синхронизации офлайн-клиента: отдаёт только "
+        "заявки, изменившиеся после указанного времени. **Вместе с "
+        "`only_open` его слать не нужно**: закрытая заявка просто исчезнет из "
+        "ответа, и телефон никогда не узнает, что она закрылась."
+    ),
     summary="Задачи для пользователя",
     tags=["Админ панель / Задачи"],
 )
 def get_orders_for_me(
     request: Request,
     session=Depends(deps.get_db),
+    page: int = Query(
+        None,
+        ge=1,
+        title="Номер страницы",
+        description="Без параметра выдача полная, без разбивки на страницы.",
+    ),
+    status_id: int = Query(None, ge=1, title="Только заявки с этим статусом"),
+    only_open: bool = Query(
+        False,
+        title="Только незакрытые",
+        description=(
+            "Исключает «Выполнено» и «Проблема» — то, что механику уже не нужно делать."
+        ),
+    ),
+    year: int = Query(None, ge=1990, le=2100, title="Год, вместе с month"),
+    month: int = Query(None, ge=1, le=12, title="Месяц (1–12), вместе с year"),
+    changed_since: int = Query(
+        None,
+        ge=0,
+        title="Изменённые после этого времени",
+        description="Время в секундах эпохи, как и остальные даты в ответах.",
+    ),
     current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
     scope=Depends(deps.get_read_scope),
 ):
-    data, code, indexes = crud_orders.get_orders_for_me(
-        db=session, executor_id=current_universal_user.id, scope=scope
+    _check_year_month_pair(year, month)
+
+    data, paginator = crud_orders.get_orders_for_me(
+        db=session,
+        executor_id=current_universal_user.id,
+        scope=scope,
+        page=page,
+        status_id=status_id,
+        only_open=only_open,
+        year=year,
+        month=month,
+        changed_since=datetime_from_timestamp(changed_since),
     )
-    get_raise(code=code)
     return ListOfEntityResponse(
-        data=[getting_order(obj=datum, request=request) for datum in data]
+        data=[getting_order(obj=datum, request=request) for datum in data],
+        meta=Meta(paginator=paginator),
     )
 
 

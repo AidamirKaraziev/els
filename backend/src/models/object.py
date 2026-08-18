@@ -1,7 +1,10 @@
+from datetime import datetime
+
 from sqlalchemy import (
     Boolean,
     Column,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     String,
@@ -58,6 +61,12 @@ class Object(Base):
     foreman_id = Column(Integer, ForeignKey("universal_users.id", ondelete="SET NULL"))
     mechanic_id = Column(Integer, ForeignKey("universal_users.id", ondelete="SET NULL"))
     letter_of_appointment = Column(String)  # приказ о назначении
+
+    #: Метка последней правки — по ней телефон механика спрашивает «что
+    #: изменилось с момента T» и не тянет весь список заново.
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True
+    )
 
     acceptance_certificate = Column(String)
     act_pto = Column(String)

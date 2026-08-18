@@ -23,6 +23,13 @@ from src.models import (
 from src.schemas.order import OrderCreate, OrderUpdate
 from src.utils import pagination
 
+#: Статусы заявки из справочника `statuses`, см. `core/db/init_db.py:check_statuses`.
+STATUS_DONE = 4
+STATUS_PROBLEM = 5
+#: Заявка отработана: либо сделана, либо упёрлась в проблему. Для механика обе
+#: одинаково уходят из списка «что мне делать сейчас».
+CLOSED_STATUSES = (STATUS_DONE, STATUS_PROBLEM)
+
 
 def _object_display_label(name: Optional[str], object_id: int) -> str:
     if name and str(name).strip():
@@ -150,6 +157,10 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         year: Optional[int] = None,
         month: Optional[int] = None,
         only_breakdowns: bool = False,
+        executor_id: Optional[int] = None,
+        status_id: Optional[int] = None,
+        only_open: bool = False,
+        changed_since: Optional[datetime.datetime] = None,
     ):
         """Список заявок с необязательными фильтрами.
 
@@ -158,11 +169,35 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
 
         Нужно для перехода из виджета «Топ поломок»: человек видит у объекта
         число за месяц и хочет посмотреть, какие именно это были заявки.
+        Отсюда же выбирается список для механика — там важен `executor_id`
+        вместе с `only_open`.
         """
         query = self.scoped_query(db, scope)
 
         if object_id is not None:
             query = query.filter(self.model.object_id == object_id)
+
+        if executor_id is not None:
+            query = query.filter(self.model.executor_id == executor_id)
+
+        if status_id is not None:
+            query = query.filter(self.model.status_id == status_id)
+
+        if changed_since is not None:
+            # Синхронизация телефона: отдаём только то, что изменилось. Строка
+            # без метки в выдачу не попадёт — сравнение с NULL даёт NULL, — но
+            # таких строк нет: миграция проставила метку всем накопленным
+            # записям, а новым её ставит сама модель.
+            query = query.filter(self.model.updated_at > changed_since)
+
+        if only_open:
+            # `status_id` в базе обнуляемый, а заявка без статуса — это заявка,
+            # которую никто не закрывал. NOT IN на NULL даёт NULL, то есть
+            # молча выкинул бы такие строки из списка механика.
+            query = query.filter(
+                (self.model.status_id.is_(None))
+                | (self.model.status_id.notin_(CLOSED_STATUSES))
+            )
 
         if year is not None and month is not None:
             period = month_period(year, month)
@@ -198,11 +233,37 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         )
         return my_orders, 0, None
 
-    def get_orders_for_me(self, *, db: Session, executor_id: int, scope: AccessScope):
-        orders = self.scoped_query(db, scope).filter(
-            self.model.executor_id == executor_id
+    def get_orders_for_me(
+        self,
+        *,
+        db: Session,
+        executor_id: int,
+        scope: AccessScope,
+        page: Optional[int] = None,
+        status_id: Optional[int] = None,
+        only_open: bool = False,
+        year: Optional[int] = None,
+        month: Optional[int] = None,
+        changed_since: Optional[datetime.datetime] = None,
+    ):
+        """Задачи, назначенные на человека.
+
+        Раньше отдавала всё за всё время без сортировки и без страниц, а
+        мобильное приложение опрашивало ручку раз в три секунды — у механика
+        за год это сотни записей в каждом ответе. Фильтры и страницы
+        необязательные: без `page` выдача остаётся полной, как была.
+        """
+        return self.get_orders_filtered(
+            db=db,
+            scope=scope,
+            page=page,
+            year=year,
+            month=month,
+            executor_id=executor_id,
+            status_id=status_id,
+            only_open=only_open,
+            changed_since=changed_since,
         )
-        return orders, 0, None
 
     def get_top_breakdowns_by_month(
         self, *, db: Session, scope: AccessScope, year: int, month: int
