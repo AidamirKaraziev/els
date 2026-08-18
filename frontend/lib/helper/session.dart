@@ -16,6 +16,7 @@ import '../bloc/company_bloc/company_bloc.dart';
 import '../bloc/user_bloc/user_bloc.dart';
 import '../dispatcher/home_dispatcher.dart';
 import '../foreman/home_foreman.dart';
+import '../mechanic/mechanic_shell.dart';
 import '../owner/home_owner.dart';
 import '../screns/auth/auth.dart';
 import '../screns/auth/role_stub_screen.dart';
@@ -99,11 +100,14 @@ Future<bool> loadProfile() async {
 
 /// Экран, на который попадает человек с такой ролью.
 ///
-/// Механик и инженер пока получают заглушку: своих экранов у них нет, а
-/// показать им админский набор — значит показать кнопки, которые ответят
-/// `403`. До рефакторинга авторизации они не попадали никуда вообще: веток
-/// для ролей 3 и 4 в заставке не было, и приложение навсегда оставалось на
-/// анимации загрузки.
+/// Механик получает свою оболочку — четыре вкладки по макету «Механик |
+/// Мобильная версия», локальную базу и очередь исходящих действий.
+/// Инженер-наладчик пока остаётся на заглушке: работа у него та же, но
+/// оболочка сделана и проверена под механика, а пускать в неё роль, которую
+/// никто не смотрел, — значит выдать непроверенный экран за готовый.
+/// Показать обоим админский набор нельзя: половина его кнопок ответит `403`,
+/// потому что по матрице прав эти роли не заводят людей и не правят
+/// справочники.
 Widget homeScreenForRole(int roleId) {
   switch (roleId) {
     case Roles.admin:
@@ -115,6 +119,7 @@ Widget homeScreenForRole(int roleId) {
     case Roles.client:
       return const HomeOwner();
     case Roles.mechanic:
+      return const MechanicShell();
     case Roles.engineer:
       return RoleStubScreen(roleId: roleId);
     default:
@@ -129,6 +134,12 @@ Widget homeScreenForRole(int roleId) {
 /// токеном. Пока ручки были открыты, это работало; теперь каждое такое
 /// обращение получает `401`.
 void primeData(BuildContext context) {
+  // Механику эти списки не нужны вовсе: его оболочка не читает ни один из
+  // этих блоков, а данные берёт из локальной базы. Пять запросов на старте —
+  // это ровно та болезнь, от которой лечили фронт: телефон на объекте платит
+  // за них трафиком и батареей, а показать ему нечего.
+  if (idUserTest == Roles.mechanic) return;
+
   context.read<UserBloc>().add(UserGetEvent());
   context.read<MyObjectBloc>().add(ObjectGetEvent());
   context.read<TaskBloc>().add(TaskGetEvent());
