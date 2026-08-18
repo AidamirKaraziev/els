@@ -60,7 +60,16 @@ dependencies:
   location: any
   syncfusion_flutter_datepicker: 32.1.24
   shared_preferences: ^2.0.15
-  intl: 0.20.2
+  # `any` здесь — не небрежность, а единственный вариант, который работает.
+  # `flutter_localizations` из SDK зависит от точной версии intl, и версия эта
+  # у каждого Flutter своя: 3.44 (образ ghcr.io/cirruslabs/flutter:stable, на
+  # котором собирается веб) требует ровно `0.20.2`, а 3.47 — ровно `0.20.3`.
+  # Любое ограничение в этой строке называет одну из них и ломает сборку на
+  # другой: `0.20.2` роняло CI, `^0.20.3` — docker-сборку веба. `any` отдаёт
+  # выбор SDK, и pubspec переживает и обновление Flutter, и разъезд версий
+  # между машиной, CI и образом. Сам пакет нужен: 24 файла импортируют
+  # `package:intl` напрямую, поэтому убрать строку нельзя.
+  intl: any
 #  webfeed: any
   dotted_border: any
   # image_picker_web убран: он тянет dart:html и ломал сборку под Android/iOS.

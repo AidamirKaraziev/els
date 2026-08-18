@@ -51,6 +51,13 @@ jobs:
       DB_PASS: postgres
       DB_NAME: test_postgres
       SECRET_KEY: test-secret-key-for-ci
+      # Первого администратора заводит `create_initial_data()` в conftest, и
+      # на дефолтных значениях из `config.py` он намеренно падает: с ними
+      # система открыта с полными правами. Без этих двух переменных в CI не
+      # проходил ни один интеграционный тест — джоба была красной, и гейта у
+      # бэкенда фактически не было.
+      FIRST_SUPERUSER: superadmin@els-test.ru
+      FIRST_SUPERUSER_PASSWORD: test-superuser-password
 
     steps:
       - uses: actions/checkout@v4
