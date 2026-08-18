@@ -49,4 +49,4 @@ build args через `infra/docker-compose.yml`.
 
 Связано: [[аудит фронта на 2026-08-11 - Flutter, 71 тысяча строк]],
 [[план - запустить проект локально в docker]],
-[[конфигурация - .env через BaseSettings и get_url из DB переменных]]
+[[конфигурация - .env через BaseSettings и свойство DB_URL]]

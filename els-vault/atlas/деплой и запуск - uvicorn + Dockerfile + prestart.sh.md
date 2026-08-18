@@ -1,12 +1,16 @@
 ---
 tags: [atlas, deploy, run]
-date: 2026-04-07
+date: 2026-08-19
 ---
 
 # Деплой и запуск - uvicorn + Dockerfile + prestart.sh
 
 ## Локальный запуск
-- `make up` или `uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload`
+- `make up` — весь стек в docker: postgres, backend, nginx с веб-сборкой
+  фронта. Веб и API на `http://localhost:8080`, наружу торчит только nginx.
+- `make dev` — только бэкенд локально с автоперезагрузкой
+  (`uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload`),
+  база при этом нужна своя.
 
 ## Docker
 - Образ собирается из `Dockerfile`
