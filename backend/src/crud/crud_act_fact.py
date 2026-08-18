@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from starlette import status
 
 from src.core.access import AccessScope, apply_act_fact_scope, can_access_act_fact
+from src.core.archiving import ArchiveView, apply_archive_view
 from src.core.roles import ADMIN, FOREMAN, MECHANIC
 from src.crud.base import CRUDBase
 from src.crud.crud_act_base import crud_acts_bases
@@ -46,13 +47,32 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
     # Запись вне области видимости — 403, см. `templates_raise.out_of_scope`.
     out_of_scope = -136
 
-    def scoped_query(self, db: Session, scope: AccessScope):
-        """Единственное место, где список фактических актов режется."""
-        return apply_act_fact_scope(db.query(self.model), scope)
+    def scoped_query(
+        self,
+        db: Session,
+        scope: AccessScope,
+        view: ArchiveView = ArchiveView.ACTUAL,
+    ):
+        """Единственное место, где список фактических актов режется.
 
-    def get_multi(self, db: Session, *, scope: AccessScope, page: Optional[int] = None):
+        Вместе с областью отсекается архив: заархивированный акт удалён и в
+        обычных списках не показывается. Синхронизация просит
+        `ArchiveView.ALL` — иначе телефон не узнает, что акт убрали.
+        """
+        query = apply_act_fact_scope(db.query(self.model), scope)
+        return apply_archive_view(query, self.model, view)
+
+    def get_multi(
+        self,
+        db: Session,
+        *,
+        scope: AccessScope,
+        page: Optional[int] = None,
+        only_archived: bool = False,
+    ):
         """Перекрывает `CRUDBase.get_multi` ради обязательной области."""
-        return pagination.get_page(self.scoped_query(db, scope), page)
+        view = ArchiveView.choose(only_archived=only_archived)
+        return pagination.get_page(self.scoped_query(db, scope, view), page)
 
     def _planned_cells(self):
         """Ячейки графика, развёрнутые из колонок в строки.
@@ -87,6 +107,7 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
         year: Optional[int] = None,
         month: Optional[int] = None,
         only_open: bool = False,
+        only_archived: bool = False,
         changed_since: Optional[datetime.datetime] = None,
     ) -> Tuple[List, Optional[object]]:
         """Плановые ТО, назначенные на механика.
@@ -97,8 +118,11 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
         """
         cells = self._planned_cells()
 
+        view = ArchiveView.choose(
+            only_archived=only_archived, syncing=changed_since is not None
+        )
         query = (
-            self.scoped_query(db, scope)
+            self.scoped_query(db, scope, view)
             .add_columns(cells.c.year, cells.c.month)
             .join(cells, cells.c.act_id == ActFact.id)
             .outerjoin(Object, ActFact.object_id == Object.id)
@@ -241,6 +265,25 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
         # обновление данных
         db_obj = super().update(db=db, db_obj=this_act_fact, obj_in=update_data)
         return db_obj, 0, None
+
+    def archive_act_fact(self, db: Session, *, act_fact_id: int, scope: AccessScope):
+        """Мягкое удаление фактического акта.
+
+        Ячейка графика на акт продолжает ссылаться: график — это план, и то,
+        что запись убрали, из плана не следует. В списках механика и в ленте
+        прораба архивный акт не показывается.
+        """
+        act, code, indexes = self.get_act_fact_by_id(db=db, id=act_fact_id, scope=scope)
+        if code != 0:
+            return None, code, None
+        return super().archiving(db=db, db_obj=act)
+
+    def restore_act_fact(self, db: Session, *, act_fact_id: int, scope: AccessScope):
+        """Вернуть фактический акт из архива."""
+        act, code, indexes = self.get_act_fact_by_id(db=db, id=act_fact_id, scope=scope)
+        if code != 0:
+            return None, code, None
+        return super().unzipping(db=db, db_obj=act)
 
     def get_act_fact_by_object_id(
         self, *, db: Session, object_id: int, scope: AccessScope

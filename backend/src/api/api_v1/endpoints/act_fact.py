@@ -33,10 +33,20 @@ def get_data(
     request: Request,
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
+    only_archived: bool = Query(
+        False,
+        title="Только архивные",
+        description=(
+            "Отдельный вид «корзина»: акты, убранные в архив. Без параметра "
+            "их в списке нет."
+        ),
+    ),
     current_user=Depends(deps.require(Permission.ACT_READ)),
     scope=Depends(deps.get_read_scope),
 ):
-    data, paginator = crud_acts_fact.get_multi(db=session, scope=scope, page=page)
+    data, paginator = crud_acts_fact.get_multi(
+        db=session, scope=scope, page=page, only_archived=only_archived
+    )
 
     return ListOfEntityResponse(
         data=[get_acts_facts(obj=datum, request=request) for datum in data],
@@ -61,7 +71,10 @@ def get_data(
         "`only_open` — незакрытые: те, у которых нет даты окончания. "
         "`changed_since` — для синхронизации офлайн-клиента; вместе с "
         "`only_open` его слать не нужно, иначе закрытое ТО просто исчезнет из "
-        "ответа и телефон не узнает, что оно закрылось."
+        "ответа и телефон не узнает, что оно закрылось.\n\n"
+        "Архивные ТО в обычной выдаче не показываются, но в выдачу по "
+        "`changed_since` попадают — с `is_actual=false`. Так телефон и "
+        "узнаёт, что запись убрали."
     ),
     tags=["Админ панель / Фактические Акты"],
 )
@@ -76,6 +89,11 @@ def get_my_maintenance_list(
     year: int = Query(None, ge=1990, le=2100, title="Год графика, вместе с month"),
     month: int = Query(None, ge=1, le=12, title="Месяц (1–12), вместе с year"),
     only_open: bool = Query(False, title="Только незакрытые ТО"),
+    only_archived: bool = Query(
+        False,
+        title="Только архивные",
+        description="Отдельный вид «корзина». С `changed_since` не нужен.",
+    ),
     changed_since: int = Query(
         None,
         ge=0,
@@ -102,6 +120,7 @@ def get_my_maintenance_list(
         year=year,
         month=month,
         only_open=only_open,
+        only_archived=only_archived,
         changed_since=datetime_from_timestamp(changed_since),
     )
 
@@ -226,6 +245,60 @@ def update_act_fact(
     )
     get_raise(code=code)
 
+    return SingleEntityResponse(data=get_acts_facts(obj, request=request))
+
+
+@router.post(
+    path="/act-fact/{act_fact_id}/archive/",
+    response_model=SingleEntityResponse,
+    name="archive_act_fact",
+    summary="Удалить фактический акт (в архив)",
+    description=(
+        "🗑 Мягкое удаление акта. Запись остаётся в базе, но пропадает из "
+        "списков механика и из ленты сданных работ у прораба.\n\n"
+        "Настоящего `DELETE` у актов нет намеренно: телефон механика узнаёт "
+        "об удалении только по `is_actual=false` в выдаче по `changed_since`."
+        "\n\n"
+        "Ячейка графика ТО продолжает ссылаться на акт: график — это план, и "
+        "из того, что запись убрали, он не меняется.\n\n"
+        "Право `act:archive` — админ и прораб; прораб ограничен своими "
+        "участками."
+    ),
+    tags=["Админ панель / Фактические Акты"],
+)
+def archive_act_fact(
+    request: Request,
+    act_fact_id: int = Path(..., title="Id фактического акта"),
+    current_user=Depends(deps.require(Permission.ACT_ARCHIVE)),
+    session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
+):
+    obj, code, indexes = crud_acts_fact.archive_act_fact(
+        db=session, act_fact_id=act_fact_id, scope=scope
+    )
+    get_raise(code=code)
+    return SingleEntityResponse(data=get_acts_facts(obj, request=request))
+
+
+@router.post(
+    path="/act-fact/{act_fact_id}/restore/",
+    response_model=SingleEntityResponse,
+    name="restore_act_fact",
+    summary="Вернуть фактический акт из архива",
+    description="↩️ Возвращает удалённый акт в обычные списки.",
+    tags=["Админ панель / Фактические Акты"],
+)
+def restore_act_fact(
+    request: Request,
+    act_fact_id: int = Path(..., title="Id фактического акта"),
+    current_user=Depends(deps.require(Permission.ACT_ARCHIVE)),
+    session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
+):
+    obj, code, indexes = crud_acts_fact.restore_act_fact(
+        db=session, act_fact_id=act_fact_id, scope=scope
+    )
+    get_raise(code=code)
     return SingleEntityResponse(data=get_acts_facts(obj, request=request))
 
 

@@ -560,6 +560,18 @@
     ],
     "required_params": []
   },
+  "POST /api/v1/act-fact/{act_fact_id}/archive/": {
+    "required_body": [],
+    "required_params": [
+      "act_fact_id"
+    ]
+  },
+  "POST /api/v1/act-fact/{act_fact_id}/restore/": {
+    "required_body": [],
+    "required_params": [
+      "act_fact_id"
+    ]
+  },
   "POST /api/v1/act-fact/{act_fact_id}/step/{step_id}/photo/": {
     "required_body": [],
     "required_params": [
@@ -744,6 +756,18 @@
     ],
     "required_params": []
   },
+  "POST /api/v1/order/{order_id}/archive/": {
+    "required_body": [],
+    "required_params": [
+      "order_id"
+    ]
+  },
+  "POST /api/v1/order/{order_id}/restore/": {
+    "required_body": [],
+    "required_params": [
+      "order_id"
+    ]
+  },
   "POST /api/v1/organization/": {
     "required_body": [
       "title"
@@ -756,6 +780,18 @@
       "year"
     ],
     "required_params": []
+  },
+  "POST /api/v1/planned-to/{planned_to_id}/archive/": {
+    "required_body": [],
+    "required_params": [
+      "planned_to_id"
+    ]
+  },
+  "POST /api/v1/planned-to/{planned_to_id}/restore/": {
+    "required_body": [],
+    "required_params": [
+      "planned_to_id"
+    ]
   },
   "POST /api/v1/steps/": {
     "required_body": [

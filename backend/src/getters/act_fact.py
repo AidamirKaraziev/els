@@ -59,6 +59,7 @@ def get_acts_facts(
         main_mechanic_id=obj.main_mechanic_id,
         file=file,
         status_id=get_statuses(obj.status) if obj.status is not None else None,
+        is_actual=obj.is_actual,
     )
 
 
@@ -90,6 +91,7 @@ def get_my_maintenance(obj: ActFact, year: str, month: int) -> MyMaintenanceItem
         finished_at=utc_to_timestamp(obj.finished_at),
         status_id=obj.status_id,
         updated_at=utc_to_timestamp(obj.updated_at),
+        is_actual=obj.is_actual,
     )
 
 

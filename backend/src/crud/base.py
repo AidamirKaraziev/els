@@ -168,19 +168,26 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         else:
             return {path_type: path_for_db}
 
-    def archiving(self, db: Session, *, db_obj: ModelType):
-        db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update(
-            {"is_actual": False}
-        )
+    def _set_actual(self, db: Session, db_obj: ModelType, value: bool):
+        """Пометить запись архивной или живой.
+
+        Через объект, а не запросом `UPDATE`: у заявок, актов и графика ТО
+        есть `updated_at` с `onupdate`, и его двигает только правка через
+        сессию. Массовый `UPDATE` метку не трогал бы — а именно по ней телефон
+        механика узнаёт, что запись убрали, то есть архивирование прошло бы
+        мимо синхронизации целиком.
+        """
+        db_obj.is_actual = value
+        db.add(db_obj)
         db.commit()
+        db.refresh(db_obj)
         return db_obj, 0, None
 
+    def archiving(self, db: Session, *, db_obj: ModelType):
+        return self._set_actual(db, db_obj, False)
+
     def unzipping(self, db: Session, *, db_obj: ModelType):
-        db.query(db_obj.__class__).filter(db_obj.__class__.id == db_obj.id).update(
-            {"is_actual": True}
-        )
-        db.commit()
-        return db_obj, 0, None
+        return self._set_actual(db, db_obj, True)
 
     def check_list(self, verify_list: list, all_list: list):
         for element in verify_list:

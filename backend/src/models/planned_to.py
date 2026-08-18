@@ -1,12 +1,14 @@
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     ForeignKey,
     Integer,
     String,
     UniqueConstraint,
+    true,
 )
 from sqlalchemy.orm import relationship
 
@@ -31,6 +33,11 @@ class PlannedTO(Base):
     october_to_id = Column(Integer, ForeignKey("acts_fact.id", ondelete="SET NULL"))
     november_to_id = Column(Integer, ForeignKey("acts_fact.id", ondelete="SET NULL"))
     december_to_id = Column(Integer, ForeignKey("acts_fact.id", ondelete="SET NULL"))
+
+    #: Мягкое удаление: запись уходит из списков, но остаётся в базе и
+    #: доезжает до телефона с `is_actual=false`. Настоящий `DELETE` офлайн-
+    #: клиенту сказать нечего — см. `src/core/archiving.py`.
+    is_actual = Column(Boolean, default=True, nullable=False, server_default=true())
 
     #: Метка последней правки — по ней телефон механика спрашивает «что
     #: изменилось с момента T» и не тянет весь список заново.

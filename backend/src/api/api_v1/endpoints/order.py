@@ -87,7 +87,9 @@ def get_top_breakdowns_statistics(
         "`year` и `month` задаются только вместе — период считается по дате "
         "создания заявки. Связка с `object_id` и `only_breakdowns` нужна для "
         "перехода из виджета «Топ поломок»: показать те самые заявки, которые "
-        "посчитаны в его счётчике."
+        "посчитаны в его счётчике.\n\n"
+        "Архивных заявок в списке нет, для них есть "
+        "отдельный вид — `only_archived=true`."
     ),
     tags=["Админ панель / Задачи"],
 )
@@ -106,6 +108,14 @@ def get_orders(
             "отбор, что в статистике."
         ),
     ),
+    only_archived: bool = Query(
+        False,
+        title="Только архивные",
+        description=(
+            "Отдельный вид «корзина»: заявки, убранные в архив. Без параметра "
+            "их в списке нет."
+        ),
+    ),
     current_universal_user=Depends(deps.require(Permission.ORDER_READ)),
     scope=Depends(deps.get_read_scope),
 ):
@@ -119,6 +129,7 @@ def get_orders(
         year=year,
         month=month,
         only_breakdowns=only_breakdowns,
+        only_archived=only_archived,
     )
 
     return ListOfEntityResponse(
@@ -218,6 +229,59 @@ def update_order(
     return SingleEntityResponse(data=getting_order(obj, request=request))
 
 
+@router.post(
+    "/order/{order_id}/archive/",
+    response_model=SingleEntityResponse,
+    name="archive_order",
+    summary="Удалить заявку (в архив)",
+    description=(
+        "🗑 Мягкое удаление заявки. Запись остаётся в базе, но пропадает из "
+        "списков и из ленты сданных работ.\n\n"
+        "Настоящего `DELETE` у заявок нет намеренно: офлайн-клиенту об "
+        "исчезнувшей строке сказать нечего, а заархивированная приезжает в "
+        "`changed_since` с `is_actual=false` — по ней телефон и убирает "
+        "заявку у себя.\n\n"
+        "Право `order:archive` — админ и прораб; прораб ограничен своими "
+        "участками. Повторное архивирование ничего не меняет."
+    ),
+    tags=["Админ панель / Задачи"],
+)
+def archive_order(
+    request: Request,
+    order_id: int = Path(..., title="Id задачи"),
+    current_user=Depends(deps.require(Permission.ORDER_ARCHIVE)),
+    session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
+):
+    obj, code, indexes = crud_orders.archive_order(
+        db=session, order_id=order_id, scope=scope
+    )
+    get_raise(code=code)
+    return SingleEntityResponse(data=getting_order(obj, request=request))
+
+
+@router.post(
+    "/order/{order_id}/restore/",
+    response_model=SingleEntityResponse,
+    name="restore_order",
+    summary="Вернуть заявку из архива",
+    description="↩️ Возвращает удалённую заявку в обычные списки.",
+    tags=["Админ панель / Задачи"],
+)
+def restore_order(
+    request: Request,
+    order_id: int = Path(..., title="Id задачи"),
+    current_user=Depends(deps.require(Permission.ORDER_ARCHIVE)),
+    session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
+):
+    obj, code, indexes = crud_orders.restore_order(
+        db=session, order_id=order_id, scope=scope
+    )
+    get_raise(code=code)
+    return SingleEntityResponse(data=getting_order(obj, request=request))
+
+
 @router.get(
     "/order/for-me",
     response_model=ListOfEntityResponse,
@@ -233,7 +297,10 @@ def update_order(
         "`changed_since` — для синхронизации офлайн-клиента: отдаёт только "
         "заявки, изменившиеся после указанного времени. **Вместе с "
         "`only_open` его слать не нужно**: закрытая заявка просто исчезнет из "
-        "ответа, и телефон никогда не узнает, что она закрылась."
+        "ответа, и телефон никогда не узнает, что она закрылась.\n\n"
+        "Архивные заявки в обычной выдаче не показываются, но в выдачу по "
+        "`changed_since` попадают — с `is_actual=false`. Именно так телефон "
+        "узнаёт, что заявку убрали."
     ),
     summary="Задачи для пользователя",
     tags=["Админ панель / Задачи"],
@@ -257,6 +324,11 @@ def get_orders_for_me(
     ),
     year: int = Query(None, ge=1990, le=2100, title="Год, вместе с month"),
     month: int = Query(None, ge=1, le=12, title="Месяц (1–12), вместе с year"),
+    only_archived: bool = Query(
+        False,
+        title="Только архивные",
+        description="Отдельный вид «корзина». С `changed_since` не нужен.",
+    ),
     changed_since: int = Query(
         None,
         ge=0,
@@ -275,6 +347,7 @@ def get_orders_for_me(
         page=page,
         status_id=status_id,
         only_open=only_open,
+        only_archived=only_archived,
         year=year,
         month=month,
         changed_since=datetime_from_timestamp(changed_since),

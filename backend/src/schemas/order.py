@@ -1,7 +1,7 @@
 from sqlite3 import Date, Timestamp
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.schemas.fault_category import FaultCategoryGet
 from src.schemas.object import ObjectGet
@@ -91,3 +91,13 @@ class OrderGet(BaseModel):
     #: Метка последней правки. Клиент запоминает наибольшую из полученных и
     #: присылает её обратно в `changed_since`.
     updated_at: Optional[int]
+
+    is_actual: Optional[bool] = Field(
+        None,
+        title="Запись жива",
+        description=(
+            "`false` — запись удалена (заархивирована). В обычных списках "
+            "её нет, но синхронизация по `changed_since` её отдаёт — именно "
+            "так офлайн-клиент узнаёт, что запись надо убрать у себя."
+        ),
+    )

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, true
 from sqlalchemy.orm import relationship
 
 from src.models import ActBase, Object, Status
@@ -34,6 +34,11 @@ class ActFact(Base):
         ForeignKey("statuses.id", ondelete="CASCADE", onupdate="CASCADE"),
         default=1,
     )
+
+    #: Мягкое удаление: запись уходит из списков, но остаётся в базе и
+    #: доезжает до телефона с `is_actual=false`. Настоящий `DELETE` офлайн-
+    #: клиенту сказать нечего — см. `src/core/archiving.py`.
+    is_actual = Column(Boolean, default=True, nullable=False, server_default=true())
 
     #: Метка последней правки — по ней телефон механика спрашивает «что
     #: изменилось с момента T» и не тянет весь список заново.

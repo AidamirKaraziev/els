@@ -45,12 +45,17 @@ class Permission(str, Enum):
     # Перевод в «Выполнено» — отдельно от обычного изменения: диспетчер ведёт
     # заявку, но закрывает её исполнитель или прораб.
     ORDER_CLOSE = "order:close"
+    # Мягкое удаление. Отдельно от `*_DELETE`, как у пользователей: настоящий
+    # `DELETE` необратим и остаётся у админа, а убрать ошибочную запись из
+    # списков должен уметь и прораб.
+    ORDER_ARCHIVE = "order:archive"
     ORDER_DELETE = "order:delete"
 
     # Акты: шаблоны, фактические, дефектные ведомости
     ACT_READ = "act:read"
     ACT_CREATE = "act:create"
     ACT_UPDATE = "act:update"
+    ACT_ARCHIVE = "act:archive"
     ACT_DELETE = "act:delete"
 
     # Отметка «проверил» на сданной работе. Отдельно от `act:update` и
@@ -62,6 +67,7 @@ class Permission(str, Enum):
     # Плановые ТО
     PLANNED_TO_READ = "planned_to:read"
     PLANNED_TO_WRITE = "planned_to:write"
+    PLANNED_TO_ARCHIVE = "planned_to:archive"
 
     # Контрагенты: компании-клиенты, наши юрлица, договоры, контактные лица
     COUNTERPARTY_READ = "counterparty:read"
@@ -136,6 +142,12 @@ ROLE_PERMISSIONS: Dict[Role, FrozenSet[Permission]] = {
         Permission.USER_CREATE,
         Permission.USER_UPDATE,
         Permission.USER_ARCHIVE,
+        # Мягкое удаление работы и графика — там же, где право заводить их.
+        # Механику не даём: убрать заявку, которую не хочется делать, он бы
+        # смог, а заметить это было бы некому.
+        Permission.ORDER_ARCHIVE,
+        Permission.ACT_ARCHIVE,
+        Permission.PLANNED_TO_ARCHIVE,
         # Рейтинг своих механиков: прораб видит людей своих участков, режет
         # выдачу область видимости.
         Permission.EMPLOYEE_STATS_READ,

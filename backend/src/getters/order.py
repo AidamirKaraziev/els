@@ -56,5 +56,6 @@ def getting_order(
         # функции пишут метку прямо в загруженную запись, и любой flush после
         # этого попытается сохранить число в колонку с датой.
         updated_at=utc_to_timestamp(obj.updated_at),
+        is_actual=obj.is_actual,
         # order_photo=getting_order_photo(obj=obj.order_photo, request=request) if obj.order_photo is not None else None
     )

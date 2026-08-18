@@ -54,4 +54,5 @@ def get_planned_to(
         december_to_id=get_acts_facts(obj.december_to, request=request)
         if obj.december_to is not None
         else None,
+        is_actual=obj.is_actual,
     )

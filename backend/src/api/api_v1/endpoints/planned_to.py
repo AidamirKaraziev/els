@@ -64,10 +64,20 @@ def get_all_planned_to(
     request: Request,
     session=Depends(deps.get_db),
     page: int = Query(1, title="Номер страницы"),
+    only_archived: bool = Query(
+        False,
+        title="Только архивные",
+        description=(
+            "Отдельный вид «корзина»: графики, убранные в архив. Без "
+            "параметра их в списке нет."
+        ),
+    ),
     current_user=Depends(deps.require(Permission.PLANNED_TO_READ)),
     scope=Depends(deps.get_read_scope),
 ):
-    data, paginator = crud_planned_to.get_multi(db=session, scope=scope, page=page)
+    data, paginator = crud_planned_to.get_multi(
+        db=session, scope=scope, page=page, only_archived=only_archived
+    )
 
     return ListOfEntityResponse(
         data=[get_planned_to(obj=datum, request=request) for datum in data],
@@ -168,6 +178,57 @@ def update_planned_to(
     )
     get_raise(code=code)
 
+    return SingleEntityResponse(data=get_planned_to(obj, request=request))
+
+
+@router.post(
+    path="/planned-to/{planned_to_id}/archive/",
+    response_model=SingleEntityResponse,
+    name="archive_planned_to",
+    summary="Удалить график ТО (в архив)",
+    description=(
+        "🗑 Мягкое удаление годового графика ТО по объекту. Запись остаётся в "
+        "базе, но пропадает из списков.\n\n"
+        "Акты, на которые ссылаются ячейки, не трогаются: сделанная по "
+        "графику работа никуда не девается.\n\n"
+        "Право `planned_to:archive` — админ и прораб; прораб ограничен своими "
+        "участками."
+    ),
+    tags=["Админ панель / Плановые ТО"],
+)
+def archive_planned_to(
+    request: Request,
+    planned_to_id: int = Path(..., title="Id планового ТО"),
+    current_user=Depends(deps.require(Permission.PLANNED_TO_ARCHIVE)),
+    session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
+):
+    obj, code, indexes = crud_planned_to.archive_planned_to(
+        db=session, planned_to_id=planned_to_id, scope=scope
+    )
+    get_raise(code=code)
+    return SingleEntityResponse(data=get_planned_to(obj, request=request))
+
+
+@router.post(
+    path="/planned-to/{planned_to_id}/restore/",
+    response_model=SingleEntityResponse,
+    name="restore_planned_to",
+    summary="Вернуть график ТО из архива",
+    description="↩️ Возвращает удалённый график в обычные списки.",
+    tags=["Админ панель / Плановые ТО"],
+)
+def restore_planned_to(
+    request: Request,
+    planned_to_id: int = Path(..., title="Id планового ТО"),
+    current_user=Depends(deps.require(Permission.PLANNED_TO_ARCHIVE)),
+    session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
+):
+    obj, code, indexes = crud_planned_to.restore_planned_to(
+        db=session, planned_to_id=planned_to_id, scope=scope
+    )
+    get_raise(code=code)
     return SingleEntityResponse(data=get_planned_to(obj, request=request))
 
 

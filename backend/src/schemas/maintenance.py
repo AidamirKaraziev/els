@@ -47,3 +47,13 @@ class MyMaintenanceItem(BaseModel):
         title="Метка последней правки",
         description="Клиент запоминает наибольшую и присылает её в `changed_since`.",
     )
+
+    is_actual: Optional[bool] = Field(
+        None,
+        title="Запись жива",
+        description=(
+            "`false` — запись удалена (заархивирована). В обычных списках "
+            "её нет, но синхронизация по `changed_since` её отдаёт — именно "
+            "так офлайн-клиент узнаёт, что запись надо убрать у себя."
+        ),
+    )

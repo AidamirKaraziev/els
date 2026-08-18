@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from src.core.access import AccessScope, apply_order_scope, can_access_order
+from src.core.archiving import ArchiveView, apply_archive_view
 from src.crud.base import CRUDBase
 from src.crud.crud_fault_category import crud_fault_category
 from src.crud.crud_object import crud_objects
@@ -43,9 +44,20 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
     # Запись вне области видимости — 403, см. `templates_raise.out_of_scope`.
     out_of_scope = -136
 
-    def scoped_query(self, db: Session, scope: AccessScope):
-        """Единственное место, где список заявок режется по области."""
-        return apply_order_scope(db.query(self.model), scope)
+    def scoped_query(
+        self,
+        db: Session,
+        scope: AccessScope,
+        view: ArchiveView = ArchiveView.ACTUAL,
+    ):
+        """Единственное место, где список заявок режется по области.
+
+        Здесь же отсекается архив: заархивированная заявка удалена, и в
+        обычных списках её быть не должно. Исключение одно — синхронизация,
+        она просит `ArchiveView.ALL`.
+        """
+        query = apply_order_scope(db.query(self.model), scope)
+        return apply_archive_view(query, self.model, view)
 
     def get_order_by_id(self, *, db: Session, order_id: int, scope: AccessScope):
         obj = db.query(Order).filter(Order.id == order_id).first()
@@ -147,6 +159,28 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         db_obj = super().update(db=db, db_obj=order, obj_in=new_data)
         return db_obj, 0, None
 
+    def archive_order(self, db: Session, *, order_id: int, scope: AccessScope):
+        """Мягкое удаление заявки.
+
+        Настоящего `DELETE` у заявок нет и не будет: телефон механика узнаёт
+        об удалении только по метке `is_actual` в синхронизации.
+        """
+        order, code, indexes = self.get_order_by_id(
+            db=db, order_id=order_id, scope=scope
+        )
+        if code != 0:
+            return None, code, None
+        return super().archiving(db=db, db_obj=order)
+
+    def restore_order(self, db: Session, *, order_id: int, scope: AccessScope):
+        """Вернуть заявку из архива."""
+        order, code, indexes = self.get_order_by_id(
+            db=db, order_id=order_id, scope=scope
+        )
+        if code != 0:
+            return None, code, None
+        return super().unzipping(db=db, db_obj=order)
+
     def get_orders_filtered(
         self,
         *,
@@ -160,6 +194,7 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         executor_id: Optional[int] = None,
         status_id: Optional[int] = None,
         only_open: bool = False,
+        only_archived: bool = False,
         changed_since: Optional[datetime.datetime] = None,
     ):
         """Список заявок с необязательными фильтрами.
@@ -171,8 +206,18 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         число за месяц и хочет посмотреть, какие именно это были заявки.
         Отсюда же выбирается список для механика — там важен `executor_id`
         вместе с `only_open`.
+
+        Архив по умолчанию не показывается, `only_archived` даёт отдельный вид
+        «удалённое». С `changed_since` вид не спрашивают: синхронизации нужны
+        обе половины, иначе телефон не узнает об архивировании.
         """
-        query = self.scoped_query(db, scope)
+        query = self.scoped_query(
+            db,
+            scope,
+            ArchiveView.choose(
+                only_archived=only_archived, syncing=changed_since is not None
+            ),
+        )
 
         if object_id is not None:
             query = query.filter(self.model.object_id == object_id)
@@ -242,6 +287,7 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         page: Optional[int] = None,
         status_id: Optional[int] = None,
         only_open: bool = False,
+        only_archived: bool = False,
         year: Optional[int] = None,
         month: Optional[int] = None,
         changed_since: Optional[datetime.datetime] = None,
@@ -262,6 +308,7 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
             executor_id=executor_id,
             status_id=status_id,
             only_open=only_open,
+            only_archived=only_archived,
             changed_since=changed_since,
         )
 

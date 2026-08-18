@@ -40,6 +40,7 @@ from src.core.access import (
     can_access_order,
     order_scope_filter,
 )
+from src.core.archiving import archive_filter
 from src.models import ActFact, FaultCategory, Object, Order, UniversalUser
 from src.schemas.reports import WorkKind
 from src.services.work_kind import order_kind_case
@@ -95,7 +96,13 @@ class CrudSubmittedWorks:
             .outerjoin(Object, ActFact.object_id == Object.id)
             .outerjoin(mechanic, ActFact.main_mechanic_id == mechanic.id)
             .outerjoin(reviewer, ActFact.reviewed_by_id == reviewer.id)
-            .filter(ActFact.finished_at.isnot(None), act_fact_scope_filter(scope))
+            # Архивный акт в ленту не попадает: для прораба он удалён, и
+            # отмечать «проверил» на удалённой работе незачем.
+            .filter(
+                ActFact.finished_at.isnot(None),
+                act_fact_scope_filter(scope),
+                archive_filter(ActFact),
+            )
         )
 
         if only_unreviewed:
@@ -138,7 +145,11 @@ class CrudSubmittedWorks:
             .outerjoin(creator, Order.creator_id == creator.id)
             .outerjoin(executor, Order.executor_id == executor.id)
             .outerjoin(reviewer, Order.reviewed_by_id == reviewer.id)
-            .filter(Order.status_id == STATUS_DONE, order_scope_filter(scope))
+            .filter(
+                Order.status_id == STATUS_DONE,
+                order_scope_filter(scope),
+                archive_filter(Order),
+            )
         )
 
         if only_unreviewed:
@@ -241,17 +252,18 @@ class CrudSubmittedWorks:
 
         Незакрытую работу отметить нельзя: в ленте её нет, и проверять пока
         нечего. Отвечаем 404, а не 422 — для того, кто смотрит ленту, такой
-        работы там просто не существует.
+        работы там просто не существует. По той же причине не отмечается и
+        заархивированная работа.
         """
         if kind == WorkKind.MAINTENANCE.value:
             work = db.query(ActFact).filter(ActFact.id == work_id).first()
-            if work is None or work.finished_at is None:
+            if work is None or work.finished_at is None or work.is_actual is False:
                 return None, self.not_found, None
             if not can_access_act_fact(scope, work):
                 return None, self.out_of_scope, None
         elif kind in ORDER_KINDS:
             work = db.query(Order).filter(Order.id == work_id).first()
-            if work is None or work.status_id != STATUS_DONE:
+            if work is None or work.status_id != STATUS_DONE or work.is_actual is False:
                 return None, self.not_found, None
             if not can_access_order(scope, work):
                 return None, self.out_of_scope, None

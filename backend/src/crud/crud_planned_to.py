@@ -10,6 +10,7 @@ from src.core.access import (
     can_access_planned_to,
     object_scope_filter,
 )
+from src.core.archiving import ArchiveView, apply_archive_view
 from src.core.response import Paginator
 from src.core.roles import FOREMAN
 from src.crud.base import CRUDBase
@@ -78,13 +79,31 @@ class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
     # Запись вне области видимости — 403, см. `templates_raise.out_of_scope`.
     out_of_scope = -136
 
-    def scoped_query(self, db: Session, scope: AccessScope):
-        """Единственное место, где список плановых ТО режется по области."""
-        return apply_planned_to_scope(db.query(self.model), scope)
+    def scoped_query(
+        self,
+        db: Session,
+        scope: AccessScope,
+        view: ArchiveView = ArchiveView.ACTUAL,
+    ):
+        """Единственное место, где список плановых ТО режется по области.
 
-    def get_multi(self, db: Session, *, scope: AccessScope, page: Optional[int] = None):
+        Вместе с областью отсекается архив: заархивированный график удалён и в
+        обычных списках не показывается.
+        """
+        query = apply_planned_to_scope(db.query(self.model), scope)
+        return apply_archive_view(query, self.model, view)
+
+    def get_multi(
+        self,
+        db: Session,
+        *,
+        scope: AccessScope,
+        page: Optional[int] = None,
+        only_archived: bool = False,
+    ):
         """Перекрывает `CRUDBase.get_multi` ради обязательной области."""
-        return pagination.get_page(self.scoped_query(db, scope), page)
+        view = ArchiveView.choose(only_archived=only_archived)
+        return pagination.get_page(self.scoped_query(db, scope, view), page)
 
     def get_planed_to_by_id(
         self, *, db: Session, planned_to_id: int, scope: AccessScope
@@ -260,6 +279,32 @@ class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
     ) -> Tuple[List[ModelType], Paginator]:
         query = self.scoped_query(db, scope).filter(self.model.object_id == object_id)
         return pagination.get_page(query, page)
+
+    def archive_planned_to(
+        self, db: Session, *, planned_to_id: int, scope: AccessScope
+    ):
+        """Мягкое удаление годового графика ТО по объекту.
+
+        Акты, на которые ссылаются ячейки, остаются как были: график — это
+        план, а сделанная по нему работа никуда не девается.
+        """
+        planned, code, indexes = self.get_planed_to_by_id(
+            db=db, planned_to_id=planned_to_id, scope=scope
+        )
+        if code != 0:
+            return None, code, None
+        return super().archiving(db=db, db_obj=planned)
+
+    def restore_planned_to(
+        self, db: Session, *, planned_to_id: int, scope: AccessScope
+    ):
+        """Вернуть график ТО из архива."""
+        planned, code, indexes = self.get_planed_to_by_id(
+            db=db, planned_to_id=planned_to_id, scope=scope
+        )
+        if code != 0:
+            return None, code, None
+        return super().unzipping(db=db, db_obj=planned)
 
     def get_schedule_execution_stats(
         self, *, db: Session, scope: AccessScope, year: int, month: int

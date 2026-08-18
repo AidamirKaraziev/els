@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, true
 from sqlalchemy.orm import relationship
 
 from src.models import Object, Status, UniversalUser
@@ -30,6 +30,11 @@ class Order(Base):
 
     status_id = Column(Integer, ForeignKey(Status.id, ondelete="CASCADE"), default=1)
     is_viewed = Column(Boolean, default=False)
+
+    #: Мягкое удаление: запись уходит из списков, но остаётся в базе и
+    #: доезжает до телефона с `is_actual=false`. Настоящий `DELETE` офлайн-
+    #: клиенту сказать нечего — см. `src/core/archiving.py`.
+    is_actual = Column(Boolean, default=True, nullable=False, server_default=true())
 
     #: Метка последней правки — по ней телефон механика спрашивает «что
     #: изменилось с момента T» и не тянет весь список заново.

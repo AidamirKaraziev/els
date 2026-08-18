@@ -76,6 +76,16 @@ class PlannedTOGet(BaseModel):
     november_to_id: Optional[ActFactGet]
     december_to_id: Optional[ActFactGet]
 
+    is_actual: Optional[bool] = Field(
+        None,
+        title="Запись жива",
+        description=(
+            "`false` — запись удалена (заархивирована). В обычных списках "
+            "её нет, но синхронизация по `changed_since` её отдаёт — именно "
+            "так офлайн-клиент узнаёт, что запись надо убрать у себя."
+        ),
+    )
+
 
 class ScheduleExecutionDivisionStats(BaseModel):
     division_id: int
