@@ -9,6 +9,8 @@ import '../../../helper/class_colors.dart';
 import 'package:http/http.dart' as http;
 import '../../screns/home_page/home_page.dart';
 import '../screns/user/user_contact.dart';
+import 'package:els/helper/session.dart';
+import 'package:els/helper/sign_out_button.dart';
 
 import 'employee_foreman/employee_widget_foreman/editing_employee_foreman.dart';
 import 'package:els/helper/api_client.dart';
@@ -249,6 +251,13 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                         //     const SizedBox(width: 30.0),
                         //   ],
                         // ),
+
+                        ///Назад — на раздел, с которого зашли
+                        ProfileBackButton(
+                          onBack: () => setState(() {}),
+                          size: size.width > 350 ? 25.0 : 20,
+                        ),
+                        const SizedBox(width: 4.0),
 
                         ///Text
                         Text('Мой Профиль',
@@ -1088,6 +1097,14 @@ class _OpenViewUserForemanState extends State<OpenViewUserForeman> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 24.0),
+
+                  /// Выход из аккаунта
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.0),
+                    child: SignOutButton(),
+                  ),
+                  const SizedBox(height: 24.0),
                 ],
               ),
             ),
@@ -1309,9 +1326,10 @@ class _MyUserForemanState extends State<MyUserForeman> {
       progressColor: ColorApp.myColorGreenAuth,
       backgroundColor: ColorApp.myColorAvatar,
       center: GestureDetector(
-          onTap: () async {
-            IntTest.indexScreensForeman = 24;
-            myStream.add(IntTest.indexScreensForeman);
+          // Раздел ставит `openProfile`, а не эта строка: он же запоминает,
+          // откуда ушли, чтобы стрелка «назад» в профиле вернула туда же.
+          onTap: () {
+            openProfile();
             setState(() {});
           },
           child: StreamBuilder(

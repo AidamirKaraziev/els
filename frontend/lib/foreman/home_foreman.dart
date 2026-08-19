@@ -15,6 +15,8 @@ import '../screns/employee/view/employee_page.dart';
 import '../screns/home_page/home_page.dart';
 import '../screns/report/report_screen.dart';
 import '../screns/schedule/schedule_page.dart';
+import '../screns/submitted_works/repository/submitted_works_repository.dart';
+import '../screns/submitted_works/view/submitted_works_screen.dart';
 import '../screns/task/view/task_page.dart';
 import '../screns/user/user_page.dart';
 import 'companies_foreman/companies_arhive_foreman/companies_screen_archive_foreman.dart';
@@ -117,6 +119,9 @@ class _HomeForemanState extends State<HomeForeman> {
 
     /// Окно User 24
     const OpenViewUserForeman(),
+
+    /// Лента сданных работ 25
+    const SubmittedWorksScreen(drawer: DrawerForeman()),
   ];
 
   @override
@@ -126,6 +131,10 @@ class _HomeForemanState extends State<HomeForeman> {
     getListTaskForeman();
     getListCompanyForeman();
     getListEmployeeForeman();
+    // Счётчик непросмотренного нужен кнопке меню, а не экрану: число видно с
+    // любого раздела, поэтому и тянем его один раз при входе в оболочку.
+    // Ошибку глотаем молча — из-за неё нельзя не пустить прораба в систему.
+    const SubmittedWorksRepository().unreviewedCount().catchError((_) => 0);
     // TODO: implement initState
     super.initState();
   }

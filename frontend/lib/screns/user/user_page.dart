@@ -12,6 +12,7 @@ import '../../helper/header/header.dart';
 import '../../helper/hints/hints_switch.dart';
 import '../../helper/my_drawer/my_drawer.dart';
 import '../../helper/my_user.dart';
+import '../../helper/sign_out_button.dart';
 import '../home_page/home_page.dart';
 
 ///Мой профиль
@@ -49,6 +50,13 @@ class _MyProfileState extends State<MyProfile> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
+                      ///Назад — на раздел, с которого зашли
+                      ProfileBackButton(
+                        onBack: () => setState(() {}),
+                        size: size.width > 350 ? 25.0 : 20,
+                      ),
+                      const SizedBox(width: 4.0),
+
                       ///Иконка меню
                       if (size.width <= 1350)
                         Row(
@@ -142,6 +150,8 @@ class _MyProfileState extends State<MyProfile> {
                       ),
                       const SizedBox(height: 20.0),
                       const HintsSwitch(),
+                      const SizedBox(height: 24.0),
+                      const SignOutButton(),
                     ],
                   ),
                 )
@@ -157,6 +167,8 @@ class _MyProfileState extends State<MyProfile> {
                     UserContact(),
                     SizedBox(height: 20.0),
                     UserDoc(),
+                    SizedBox(height: 24.0),
+                    SignOutButton(),
                   ],
                 ),
               ),

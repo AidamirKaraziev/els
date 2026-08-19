@@ -6,12 +6,25 @@
 и отметка — и ни чек-листа, ни истории статусов.
 """
 
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
 from src.schemas.maintenance import MaintenanceObject
 from src.schemas.reports import WorkKind
+
+
+class WorkOutcome(str, Enum):
+    """Чем кончился выход: сделали или не смогли.
+
+    Отдельно от `WorkKind`: вид работы отвечает на «что это было», исход — на
+    «получилось ли». Смешивать их в одно поле нельзя, иначе авария, закрытая
+    проблемой, перестала бы считаться аварией в отчётах.
+    """
+
+    DONE = "done"
+    PROBLEM = "problem"
 
 
 class SubmittedWork(BaseModel):
@@ -40,6 +53,15 @@ class SubmittedWork(BaseModel):
         None,
         title="Кто сдал работу",
         description="Механик акта у ТО, исполнитель у заявки.",
+    )
+    outcome: Optional[WorkOutcome] = Field(
+        None,
+        title="Чем кончился выход",
+        description=(
+            "`done` — работа сделана, `problem` — механик выехал, но сделать "
+            "не вышло и заявка закрыта «Проблемой». У ТО всегда `done`: "
+            "«проблемой» акт не закрывают."
+        ),
     )
     closed_at: Optional[int] = Field(
         None,

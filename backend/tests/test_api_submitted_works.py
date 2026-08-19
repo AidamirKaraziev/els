@@ -31,6 +31,7 @@ FEED = f"{settings.API_V1_STR}/work/submitted"
 COUNT = f"{settings.API_V1_STR}/work/submitted/unreviewed-count"
 
 STATUS_DONE = 4
+STATUS_PROBLEM = 5
 STATUS_IN_PROGRESS = 3
 
 
@@ -161,6 +162,34 @@ def test_unfinished_work_is_not_submitted(
 
 
 @pytest.mark.integration
+def test_order_closed_with_a_problem_is_submitted_too(
+    client_with_db, foreman, db_session, closed_order
+):
+    """«Съездил и не смог» — тоже отчёт о выходе, и прорабу он нужен."""
+    order = closed_order(status_id=STATUS_PROBLEM)
+    # На «Проблему» бэкенд `done_at` не ставит: так заявка и живёт в базе.
+    order.done_at = None
+    db_session.flush()
+
+    item = _items(client_with_db.get(FEED))[0]
+
+    assert item["work_id"] == order.id
+    assert item["outcome"] == "problem"
+    # Дата сдачи берётся из метки правки, иначе строка провалилась бы в конец.
+    assert item["closed_at"] is not None
+
+
+@pytest.mark.integration
+def test_done_work_says_it_went_well(
+    client_with_db, foreman, closed_act, closed_order
+):
+    closed_act()
+    closed_order()
+
+    assert {item["outcome"] for item in _items(client_with_db.get(FEED))} == {"done"}
+
+
+@pytest.mark.integration
 def test_card_says_what_where_and_who(client_with_db, foreman, closed_act, mechanic):
     act = closed_act()
 
@@ -277,6 +306,23 @@ def test_marking_twice_keeps_the_first_mark(
 
     db_session.refresh(act)
     assert act.reviewed_at == first
+
+
+@pytest.mark.integration
+def test_problem_is_counted_and_can_be_marked(
+    client_with_db, foreman, closed_order, db_session
+):
+    """Счётчик считает «Проблему», и отметка её гасит — как и удавшуюся работу."""
+    order = closed_order(status_id=STATUS_PROBLEM)
+
+    assert client_with_db.get(COUNT).json()["data"]["count"] == 1
+
+    marked = _mark(client_with_db, "breakdown", order.id)
+
+    assert marked.status_code == 200, marked.text
+    assert marked.json()["data"]["count"] == 0
+    db_session.refresh(order)
+    assert order.reviewed_by_id == foreman.id
 
 
 @pytest.mark.integration

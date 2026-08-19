@@ -9,6 +9,7 @@ import '../screns/home_page/home_page.dart';
 import '../screns/user/user_contact.dart';
 import '../screns/user/user_profile.dart';
 import 'class_colors.dart';
+import 'session.dart';
 import 'package:els/helper/api_config.dart';
 import 'package:els/helper/api_image.dart';
 
@@ -35,11 +36,16 @@ class _MyUserState extends State<MyUser> {
               progressColor: ColorApp.myColorGreenAuth,
               backgroundColor: ColorApp.myColorAvatar,
               center: GestureDetector(
-                onTap: () async {
-                  IntTest.indexScreens = 8;
-                  myStream.add(IntTest.indexScreens);
-                  setState(() {});
-                },
+                // Раньше здесь стояло `IntTest.indexScreens = 8`: у админа это
+                // «Охрана труда», а не профиль, а у прораба и диспетчера —
+                // чужая переменная, поэтому нажатие не делало вовсе ничего.
+                // Куда идти, знает `openProfile`: индексы у ролей разные.
+                onTap: !hasProfileScreen
+                    ? null
+                    : () {
+                        openProfile();
+                        setState(() {});
+                      },
                 child: StreamBuilder(
                   stream: myStream.stream,
                   builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {

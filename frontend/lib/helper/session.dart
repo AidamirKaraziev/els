@@ -27,6 +27,7 @@ import '../screns/task/bloc_task/task_bloc.dart';
 import '../screns/user/user_contact.dart';
 import 'api_client.dart';
 import 'api_config.dart';
+import 'class_colors.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -205,4 +206,86 @@ void goToLogin() {
 /// Вход состоялся — снимаем флаг, иначе следующий `401` не сработает.
 void markSignedIn() {
   _atLogin = false;
+}
+
+/// ===== Переход в «Личный профиль» и обратно =====
+///
+/// Оболочки подрядчика держат открытый раздел одной глобальной переменной на
+/// роль (`IntTest.indexScreens*`) и перерисовываются по `myStream`. Истории
+/// переходов в них нет вовсе, поэтому «назад» из профиля приходится делать
+/// руками: запоминаем раздел перед уходом и возвращаем его.
+///
+/// Одной переменной хватает: у вошедшего оболочка одна, сменить роль без
+/// повторного входа нельзя.
+
+/// Индекс экрана `MyProfile` в списке экранов своей оболочки.
+///
+/// Числа разные, потому что списки у ролей разные и собраны подрядчиком в
+/// произвольном порядке. Экраны тоже разные: у админа это `MyProfile`, у
+/// прораба `OpenViewUserForeman`, у диспетчера `OpenViewUserDispatcher` —
+/// три копии одного и того же, унаследованные от подрядчика. Роли, которой
+/// здесь нет, профиль не показывается: у механика своя оболочка со своей
+/// вкладкой, у владельца экрана нет.
+const Map<int, int> _profileIndex = <int, int>{
+  Roles.admin: 9,
+  Roles.foreman: 24,
+  Roles.dispatcher: 4,
+};
+
+/// Раздел, с которого зашли в профиль. `null` — заходили не из раздела
+/// (например, сразу после входа), тогда «назад» ведёт на стартовый.
+int? _sectionBeforeProfile;
+
+/// Показывать ли этой роли переход в профиль по аватарке.
+bool get hasProfileScreen => _profileIndex.containsKey(idUserTest);
+
+/// Открытый сейчас раздел своей оболочки.
+int _currentSection() {
+  switch (idUserTest) {
+    case Roles.foreman:
+      return IntTest.indexScreensForeman;
+    case Roles.dispatcher:
+      return IntTest.indexScreensDispatcher;
+    default:
+      return IntTest.indexScreens;
+  }
+}
+
+/// Переключить раздел и перерисовать оболочку.
+void _setSection(int index) {
+  switch (idUserTest) {
+    case Roles.foreman:
+      IntTest.indexScreensForeman = index;
+      break;
+    case Roles.dispatcher:
+      IntTest.indexScreensDispatcher = index;
+      break;
+    default:
+      IntTest.indexScreens = index;
+  }
+  myStream.add(index);
+}
+
+/// Уйти в «Личный профиль», запомнив, откуда пришли.
+///
+/// Повторное нажатие по аватарке, когда профиль уже открыт, не должно
+/// затирать запомненный раздел — иначе «назад» вернёт в сам профиль.
+void openProfile() {
+  final int? target = _profileIndex[idUserTest];
+  if (target == null) return;
+
+  final int current = _currentSection();
+  if (current == target) return;
+
+  _sectionBeforeProfile = current;
+  _setSection(target);
+}
+
+/// Вернуться из профиля туда, откуда зашли.
+///
+/// Стартовый раздел у всех оболочек нулевой: у админа «Главная», у прораба
+/// «Объекты», у диспетчера «Заявки».
+void leaveProfile() {
+  _setSection(_sectionBeforeProfile ?? 0);
+  _sectionBeforeProfile = null;
 }

@@ -23,6 +23,7 @@ def get_submitted_work(row) -> SubmittedWork:
         else None,
         task_text=row.task_text,
         performer=row.performer,
+        outcome=row.outcome,
         closed_at=utc_to_timestamp(row.closed_at),
         reviewed_at=utc_to_timestamp(row.reviewed_at),
         reviewer=row.reviewer,

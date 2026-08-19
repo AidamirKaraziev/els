@@ -36,7 +36,15 @@ class MechanicShell extends StatefulWidget {
 
 class _MechanicShellState extends State<MechanicShell>
     with WidgetsBindingObserver {
+  /// Номер вкладки личного кабинета в панели внизу.
+  static const int _profileTab = 3;
+
   int _tab = 0;
+
+  /// Вкладка, с которой ушли в личный кабинет: стрелка «назад» там возвращает
+  /// именно на неё, а не на первую. Панель вкладок никуда не девается, но
+  /// возврат одним нажатием привычнее, чем поиск нужной вкладки глазами.
+  int _tabBeforeProfile = 0;
   MechanicWorkspace? _workspace;
 
   @override
@@ -70,6 +78,7 @@ class _MechanicShellState extends State<MechanicShell>
   /// Переключение вкладки. Открытая вкладка уведомлений гасит счётчик:
   /// человек её открыл — значит, увидел.
   void _pick(int index) {
+    if (index == _profileTab && _tab != _profileTab) _tabBeforeProfile = _tab;
     setState(() => _tab = index);
     if (index == 2) _workspace?.markNotificationsRead();
   }
@@ -101,16 +110,16 @@ class _MechanicShellState extends State<MechanicShell>
             Expanded(
               child: IndexedStack(
                 index: _tab,
-                children: const <Widget>[
-                  MechanicOrdersScreen(),
-                  MechanicSoonScreen(
+                children: <Widget>[
+                  const MechanicOrdersScreen(),
+                  const MechanicSoonScreen(
                     title: 'Объекты',
                     note: 'Карточки объектов и чек-лист ТО появятся следующим '
                         'обновлением. Сами ТО уже видны в списке работ.',
                     collection: LocalCollection.maintenance,
                   ),
-                  MechanicNotificationsScreen(),
-                  MechanicProfileScreen(),
+                  const MechanicNotificationsScreen(),
+                  MechanicProfileScreen(onBack: () => _pick(_tabBeforeProfile)),
                 ],
               ),
             ),

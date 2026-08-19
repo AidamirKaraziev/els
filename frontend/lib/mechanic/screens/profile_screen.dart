@@ -28,7 +28,11 @@ import '../data/mechanic_workspace.dart';
 import '../mechanic_theme.dart';
 
 class MechanicProfileScreen extends StatelessWidget {
-  const MechanicProfileScreen({Key? key}) : super(key: key);
+  const MechanicProfileScreen({Key? key, this.onBack}) : super(key: key);
+
+  /// Возврат на вкладку, с которой сюда пришли. `null` — стрелку не рисуем:
+  /// экран открыт не переходом, а сам по себе (так он живёт в тестах).
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -39,14 +43,29 @@ class MechanicProfileScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 32.0),
       children: <Widget>[
-        const Padding(
-          padding: EdgeInsets.fromLTRB(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
             MechanicLayout.screenPadding,
             24.0,
             MechanicLayout.screenPadding,
             16.0,
           ),
-          child: Text('Личный кабинет', style: MechanicLayout.screenTitle),
+          child: Row(
+            children: <Widget>[
+              if (onBack != null) ...<Widget>[
+                InkWell(
+                  onTap: onBack,
+                  borderRadius: BorderRadius.circular(20.0),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4.0),
+                    child: Icon(Icons.arrow_back, size: 24.0),
+                  ),
+                ),
+                const SizedBox(width: 8.0),
+              ],
+              const Text('Личный кабинет', style: MechanicLayout.screenTitle),
+            ],
+          ),
         ),
         _Head(profile: profile),
         const Divider(height: 33.0, thickness: 1.0, color: MechanicLayout.divider),

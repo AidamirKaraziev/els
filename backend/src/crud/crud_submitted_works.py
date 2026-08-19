@@ -21,15 +21,21 @@
 ТО — акт с заполненным `finished_at`: именно по нему считается выполнение
 графика, и второй признак разошёлся бы с ним
 ([[выполнение считается по дате закрытия акта, а месяц берётся из плана]]).
-Заявка — статус «Выполнено». Дата сдачи у заявки берётся из `done_at`, а если
-его нет — из метки правки: `done_at` годами не заполнялся из-за опечатки в
-схеме, и старые закрытые заявки иначе провалились бы в конец ленты.
+Заявка — статус «Выполнено» **или** «Проблема». «Проблема» — это тоже отчёт о
+выходе: механик съездил и рассказал, почему сделать не вышло. Прорабу такая
+работа нужна в ленте даже раньше удавшейся, поэтому она и в счётчике
+непросмотренного; отличается она полем `outcome`.
+
+Дата сдачи у заявки берётся из `done_at`, а если его нет — из метки правки:
+`done_at` ставится только на «Выполнено» (`crud_order`), и у «Проблемы» его не
+бывает вовсе. Тот же `coalesce` заодно спасает старые закрытые заявки — годами
+`done_at` не заполнялся из-за опечатки в схеме.
 """
 
 import datetime
 from typing import List, Optional, Sequence, Tuple
 
-from sqlalchemy import func, literal
+from sqlalchemy import case, func, literal
 from sqlalchemy.orm import Session, aliased
 from starlette import status
 
@@ -43,11 +49,18 @@ from src.core.access import (
 from src.core.archiving import archive_filter
 from src.models import ActFact, FaultCategory, Object, Order, UniversalUser
 from src.schemas.reports import WorkKind
+from src.schemas.submitted_works import WorkOutcome
 from src.services.work_kind import order_kind_case
 from src.utils import pagination
 
 #: Статус «Выполнено» из засеянного справочника (`core/db/init_db.py`).
 STATUS_DONE = 4
+
+#: Статус «Проблема» оттуда же: механик выехал, но работу не сделал.
+STATUS_PROBLEM = 5
+
+#: Статусы, с которыми заявка считается сданной и попадает в ленту.
+SUBMITTED_STATUSES = (STATUS_DONE, STATUS_PROBLEM)
 
 #: Виды работ, которые приезжают из заявок. ТО — отдельная ветка.
 ORDER_KINDS = frozenset(
@@ -89,6 +102,8 @@ class CrudSubmittedWorks:
                 # исполнителя, пункты — на карточке акта.
                 literal(None).label("task_text"),
                 mechanic.name.label("performer"),
+                # Акт «проблемой» не закрывают: у ТО есть только закрыт или нет.
+                literal(WorkOutcome.DONE.value).label("outcome"),
                 ActFact.finished_at.label("closed_at"),
                 ActFact.reviewed_at.label("reviewed_at"),
                 reviewer.name.label("reviewer"),
@@ -125,6 +140,10 @@ class CrudSubmittedWorks:
         reviewer = aliased(UniversalUser)
 
         kind = order_kind_case(creator)
+        outcome = case(
+            (Order.status_id == STATUS_PROBLEM, WorkOutcome.PROBLEM.value),
+            else_=WorkOutcome.DONE.value,
+        )
         closed_at = func.coalesce(Order.done_at, Order.updated_at)
 
         query = (
@@ -136,6 +155,7 @@ class CrudSubmittedWorks:
                 Object.address.label("object_address"),
                 Order.task_text.label("task_text"),
                 executor.name.label("performer"),
+                outcome.label("outcome"),
                 closed_at.label("closed_at"),
                 Order.reviewed_at.label("reviewed_at"),
                 reviewer.name.label("reviewer"),
@@ -146,7 +166,7 @@ class CrudSubmittedWorks:
             .outerjoin(executor, Order.executor_id == executor.id)
             .outerjoin(reviewer, Order.reviewed_by_id == reviewer.id)
             .filter(
-                Order.status_id == STATUS_DONE,
+                Order.status_id.in_(SUBMITTED_STATUSES),
                 order_scope_filter(scope),
                 archive_filter(Order),
             )
@@ -263,7 +283,11 @@ class CrudSubmittedWorks:
                 return None, self.out_of_scope, None
         elif kind in ORDER_KINDS:
             work = db.query(Order).filter(Order.id == work_id).first()
-            if work is None or work.status_id != STATUS_DONE or work.is_actual is False:
+            if (
+                work is None
+                or work.status_id not in SUBMITTED_STATUSES
+                or work.is_actual is False
+            ):
                 return None, self.not_found, None
             if not can_access_order(scope, work):
                 return None, self.out_of_scope, None
