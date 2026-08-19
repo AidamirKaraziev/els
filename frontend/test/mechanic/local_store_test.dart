@@ -34,16 +34,21 @@ void main() {
       );
     });
 
-    test('запись с is_actual=false убирается с телефона', () {
-      // Это единственный способ узнать об удалении: запись, которая просто
-      // перестала приходить, от «не дошла страница» не отличить.
+    test('запись с is_actual=false остаётся, но помечена удалённой', () {
+      // Удаление приходит единственным способом — меткой `is_actual`. Убирать
+      // такую запись с телефона нельзя: механик должен видеть, что задачу,
+      // которая на него ставилась, сняли, иначе она просто исчезает с экрана.
       final List<Map<String, dynamic>> merged = mergeRows(
         <Map<String, dynamic>>[order(1), order(2)],
         <Map<String, dynamic>>[order(2, updatedAt: 30, isActual: false)],
         idField: 'id',
       );
 
-      expect(merged.map((Map<String, dynamic> row) => row['id']), <int>[1]);
+      expect(merged.map((Map<String, dynamic> row) => row['id']), <int>[1, 2]);
+      expect(
+        merged.firstWhere((Map<String, dynamic> row) => row['id'] == 2)['is_actual'],
+        isFalse,
+      );
     });
 
     test('удаление записи, которой на телефоне не было, ничего не ломает', () {
@@ -53,7 +58,39 @@ void main() {
         idField: 'id',
       );
 
-      expect(merged.map((Map<String, dynamic> row) => row['id']), <int>[1]);
+      expect(merged.map((Map<String, dynamic> row) => row['id']), <int>[1, 5]);
+    });
+
+    test('архив ограничен: остаются самые свежие удаления', () {
+      // Иначе список «что у меня сняли» превращается в журнал за все годы, а
+      // весит одна заявка семь килобайт.
+      final List<Map<String, dynamic>> merged = mergeRows(
+        <Map<String, dynamic>>[],
+        <Map<String, dynamic>>[
+          for (int id = 1; id <= 5; id++)
+            order(id, updatedAt: id * 10, isActual: false),
+        ],
+        idField: 'id',
+        keepArchived: 2,
+      );
+
+      expect(merged.map((Map<String, dynamic> row) => row['id']), <int>[4, 5]);
+    });
+
+    test('живые записи под ограничение архива не попадают', () {
+      final List<Map<String, dynamic>> merged = mergeRows(
+        <Map<String, dynamic>>[],
+        <Map<String, dynamic>>[
+          order(1, updatedAt: 10),
+          order(2, updatedAt: 20),
+          order(3, updatedAt: 30, isActual: false),
+          order(4, updatedAt: 40, isActual: false),
+        ],
+        idField: 'id',
+        keepArchived: 1,
+      );
+
+      expect(merged.map((Map<String, dynamic> row) => row['id']), <int>[1, 2, 4]);
     });
 
     test('ключ берётся из указанного поля — у ТО это act_id', () {

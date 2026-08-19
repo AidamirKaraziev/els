@@ -1,7 +1,7 @@
 import datetime
 from typing import Optional
 
-from sqlalchemy import func
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from src.core.access import AccessScope, apply_order_scope, can_access_order
@@ -191,7 +191,7 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         year: Optional[int] = None,
         month: Optional[int] = None,
         only_breakdowns: bool = False,
-        executor_id: Optional[int] = None,
+        assignee_id: Optional[int] = None,
         status_id: Optional[int] = None,
         only_open: bool = False,
         only_archived: bool = False,
@@ -204,7 +204,7 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
 
         Нужно для перехода из виджета «Топ поломок»: человек видит у объекта
         число за месяц и хочет посмотреть, какие именно это были заявки.
-        Отсюда же выбирается список для механика — там важен `executor_id`
+        Отсюда же выбирается список для механика — там важен `assignee_id`
         вместе с `only_open`.
 
         Архив по умолчанию не показывается, `only_archived` даёт отдельный вид
@@ -222,8 +222,25 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         if object_id is not None:
             query = query.filter(self.model.object_id == object_id)
 
-        if executor_id is not None:
-            query = query.filter(self.model.executor_id == executor_id)
+        if assignee_id is not None:
+            # «Моя заявка» — это две разные роли в одной работе: исполнитель и
+            # механик, отвечающий за лифт. Видеть должны оба, иначе
+            # ответственный узнаёт о работе на своём объекте от людей.
+            #
+            # Подзапросом, а не `join` по объекту: соединение размножило бы
+            # строки в паре с `only_breakdowns`, который присоединяет
+            # справочник категорий тем же запросом.
+            objects_i_keep = (
+                select(Object.id)
+                .where(Object.mechanic_id == assignee_id)
+                .correlate(None)
+            ).scalar_subquery()
+            query = query.filter(
+                or_(
+                    self.model.executor_id == assignee_id,
+                    self.model.object_id.in_(objects_i_keep),
+                )
+            )
 
         if status_id is not None:
             query = query.filter(self.model.status_id == status_id)
@@ -282,7 +299,7 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         self,
         *,
         db: Session,
-        executor_id: int,
+        assignee_id: int,
         scope: AccessScope,
         page: Optional[int] = None,
         status_id: Optional[int] = None,
@@ -292,7 +309,8 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         month: Optional[int] = None,
         changed_since: Optional[datetime.datetime] = None,
     ):
-        """Задачи, назначенные на человека.
+        """Задачи, которые человек ведёт: как исполнитель или как механик
+        объекта.
 
         Раньше отдавала всё за всё время без сортировки и без страниц, а
         мобильное приложение опрашивало ручку раз в три секунды — у механика
@@ -305,7 +323,7 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
             page=page,
             year=year,
             month=month,
-            executor_id=executor_id,
+            assignee_id=assignee_id,
             status_id=status_id,
             only_open=only_open,
             only_archived=only_archived,

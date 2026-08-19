@@ -103,6 +103,13 @@ class LocalCollection {
 
   /// Плановые ТО — `GET /act-fact/for-me`.
   static const String maintenance = 'maintenance';
+
+  /// Журнал уведомлений. Считается на телефоне: на бэкенде уведомлений нет.
+  static const String events = 'events';
+
+  /// Отметки «эту правку сделал я сам» — чтобы своя же отметка, приехавшая
+  /// обратно синхронизацией, не показалась чужим изменением.
+  static const String myChanges = 'my-changes';
 }
 
 /// Локальная база одного человека.
@@ -173,10 +180,20 @@ class LocalStore {
 /// удалённое**: заархивированная запись приходит с `is_actual: false`. Это
 /// единственный способ узнать об удалении — записи, которая просто перестала
 /// приходить, клиент не отличит от записи, до которой не дошла страница.
+///
+/// Удалённое **остаётся на телефоне**, а не выбрасывается: механик должен
+/// видеть, что задачу, которая на него ставилась, сняли, — иначе она просто
+/// исчезает с экрана и человек считает, что приложение её потеряло. На экране
+/// такие записи уходят серым в свёрнутый архив.
+///
+/// Чтобы архив не рос вечно, удалённых записей хранится не больше
+/// [keepArchived] — самых свежих по метке правки. Остальные забываются: это
+/// список «что у меня сняли», а не журнал за все годы.
 List<Map<String, dynamic>> mergeRows(
   List<Map<String, dynamic>> stored,
   List<Map<String, dynamic>> incoming, {
   required String idField,
+  int keepArchived = 30,
 }) {
   final Map<Object, Map<String, dynamic>> byId = <Object, Map<String, dynamic>>{
     for (final Map<String, dynamic> row in stored)
@@ -186,14 +203,30 @@ List<Map<String, dynamic>> mergeRows(
   for (final Map<String, dynamic> row in incoming) {
     final Object? id = row[idField] as Object?;
     if (id == null) continue;
-    if (row['is_actual'] == false) {
-      byId.remove(id);
-      continue;
-    }
     byId[id] = row;
   }
 
-  return byId.values.toList();
+  final List<Map<String, dynamic>> rows = byId.values.toList();
+
+  final List<Map<String, dynamic>> archived = rows
+      .where((Map<String, dynamic> row) => row['is_actual'] == false)
+      .toList()
+    ..sort((Map<String, dynamic> a, Map<String, dynamic> b) =>
+        _markOf(b).compareTo(_markOf(a)));
+  if (archived.length <= keepArchived) return rows;
+
+  final Set<Object> forgotten = <Object>{
+    for (final Map<String, dynamic> row in archived.skip(keepArchived))
+      if (row[idField] != null) row[idField] as Object,
+  };
+  return rows
+      .where((Map<String, dynamic> row) => !forgotten.contains(row[idField]))
+      .toList();
+}
+
+int _markOf(Map<String, dynamic> row) {
+  final dynamic value = row['updated_at'];
+  return value is int ? value : 0;
 }
 
 /// Новая метка синхронизации: самая поздняя правка из присланного.

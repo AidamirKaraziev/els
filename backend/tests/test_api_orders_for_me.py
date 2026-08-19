@@ -267,3 +267,104 @@ class TestChangedSince:
         assert item["updated_at"] is not None, (
             "без метки в ответе клиенту нечего прислать в changed_since"
         )
+
+
+class TestBothMechanicsSeeTheWork:
+    """Заявку ведут двое: исполнитель и механик, отвечающий за лифт.
+
+    До этой правки список отдавал заявку только исполнителю, и ответственный
+    за лифт узнавал о работе на своём объекте от людей. Отбор идёт по двум
+    признакам сразу, поэтому отдельно закреплено, что чужое в список всё ещё
+    не попадает и что своё не удваивается.
+    """
+
+    @pytest.fixture
+    def someone(self, db_session):
+        from src.models import UniversalUser
+
+        other = UniversalUser(
+            name="Другой механик",
+            email=f"other-{uuid.uuid4().hex[:8]}@test",
+            role_id=Role.MECHANIC.value,
+            is_active=True,
+        )
+        db_session.add(other)
+        db_session.flush()
+        return other
+
+    @pytest.mark.integration
+    def test_object_mechanic_sees_someone_elses_order(
+        self, client_with_db, me, someone, make_object, make_order, db_session
+    ):
+        """Работает другой, отвечаю за лифт я — заявка обязана быть в списке."""
+        obj = make_object()
+        obj.mechanic_id = me.id
+        db_session.flush()
+
+        order = make_order(someone, datetime.datetime(2026, 5, 2), obj=obj)
+
+        assert _ids(client_with_db.get(URL)) == [order.id]
+
+    @pytest.mark.integration
+    def test_someone_elses_object_stays_hidden(
+        self, client_with_db, me, someone, make_object, make_order, db_session
+    ):
+        """Чужой лифт с чужим исполнителем — по-прежнему не моё дело."""
+        obj = make_object()
+        obj.mechanic_id = someone.id
+        db_session.flush()
+
+        make_order(someone, datetime.datetime(2026, 5, 2), obj=obj)
+
+        assert _ids(client_with_db.get(URL)) == []
+
+    @pytest.mark.integration
+    def test_being_both_does_not_double_the_order(
+        self, client_with_db, me, make_object, make_order, db_session
+    ):
+        """Исполнитель и ответственный — одно лицо: запись всё равно одна.
+
+        Отбор двумя условиями через `OR` — та самая правка, где `join` по
+        объекту вместо подзапроса дал бы вторую строку.
+        """
+        obj = make_object()
+        obj.mechanic_id = me.id
+        db_session.flush()
+
+        order = make_order(me, datetime.datetime(2026, 5, 2), obj=obj)
+
+        assert _ids(client_with_db.get(URL)) == [order.id]
+
+    @pytest.mark.integration
+    def test_filters_still_apply_to_the_wider_list(
+        self, client_with_db, me, someone, make_object, make_order, db_session
+    ):
+        """Расширение выдачи не отменяет `only_open`."""
+        obj = make_object()
+        obj.mechanic_id = me.id
+        db_session.flush()
+
+        open_order = make_order(someone, datetime.datetime(2026, 5, 2), obj=obj)
+        make_order(someone, datetime.datetime(2026, 5, 3), STATUS_DONE, obj=obj)
+
+        got = _ids(client_with_db.get(URL, params={"only_open": True}))
+
+        assert got == [open_order.id]
+
+    @pytest.mark.integration
+    def test_sync_brings_the_object_mechanic_orders_too(
+        self, client_with_db, me, someone, make_object, make_order, db_session
+    ):
+        """Офлайн-клиент ответственного тоже должен догонять изменения."""
+        obj = make_object()
+        obj.mechanic_id = me.id
+        db_session.flush()
+
+        order = make_order(someone, datetime.datetime(2026, 5, 2), obj=obj)
+        order.updated_at = datetime.datetime(2026, 5, 2, 12, 0)
+        db_session.flush()
+        since = _mark(datetime.datetime(2026, 5, 2, 11, 0))
+
+        assert _ids(client_with_db.get(URL, params={"changed_since": since})) == [
+            order.id
+        ]

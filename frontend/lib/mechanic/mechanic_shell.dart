@@ -22,6 +22,8 @@ import '../screns/user/user_contact.dart';
 import 'data/local_store.dart';
 import 'data/mechanic_workspace.dart';
 import 'mechanic_theme.dart';
+import 'screens/notifications_screen.dart';
+import 'screens/orders_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/soon_screen.dart';
 
@@ -65,6 +67,13 @@ class _MechanicShellState extends State<MechanicShell>
     if (state == AppLifecycleState.resumed) _workspace?.refresh();
   }
 
+  /// Переключение вкладки. Открытая вкладка уведомлений гасит счётчик:
+  /// человек её открыл — значит, увидел.
+  void _pick(int index) {
+    setState(() => _tab = index);
+    if (index == 2) _workspace?.markNotificationsRead();
+  }
+
   int _currentUserId() {
     if (userProfile.isEmpty) return 0;
     final dynamic id = (userProfile[0] as Map)['id'];
@@ -93,24 +102,14 @@ class _MechanicShellState extends State<MechanicShell>
               child: IndexedStack(
                 index: _tab,
                 children: const <Widget>[
-                  MechanicSoonScreen(
-                    title: 'Заявки',
-                    note: 'Список заявок и работа по ним появятся следующим '
-                        'обновлением. Приложение уже держит их у себя, чтобы '
-                        'они открывались без связи.',
-                    collection: LocalCollection.orders,
-                  ),
+                  MechanicOrdersScreen(),
                   MechanicSoonScreen(
                     title: 'Объекты',
-                    note: 'Карточки объектов с плановыми ТО появятся следующим '
-                        'обновлением.',
+                    note: 'Карточки объектов и чек-лист ТО появятся следующим '
+                        'обновлением. Сами ТО уже видны в списке работ.',
                     collection: LocalCollection.maintenance,
                   ),
-                  MechanicSoonScreen(
-                    title: 'Уведомления',
-                    note: 'Список уведомлений появится вместе с экраном '
-                        'заявок. Push пока не отправляем.',
-                  ),
+                  MechanicNotificationsScreen(),
                   MechanicProfileScreen(),
                 ],
               ),
@@ -118,10 +117,18 @@ class _MechanicShellState extends State<MechanicShell>
           ],
         ),
       ),
-      bottomNavigationBar: _NavBar(
-        current: _tab,
-        onPick: (int index) => setState(() => _tab = index),
-      ),
+      bottomNavigationBar: _workspace == null
+          ? _NavBar(current: _tab, onPick: _pick)
+          : ValueListenableBuilder<WorkspaceStatus>(
+              valueListenable: _workspace!.status,
+              builder: (BuildContext context, WorkspaceStatus status, _) {
+                return _NavBar(
+                  current: _tab,
+                  unread: status.unread,
+                  onPick: _pick,
+                );
+              },
+            ),
     );
   }
 }
@@ -179,9 +186,19 @@ class _StatusStrip extends StatelessWidget {
 }
 
 class _NavBar extends StatelessWidget {
-  const _NavBar({required this.current, required this.onPick});
+  const _NavBar({
+    required this.current,
+    required this.onPick,
+    this.unread = 0,
+  });
 
   final int current;
+
+  /// Непрочитанные уведомления — красная точка над колокольчиком. В макете она
+  /// есть (`1826:270`), и это единственный признак, по которому механик поймёт,
+  /// что появилось что-то новое: push мы пока не шлём.
+  final int unread;
+
   final ValueChanged<int> onPick;
 
   static const List<IconData> _icons = <IconData>[
@@ -214,12 +231,31 @@ class _NavBar extends StatelessWidget {
                   onTap: () => onPick(index),
                   child: Tooltip(
                     message: _labels[index],
-                    child: Icon(
-                      _icons[index],
-                      size: 22.0,
-                      color: active
-                          ? ColorApp.myColorGreen
-                          : ColorApp.myColorGrayText,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: <Widget>[
+                        Icon(
+                          _icons[index],
+                          size: 22.0,
+                          color: active
+                              ? ColorApp.myColorGreen
+                              : ColorApp.myColorGrayText,
+                        ),
+                        if (index == 2 && unread > 0)
+                          Positioned(
+                            top: 2.0,
+                            right: 6.0,
+                            child: Container(
+                              width: 8.0,
+                              height: 8.0,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: ColorApp.myColorRed,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),

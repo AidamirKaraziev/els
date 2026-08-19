@@ -287,7 +287,12 @@ def restore_order(
     response_model=ListOfEntityResponse,
     name="get_orders",
     description=(
-        "📋 Получение списка задач, которые назначены на пользователя.\n\n"
+        "📋 Получение списка задач, которые человек ведёт.\n\n"
+        "**Ведут заявку двое:** исполнитель (`executor_id`) и механик, "
+        "отвечающий за лифт (`mechanic_id` объекта). Список отдаёт заявку "
+        "обоим — ответственный не должен узнавать о работе на своём объекте "
+        "от людей. Кто именно смотрит, клиент определяет сам: `executor_id` "
+        "приходит в каждой записи.\n\n"
         "Все фильтры необязательные: без них ручка отдаёт всё за всё время, "
         "как раньше. Это главный список механика в телефоне, поэтому он "
         "обычно запрашивается с `only_open=true` и страницами — иначе через "
@@ -342,7 +347,7 @@ def get_orders_for_me(
 
     data, paginator = crud_orders.get_orders_for_me(
         db=session,
-        executor_id=current_universal_user.id,
+        assignee_id=current_universal_user.id,
         scope=scope,
         page=page,
         status_id=status_id,

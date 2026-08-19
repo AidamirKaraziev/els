@@ -24,6 +24,8 @@ import 'package:http/http.dart' as http;
 import '../../helper/api_client.dart';
 import '../../helper/api_config.dart';
 import 'local_store.dart';
+import 'notifications.dart';
+import 'tasks.dart';
 
 /// Чем закончилась синхронизация — это показывается человеку, поэтому
 /// различаем «нет сети» и «сервер отказал».
@@ -44,9 +46,14 @@ class SyncResult {
 }
 
 class MechanicSync {
-  MechanicSync({required this.store});
+  MechanicSync({required this.store, NotificationJournal? journal})
+      : journal = journal ?? NotificationJournal(store: store);
 
   final LocalStore store;
+
+  /// Журнал уведомлений. Синхронизация — единственное место, где видно и
+  /// прежнее состояние записи, и новое, поэтому события считаются здесь.
+  final NotificationJournal journal;
 
   /// Тянет обе коллекции. Ошибка в одной не отменяет вторую: список ТО и
   /// список заявок независимы, и уронить оба из-за одного отказа — значит
@@ -55,12 +62,12 @@ class MechanicSync {
     final SyncResult orders = await pull(
       collection: LocalCollection.orders,
       path: '/order/for-me',
-      idField: 'id',
+      kind: TaskKind.order,
     );
     final SyncResult maintenance = await pull(
       collection: LocalCollection.maintenance,
       path: '/act-fact/for-me',
-      idField: 'act_id',
+      kind: TaskKind.maintenance,
     );
 
     return SyncResult(
@@ -74,8 +81,9 @@ class MechanicSync {
   Future<SyncResult> pull({
     required String collection,
     required String path,
-    required String idField,
+    required TaskKind kind,
   }) async {
+    final String idField = kind == TaskKind.order ? 'id' : 'act_id';
     final int? mark = await store.mark(collection);
     final Uri url = Uri.parse('${ApiConfig.base}$path').replace(
       queryParameters: <String, String>{
@@ -89,7 +97,11 @@ class MechanicSync {
     } catch (_) {
       // Нет сети. Это не ошибка приложения: локальные данные остаются в силе,
       // а метка не двигается, и в следующий раз спросим ровно то же.
-      return SyncResult(ok: false, received: 0, error: 'Нет связи с сервером');
+      return const SyncResult(
+        ok: false,
+        received: 0,
+        error: 'Нет связи с сервером',
+      );
     }
 
     if (response.statusCode != 200) {
@@ -102,10 +114,25 @@ class MechanicSync {
 
     final List<Map<String, dynamic>> incoming = _rows(response);
     final List<Map<String, dynamic>> stored = await store.read(collection);
+
+    // Уведомления считаются до слияния: после него прежнего состояния записи
+    // уже не узнать, а вся разница именно в нём.
+    final Set<String> mine = <String>{};
+    final List<MechanicEvent> events = eventsFromSync(
+      stored: stored,
+      incoming: incoming,
+      kind: kind,
+      nowMs: DateTime.now().millisecondsSinceEpoch,
+      myChanges: await journal.myChanges(),
+      matchedMyChanges: mine,
+    );
+
     await store.write(
       collection,
       mergeRows(stored, incoming, idField: idField),
     );
+    await journal.add(events);
+    await journal.forgetMyChanges(mine);
 
     // Метку двигаем только после того, как данные легли на диск. Иначе
     // прерванная запись означала бы пропущенные навсегда правки: метка уже

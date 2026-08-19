@@ -32,3 +32,25 @@ Future<PickedImage?> pickImageFromGallery() async {
   // и загрузить по ней файл на бэкенд нельзя.
   return PickedImage(fileName: file.name, data: await file.readAsBytes());
 }
+
+/// Снимок для отчёта о работе — сразу сжатый.
+///
+/// Отдельно от [pickImageFromGallery] по двум причинам, и обе про размер.
+/// Такой снимок ждёт связи в очереди исходящих, а лежит она в хранилище
+/// телефона: несжатая фотография с современной камеры весит 4 МБ, и пара
+/// таких заполняет его целиком. На сервере эти же снимки ложатся на том со
+/// статикой, который растёт и не чистится.
+///
+/// Сжимает сам `image_picker` средствами платформы — отдельного пакета для
+/// этого не нужно. 1600 точек по длинной стороне и качество 70 оставляют
+/// читаемыми и номер лифта, и надпись на табличке.
+Future<PickedImage?> pickWorkPhoto({required bool fromCamera}) async {
+  final file = await ImagePicker().pickImage(
+    source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+    maxWidth: 1600,
+    maxHeight: 1600,
+    imageQuality: 70,
+  );
+  if (file == null) return null;
+  return PickedImage(fileName: file.name, data: await file.readAsBytes());
+}

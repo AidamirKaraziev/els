@@ -19,6 +19,14 @@
 ///   показывается человеку — молча выбросить его нельзя, это его работа.
 /// * **`401` не считается отказом.** Токен обновляет клиент API сам; для
 ///   очереди это просто «сейчас не вышло».
+/// * **Фотография едет вместе с действием.** Снимок сделан в машинном
+///   помещении, где связи нет, и ждать её с телефоном в руках механик не
+///   станет. Байты лежат отдельным ключом хранилища, а не внутри очереди:
+///   очередь читается и перезаписывается на каждом шаге, и таскать в ней
+///   полмегабайта base64 значит делать это полмегабайтами. Сжатие — на входе,
+///   средствами `image_picker`, до сотен килобайт: в хранилище телефона
+///   несжатый снимок на 4 МБ не поместится, да и на сервере том со статикой
+///   растёт именно от них.
 /// * **Хранилище правится под замком.** Постановка в очередь и отправка
 ///   меняют один и тот же список по схеме «прочитал — изменил — записал».
 ///   Без замка одно затирает другое, и действие либо уходит дважды, либо
@@ -42,6 +50,8 @@ class OutboxAction {
     required this.createdAt,
     this.attempts = 0,
     this.lastError,
+    this.fileKey,
+    this.fileName,
   });
 
   /// Идентификатор внутри очереди: время создания плюс счётчик. Нужен, чтобы
@@ -61,6 +71,18 @@ class OutboxAction {
   /// Когда действие сделано на телефоне, миллисекунды эпохи.
   final int createdAt;
 
+  /// Ключ хранилища, под которым лежит прикреплённый файл, — или `null`, если
+  /// действие без файла.
+  final String? fileKey;
+
+  /// Имя файла для сервера. Расширение важно: по нему бэкенд решает, что это
+  /// за файл.
+  final String? fileName;
+
+  /// Байты файла. Заполняются очередью перед отправкой и в хранилище не
+  /// пишутся: там они лежат отдельным ключом.
+  List<int>? bytes;
+
   int attempts;
 
   String? lastError;
@@ -74,6 +96,8 @@ class OutboxAction {
         'created_at': createdAt,
         'attempts': attempts,
         'last_error': lastError,
+        if (fileKey != null) 'file_key': fileKey,
+        if (fileName != null) 'file_name': fileName,
       };
 
   static OutboxAction? fromJson(Map<String, dynamic> row) {
@@ -92,6 +116,8 @@ class OutboxAction {
       createdAt: row['created_at'] is int ? row['created_at'] as int : 0,
       attempts: row['attempts'] is int ? row['attempts'] as int : 0,
       lastError: row['last_error'] is String ? row['last_error'] as String : null,
+      fileKey: row['file_key'] is String ? row['file_key'] as String : null,
+      fileName: row['file_name'] is String ? row['file_name'] as String : null,
     );
   }
 }
@@ -134,6 +160,8 @@ class Outbox {
 
   String get _rejectedKey => '$_prefix.$userId.outbox.rejected';
 
+  String _fileKeyFor(String actionId) => '$_prefix.$userId.outbox.file.$actionId';
+
   /// Идёт ли отправка прямо сейчас. Две параллельные отправки послали бы одно
   /// действие дважды — а «выполнил» дважды означает две записи в истории.
   Future<void>? _flushing;
@@ -158,18 +186,26 @@ class Outbox {
     required String method,
     required String path,
     Map<String, dynamic> body = const <String, dynamic>{},
+    List<int>? file,
+    String? fileName,
   }) async {
     final DateTime moment = _now();
+    final String id = '${moment.microsecondsSinceEpoch}-${_counter++}';
     final OutboxAction action = OutboxAction(
-      id: '${moment.microsecondsSinceEpoch}-${_counter++}',
+      id: id,
       title: title,
       method: method,
       path: path,
       body: body,
       createdAt: moment.millisecondsSinceEpoch,
+      fileKey: file == null ? null : _fileKeyFor(id),
+      fileName: fileName,
     );
 
     await _guard(() async {
+      if (file != null) {
+        await _store.write(_fileKeyFor(id), base64Encode(file));
+      }
       final List<OutboxAction> queue = await _load(_queueKey);
       queue.add(action);
       await _save(_queueKey, queue);
@@ -232,6 +268,19 @@ class Outbox {
       final OutboxAction? sending = action;
       if (sending == null) break;
 
+      // Байты читаются вне замка: файл лежит своим ключом и никем больше не
+      // правится, а замок нужен только очереди.
+      if (sending.fileKey != null) {
+        sending.bytes = await _readFile(sending.fileKey!);
+        if (sending.bytes == null) {
+          // Файл потерян — хранилище почистили или это остаток прошлой
+          // установки. Отправлять пустоту нельзя, повторять нечего.
+          sending.lastError = 'Файл не найден на устройстве';
+          await _settle(sending, SendOutcome.rejected);
+          continue;
+        }
+      }
+
       SendOutcome outcome;
       try {
         outcome = await _sender(sending);
@@ -267,6 +316,10 @@ class Outbox {
         final OutboxAction settled = queue.removeAt(at);
         await _save(_queueKey, queue);
 
+        // Действие отработало — файл больше не нужен ни при успехе, ни при
+        // отказе. В отклонённых остаётся запись о нём, а не полмегабайта.
+        if (settled.fileKey != null) await _store.remove(settled.fileKey!);
+
         if (outcome == SendOutcome.rejected) {
           final List<OutboxAction> denied = await _load(_rejectedKey);
           denied.add(settled);
@@ -283,11 +336,52 @@ class Outbox {
   }
 
   /// Забывает очередь этого человека — при выходе из системы.
+  ///
+  /// Вместе с очередью уходят и прикреплённые файлы: телефон в бригаде бывает
+  /// общим, и снимки чужого объекта на нём оставлять нельзя.
   Future<void> forget() async {
     await _guard(() async {
       await _store.remove(_queueKey);
       await _store.remove(_rejectedKey);
+      for (final String key in await _store.keys('$_prefix.$userId.outbox.file.')) {
+        await _store.remove(key);
+      }
     });
+  }
+
+  /// Убирает одно действие из очереди по просьбе человека.
+  ///
+  /// Нужно отклонённым: их показывают списком, и повторять их бессмысленно, а
+  /// висеть в интерфейсе вечно они не должны.
+  Future<void> _settle(OutboxAction action, SendOutcome outcome) async {
+    await _guard(() async {
+      final List<OutboxAction> queue = await _load(_queueKey);
+      final int at = queue.indexWhere(
+        (OutboxAction waiting) => waiting.id == action.id,
+      );
+      if (at < 0) return;
+      final OutboxAction settled = queue.removeAt(at);
+      // Причина живёт в объекте, с которым работала отправка, а из хранилища
+      // приезжает копия без неё — человеку нужна именно причина.
+      settled.lastError = action.lastError ?? settled.lastError;
+      await _save(_queueKey, queue);
+      if (settled.fileKey != null) await _store.remove(settled.fileKey!);
+      if (outcome == SendOutcome.rejected) {
+        final List<OutboxAction> denied = await _load(_rejectedKey);
+        denied.add(settled);
+        await _save(_rejectedKey, denied);
+      }
+    });
+  }
+
+  Future<List<int>?> _readFile(String key) async {
+    final String? raw = await _store.read(key);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return base64Decode(raw);
+    } on FormatException {
+      return null;
+    }
   }
 
   /// Пропускает изменения хранилища по одному, в порядке обращения.

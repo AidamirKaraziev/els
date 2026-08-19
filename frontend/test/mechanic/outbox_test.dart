@@ -145,6 +145,153 @@ void main() {
     });
   });
 
+  group('Outbox с файлом', () {
+    late MemoryStore store;
+
+    setUp(() => store = MemoryStore());
+
+    test('байты уезжают вместе с действием и уходят из хранилища', () async {
+      // Снимок сделан в машинном помещении, где связи нет: он обязан дождаться
+      // сети на телефоне, а после отправки не занимать место.
+      List<int>? delivered;
+      final Outbox outbox = Outbox(
+        userId: 7,
+        store: store,
+        sender: (OutboxAction action) async {
+          delivered = action.bytes;
+          return SendOutcome.done;
+        },
+      );
+
+      await outbox.enqueue(
+        title: 'фото к заявке №14',
+        method: 'POST',
+        path: '/order-photo/14/',
+        file: <int>[1, 2, 3, 4],
+        fileName: 'photo.jpg',
+      );
+      await outbox.flush();
+
+      expect(delivered, <int>[1, 2, 3, 4]);
+      expect(await outbox.pending(), isEmpty);
+      expect(
+        await store.keys('mechanic.7.outbox.file.'),
+        isEmpty,
+        reason: 'отправленный файл в хранилище не остаётся',
+      );
+    });
+
+    test('без связи файл остаётся на телефоне и уходит со второй попытки',
+        () async {
+      bool online = false;
+      List<int>? delivered;
+      final Outbox outbox = Outbox(
+        userId: 7,
+        store: store,
+        sender: (OutboxAction action) async {
+          if (!online) return SendOutcome.retry;
+          delivered = action.bytes;
+          return SendOutcome.done;
+        },
+      );
+
+      await outbox.enqueue(
+        title: 'фото',
+        method: 'POST',
+        path: '/order-photo/14/',
+        file: <int>[9, 9, 9],
+        fileName: 'photo.jpg',
+      );
+      await outbox.flush();
+
+      expect(await outbox.pending(), hasLength(1));
+      expect(await store.keys('mechanic.7.outbox.file.'), hasLength(1));
+
+      online = true;
+      await outbox.flush();
+
+      expect(delivered, <int>[9, 9, 9]);
+      expect(await outbox.pending(), isEmpty);
+    });
+
+    test('потерянный файл не отправляется пустым, а уходит в отклонённые',
+        () async {
+      bool asked = false;
+      final Outbox outbox = Outbox(
+        userId: 7,
+        store: store,
+        sender: (OutboxAction action) async {
+          asked = true;
+          return SendOutcome.done;
+        },
+      );
+
+      await outbox.enqueue(
+        title: 'фото',
+        method: 'POST',
+        path: '/order-photo/14/',
+        file: <int>[1],
+        fileName: 'photo.jpg',
+      );
+      for (final String key in await store.keys('mechanic.7.outbox.file.')) {
+        await store.remove(key);
+      }
+      await outbox.flush();
+
+      expect(asked, isFalse, reason: 'пустой файл серверу не отправляем');
+      expect(await outbox.pending(), isEmpty);
+      expect((await outbox.rejected()).single.lastError, contains('не найден'));
+    });
+
+    test('выход из системы забирает и снимки', () async {
+      final Outbox outbox = Outbox(
+        userId: 7,
+        store: store,
+        sender: (OutboxAction action) async => SendOutcome.retry,
+      );
+
+      await outbox.enqueue(
+        title: 'фото',
+        method: 'POST',
+        path: '/order-photo/14/',
+        file: <int>[1, 2],
+        fileName: 'photo.jpg',
+      );
+      await outbox.forget();
+
+      expect(await store.keys('mechanic.7.'), isEmpty);
+    });
+
+    test('очередь с файлом переживает перезапуск приложения', () async {
+      final Outbox first = Outbox(
+        userId: 7,
+        store: store,
+        sender: (OutboxAction action) async => SendOutcome.retry,
+      );
+      await first.enqueue(
+        title: 'фото',
+        method: 'POST',
+        path: '/order-photo/14/',
+        file: <int>[5, 6, 7],
+        fileName: 'photo.jpg',
+      );
+      await first.flush();
+
+      List<int>? delivered;
+      final Outbox second = Outbox(
+        userId: 7,
+        store: store,
+        sender: (OutboxAction action) async {
+          delivered = action.bytes;
+          return SendOutcome.done;
+        },
+      );
+      await second.flush();
+
+      expect(delivered, <int>[5, 6, 7]);
+    });
+  });
+
   group('outcomeForStatus', () {
     test('успех — это 2xx', () {
       expect(outcomeForStatus(200), SendOutcome.done);
