@@ -6,6 +6,8 @@
 /// человек уже сделал.
 library;
 
+import 'dart:async';
+
 import 'package:els/mechanic/data/local_store.dart';
 import 'package:els/mechanic/data/outbox.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,6 +77,34 @@ void main() {
 
       expect(sent, isEmpty);
       expect((await outbox.pending()).length, 2);
+    });
+
+    test('действие, добавленное во время отправки, не теряется и не дублируется',
+        () async {
+      // Та самая гонка: `enqueue` заканчивается фоновым `flush`, и постановка
+      // в очередь приходится на середину отправки. Оба правят один ключ по
+      // схеме «прочитал — изменил — записал», и без замка первое действие
+      // уходит дважды либо второе пропадает молча.
+      final Completer<void> held = Completer<void>();
+      final Outbox outbox = Outbox(
+        userId: 7,
+        store: store,
+        sender: (OutboxAction action) async {
+          if (action.path == '/order/1/') await held.future;
+          sent.add(action.path);
+          return SendOutcome.done;
+        },
+      );
+
+      await outbox.enqueue(title: 'в работу', method: 'PUT', path: '/order/1/');
+      // Отправка первого действия сейчас висит в `sender`.
+      await outbox.enqueue(title: 'выполнил', method: 'PUT', path: '/order/2/');
+      held.complete();
+
+      await outbox.flush();
+
+      expect(sent, <String>['/order/1/', '/order/2/']);
+      expect(await outbox.pending(), isEmpty);
     });
 
     test('отказ по существу уходит из очереди, но не пропадает', () async {

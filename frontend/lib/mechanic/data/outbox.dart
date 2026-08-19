@@ -19,6 +19,11 @@
 ///   показывается человеку — молча выбросить его нельзя, это его работа.
 /// * **`401` не считается отказом.** Токен обновляет клиент API сам; для
 ///   очереди это просто «сейчас не вышло».
+/// * **Хранилище правится под замком.** Постановка в очередь и отправка
+///   меняют один и тот же список по схеме «прочитал — изменил — записал».
+///   Без замка одно затирает другое, и действие либо уходит дважды, либо
+///   пропадает молча. Сеть при этом остаётся вне замка: иначе отправка без
+///   связи заблокировала бы кнопку, ради которой очередь и заведена.
 library;
 
 import 'dart:async';
@@ -133,6 +138,15 @@ class Outbox {
   /// действие дважды — а «выполнил» дважды означает две записи в истории.
   Future<void>? _flushing;
 
+  /// Очередь пополнилась, пока шла отправка. Идущая отправка прочитала список
+  /// до того, как в него добавили, и сама об этом не узнает — поэтому она
+  /// делает ещё один заход, а не оставляет свежее действие до следующего раза.
+  bool _again = false;
+
+  /// Замок на изменения хранилища. Читать-изменить-записать по одному ключу —
+  /// критическая секция, даже когда всё в одном изоляте и потоков нет.
+  Future<void> _mutex = Future<void>.value();
+
   int _counter = 0;
 
   /// Ставит действие в очередь и пробует отправить сразу.
@@ -155,9 +169,11 @@ class Outbox {
       createdAt: moment.millisecondsSinceEpoch,
     );
 
-    final List<OutboxAction> queue = await pending();
-    queue.add(action);
-    await _save(_queueKey, queue);
+    await _guard(() async {
+      final List<OutboxAction> queue = await _load(_queueKey);
+      queue.add(action);
+      await _save(_queueKey, queue);
+    });
 
     unawaited(flush());
     return action;
@@ -174,58 +190,93 @@ class Outbox {
 
   /// Отправляет очередь по порядку, до первой временной осечки.
   ///
-  /// Возвращает число ушедших действий. Повторный вызов во время отправки
-  /// ждёт текущую, а не запускает вторую.
+  /// Возвращает число ушедших действий. Повторный вызов во время отправки не
+  /// запускает вторую: он дожидается текущей и просит её сделать ещё заход,
+  /// чтобы добавленное по ходу не осталось лежать до следующего раза.
   Future<int> flush() async {
     final Future<void>? running = _flushing;
     if (running != null) {
+      _again = true;
       await running;
       return 0;
     }
 
     final Completer<void> gate = Completer<void>();
     _flushing = gate.future;
+    int sent = 0;
     try {
-      return await _flush();
+      sent = await _flush();
+      while (_again) {
+        _again = false;
+        sent += await _flush();
+      }
     } finally {
+      _again = false;
       _flushing = null;
       gate.complete();
     }
+    return sent;
   }
 
   Future<int> _flush() async {
-    List<OutboxAction> queue = await pending();
-    if (queue.isEmpty) return 0;
-
     int sent = 0;
-    while (queue.isNotEmpty) {
-      final OutboxAction action = queue.first;
+
+    while (true) {
+      // Список берётся заново на каждом шаге: пока шла прошлая отправка, в
+      // него могли добавить, а список из памяти уже устарел.
+      OutboxAction? action;
+      await _guard(() async {
+        final List<OutboxAction> queue = await _load(_queueKey);
+        if (queue.isNotEmpty) action = queue.first;
+      });
+      final OutboxAction? sending = action;
+      if (sending == null) break;
 
       SendOutcome outcome;
       try {
-        outcome = await _sender(action);
+        outcome = await _sender(sending);
       } catch (error) {
         // Сеть отвалилась прямо во время отправки. Это ровно тот случай,
         // ради которого очередь и заведена.
         outcome = SendOutcome.retry;
-        action.lastError = '$error';
+        sending.lastError = '$error';
       }
 
-      if (outcome == SendOutcome.retry) {
-        action.attempts += 1;
+      bool stop = false;
+      await _guard(() async {
+        final List<OutboxAction> queue = await _load(_queueKey);
+        // Ищем по `id`, а не берём первое: за время отправки список мог
+        // измениться, и «первое» — уже не то действие, которое ушло.
+        final int at = queue.indexWhere(
+          (OutboxAction waiting) => waiting.id == sending.id,
+        );
+        if (at < 0) {
+          // Действия больше нет — очередь забыли при выходе из системы.
+          stop = true;
+          return;
+        }
+
+        if (outcome == SendOutcome.retry) {
+          queue[at].attempts += 1;
+          queue[at].lastError = sending.lastError;
+          await _save(_queueKey, queue);
+          stop = true;
+          return;
+        }
+
+        final OutboxAction settled = queue.removeAt(at);
         await _save(_queueKey, queue);
-        break;
-      }
 
-      queue.removeAt(0);
-      if (outcome == SendOutcome.rejected) {
-        final List<OutboxAction> denied = await rejected();
-        denied.add(action);
-        await _save(_rejectedKey, denied);
-      } else {
-        sent += 1;
-      }
-      await _save(_queueKey, queue);
+        if (outcome == SendOutcome.rejected) {
+          final List<OutboxAction> denied = await _load(_rejectedKey);
+          denied.add(settled);
+          await _save(_rejectedKey, denied);
+        } else {
+          sent += 1;
+        }
+      });
+
+      if (stop) break;
     }
 
     return sent;
@@ -233,8 +284,28 @@ class Outbox {
 
   /// Забывает очередь этого человека — при выходе из системы.
   Future<void> forget() async {
-    await _store.remove(_queueKey);
-    await _store.remove(_rejectedKey);
+    await _guard(() async {
+      await _store.remove(_queueKey);
+      await _store.remove(_rejectedKey);
+    });
+  }
+
+  /// Пропускает изменения хранилища по одному, в порядке обращения.
+  ///
+  /// Внутрь не должно попадать ничего, что ждёт сети: замок держится до
+  /// конца секции, а отправка без связи длится до таймаута.
+  Future<void> _guard(Future<void> Function() section) {
+    final Future<void> previous = _mutex;
+    final Completer<void> released = Completer<void>();
+    _mutex = released.future;
+
+    return previous.then((_) async {
+      try {
+        await section();
+      } finally {
+        released.complete();
+      }
+    });
   }
 
   Future<List<OutboxAction>> _load(String key) async {
