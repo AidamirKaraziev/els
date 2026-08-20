@@ -110,13 +110,20 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         )
         if code != 0:
             return None, code, None
-        # Объект тоже проверяется по области: иначе заявку можно было бы
-        # перевесить на чужой лифт и получить к нему доступ через неё.
-        obj, code, indexes = crud_objects.get_object_by_id(
-            db=db, object_id=new_data.object_id, scope=scope
-        )
-        if code != 0:
-            return None, code, None
+        # Объект проверяется по области, только когда заявку **переносят** на
+        # другой лифт: иначе её можно было бы перевесить на чужой и получить к
+        # нему доступ через неё. Проверять лифт на каждой правке нельзя — телефон
+        # механика шлёт частичное тело (один `status_id` с комментарием), и на
+        # безусловной проверке `object_id` приходил `None`, а смена статуса
+        # отвечала «объекта с таким id нет». Заявка на этом месте уже проверена
+        # по области, а исполнителю своя заявка доступна и на чужом лифте
+        # (`can_access_order`).
+        if new_data.object_id is not None and new_data.object_id != order.object_id:
+            obj, code, indexes = crud_objects.get_object_by_id(
+                db=db, object_id=new_data.object_id, scope=scope
+            )
+            if code != 0:
+                return None, code, None
         if new_data.fault_category_id is not None:
             obj, code, indexes = crud_fault_category.get_fault_by_id(
                 db=db, fault_id=new_data.fault_category_id

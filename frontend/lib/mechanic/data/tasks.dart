@@ -37,14 +37,19 @@ enum TaskKind {
 }
 
 /// Куда работа попадает на экране. Порядок объявления — порядок на экране.
+///
+/// Секции делят работу **по виду**, а не по сроку: механик ищет глазами «что
+/// у меня по заявкам» и «что по графику», а не «что в этом месяце». Срок
+/// внутри секции показывает порядок и метка: просроченное ТО стоит первым и
+/// подписано, а не уезжает в другой раздел.
 enum TaskSection {
-  /// Делать сейчас: открытые заявки и ТО, чей плановый месяц уже наступил.
+  /// Заявки диспетчера, которые ещё делать. Аварии сверху.
   now,
 
-  /// Планируется: ТО будущих месяцев.
-  planned,
+  /// Плановые ТО, которые ещё не сданы: просроченные, этого месяца, будущие.
+  maintenance,
 
-  /// Сделано: заявка «Выполнено» или «Проблема», ТО с датой закрытия.
+  /// Выполнено: заявка «Выполнено» или «Проблема», ТО с датой закрытия.
   done,
 
   /// Архив: запись удалили. Показывается серым и в свёрнутом виде.
@@ -81,13 +86,14 @@ String orderStatusName(int? statusId) {
   }
 }
 
-/// Внутри секции «сейчас» работы идут тремя группами: сначала аварии, потом
-/// остальные заявки, потом ТО. В прочих секциях группа одна, и порядок задаёт
-/// только время.
+/// Группы внутри секции. В заявках сверху аварии, в ТО — просроченное и
+/// текущий месяц; в прочих секциях группа одна, и порядок задаёт только время.
 class _Rank {
   static const int urgentOrder = 0;
   static const int order = 1;
-  static const int maintenance = 2;
+  static const int overdueMaintenance = 0;
+  static const int currentMaintenance = 1;
+  static const int futureMaintenance = 2;
   static const int single = 0;
 }
 
@@ -108,6 +114,8 @@ class MechanicTask {
     this.urgent = false,
     this.watchingOnly = false,
     this.progress,
+    this.overdue = false,
+    this.thisMonth = false,
   });
 
   final TaskKind kind;
@@ -146,6 +154,14 @@ class MechanicTask {
 
   /// «Сделано N из M» у ТО.
   final String? progress;
+
+  /// ТО, чей плановый месяц уже прошёл. Раньше такое ТО уезжало в секцию
+  /// «сейчас» и там терялось среди заявок; теперь оно стоит первым в своей
+  /// секции и подписано словами.
+  final bool overdue;
+
+  /// ТО текущего месяца: срок ещё не вышел, но делать его уже пора.
+  final bool thisMonth;
 
   /// Строка из локальной базы целиком — карточке нужны подробности.
   final Map<String, dynamic> raw;
@@ -262,15 +278,17 @@ MechanicTask? taskFromMaintenance(
   final int plan = year * 12 + month;
   final int current = now.year * 12 + now.month;
 
+  final bool overdue = plan < current;
+  final bool thisMonth = plan == current;
+
   final TaskSection section;
   if (row['is_actual'] == false) {
     section = TaskSection.archive;
   } else if (row['finished_at'] != null) {
     section = TaskSection.done;
-  } else if (plan > current) {
-    section = TaskSection.planned;
   } else {
-    section = TaskSection.now;
+    // Несданное ТО любого месяца — в свою секцию: просроченное сверху.
+    section = TaskSection.maintenance;
   }
 
   final int order;
@@ -279,8 +297,19 @@ MechanicTask? taskFromMaintenance(
   } else if (section == TaskSection.archive) {
     order = -(asInt(row['updated_at']) ?? 0);
   } else {
-    // Просроченное — выше: чем раньше плановый месяц, тем меньше ключ.
+    // Чем раньше плановый месяц, тем выше строка.
     order = plan;
+  }
+
+  final int rank;
+  if (section != TaskSection.maintenance) {
+    rank = _Rank.single;
+  } else if (overdue) {
+    rank = _Rank.overdueMaintenance;
+  } else if (thisMonth) {
+    rank = _Rank.currentMaintenance;
+  } else {
+    rank = _Rank.futureMaintenance;
   }
 
   final int? total = asInt(row['steps_total']);
@@ -294,11 +323,13 @@ MechanicTask? taskFromMaintenance(
     subtitle: 'Срок: ${monthText(year, month)}',
     badge: 'ТО',
     section: section,
-    rank: section == TaskSection.now ? _Rank.maintenance : _Rank.single,
+    rank: rank,
     order: order,
     progress: total == null || total == 0
         ? null
         : 'Сделано ${doneSteps ?? 0} из $total',
+    overdue: overdue && section == TaskSection.maintenance,
+    thisMonth: thisMonth && section == TaskSection.maintenance,
     raw: row,
   );
 }

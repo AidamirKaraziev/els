@@ -140,7 +140,9 @@ void main() {
       expect(tasks.single.section, TaskSection.archive);
     });
 
-    test('ТО текущего и прошедших месяцев — сейчас, будущих — планируется', () {
+    test('несданное ТО любого месяца лежит в своей секции', () {
+      // Секции делятся по виду работы: заявки отдельно, график отдельно.
+      // Срок внутри секции показывают порядок и пометки.
       final List<MechanicTask> tasks = build(
         maintenance: <Map<String, dynamic>>[
           maintenanceRow(actId: 1, year: 2025, month: 12),
@@ -149,12 +151,73 @@ void main() {
         ],
       );
 
-      Map<int, TaskSection> byId = <int, TaskSection>{
+      expect(
+        tasks.map((MechanicTask task) => task.section),
+        everyElement(TaskSection.maintenance),
+      );
+    });
+
+    test('заявка в секцию ТО не попадает', () {
+      final List<MechanicTask> tasks = build(
+        orders: <Map<String, dynamic>>[orderRow(id: 1)],
+        maintenance: <Map<String, dynamic>>[maintenanceRow(actId: 9)],
+      );
+
+      final Map<int, TaskSection> byKind = <int, TaskSection>{
         for (final MechanicTask task in tasks) task.id: task.section,
       };
-      expect(byId[1], TaskSection.now, reason: 'декабрь прошлого года просрочен');
-      expect(byId[2], TaskSection.now, reason: 'текущий месяц — делать сейчас');
-      expect(byId[3], TaskSection.planned);
+      expect(byKind[1], TaskSection.now);
+      expect(byKind[9], TaskSection.maintenance);
+    });
+
+    test('просроченное ТО и ТО этого месяца помечены, будущее — нет', () {
+      final List<MechanicTask> tasks = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(actId: 1, year: 2025, month: 12),
+          maintenanceRow(actId: 2, year: 2026, month: 5),
+          maintenanceRow(actId: 3, year: 2026, month: 6),
+        ],
+      );
+
+      final Map<int, MechanicTask> byId = <int, MechanicTask>{
+        for (final MechanicTask task in tasks) task.id: task,
+      };
+      expect(byId[1]!.overdue, isTrue, reason: 'декабрь прошлого года просрочен');
+      expect(byId[1]!.thisMonth, isFalse);
+      expect(byId[2]!.overdue, isFalse);
+      expect(byId[2]!.thisMonth, isTrue, reason: 'текущий месяц — делать сейчас');
+      expect(byId[3]!.overdue, isFalse);
+      expect(byId[3]!.thisMonth, isFalse);
+    });
+
+    test('просроченное ТО стоит выше будущего', () {
+      final List<MechanicTask> tasks = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(actId: 3, year: 2026, month: 6),
+          maintenanceRow(actId: 2, year: 2026, month: 5),
+          maintenanceRow(actId: 1, year: 2025, month: 12),
+        ],
+      );
+
+      expect(tasks.map((MechanicTask task) => task.id), <int>[1, 2, 3]);
+    });
+
+    test('сданное ТО пометок о сроке не носит', () {
+      // Иначе в «Выполнено» половина строк была бы с жёлтым «срок вышел».
+      final List<MechanicTask> tasks = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(
+            actId: 1,
+            year: 2025,
+            month: 12,
+            finishedAt: seconds(DateTime(2026, 5, 12)),
+          ),
+        ],
+      );
+
+      expect(tasks.single.section, TaskSection.done);
+      expect(tasks.single.overdue, isFalse);
+      expect(tasks.single.thisMonth, isFalse);
     });
 
     test('закрытое ТО считается сделанным по дате закрытия, а не по месяцу', () {
@@ -197,7 +260,7 @@ void main() {
       expect(tasks.map((MechanicTask task) => task.id), <int>[2, 1]);
     });
 
-    test('заявки идут выше ТО, а просроченное ТО — выше свежего', () {
+    test('заявки идут выше ТО, а просроченное ТО — выше будущего', () {
       final List<MechanicTask> tasks = build(
         orders: <Map<String, dynamic>>[orderRow(id: 1)],
         maintenance: <Map<String, dynamic>>[
@@ -209,7 +272,7 @@ void main() {
       expect(tasks.map((MechanicTask task) => task.id), <int>[1, 11, 10]);
     });
 
-    test('секции идут в одном порядке: сейчас, планируется, сделано, архив', () {
+    test('секции идут в одном порядке: сейчас, ТО, выполнено, архив', () {
       final List<MechanicTask> tasks = build(
         orders: <Map<String, dynamic>>[
           orderRow(id: 1, actual: false),

@@ -9,15 +9,21 @@
 /// значок в углу, шеврон справа, фон `#F5F6F6`), а состав — из работы
 /// механика.
 ///
-/// Разделов четыре, и это решение заказчика, а не догадка:
+/// Разделов четыре, и делятся они **по виду работы**, а не по сроку:
 ///
-/// * **Сейчас** — то, что надо делать: открытые заявки и ТО, чей плановый
-///   месяц уже наступил. Аварии сверху.
-/// * **Планируется** — ТО будущих месяцев.
-/// * **Сделано** — закрытые заявки и сданные ТО. Свёрнуто: это память, а не
+/// * **Сейчас** — открытые заявки диспетчера. Аварии сверху.
+/// * **Плановые ТО** — всё несданное по графику: просроченное первым и с
+///   пометкой, потом текущий месяц, потом будущие.
+/// * **Выполнено** — закрытые заявки и сданные ТО. Свёрнуто: это память, а не
 ///   работа.
 /// * **Архив** — снятые задачи, серым и свёрнутым. Молча убрать задачу с
 ///   экрана нельзя: механик решит, что приложение её потеряло.
+///
+/// Раньше деление было по сроку — «сейчас» и «планируется», — и заявка с ТО
+/// лежали вперемешку. Механик ищет глазами не «что в этом месяце», а «что у
+/// меня по заявкам» и «что по графику», поэтому вид работы стал главным.
+/// Чтобы срочное не потерялось внутри своей секции, в шапке стоит сводка
+/// («1 авария», «2 просрочено»), а на карточке — цветная пометка.
 ///
 /// Листалки по дням из кадра здесь нет намеренно: у заявки в базе нет срока
 /// вовсе, а у ТО срок — месяц, дня в графике не существует
@@ -124,6 +130,8 @@ class _MechanicOrdersScreenState extends State<MechanicOrdersScreen> {
         _SectionHeader(
           title: _sectionTitle(section),
           count: tasks.length,
+          note: _sectionNote(section, tasks),
+          alarming: section == TaskSection.now,
           folded: _folded.contains(section),
           foldable: section == TaskSection.done || section == TaskSection.archive,
           onTap: () => setState(() {
@@ -179,13 +187,41 @@ class _MechanicOrdersScreenState extends State<MechanicOrdersScreen> {
     switch (section) {
       case TaskSection.now:
         return 'Сейчас';
-      case TaskSection.planned:
-        return 'Планируется';
+      case TaskSection.maintenance:
+        return 'Плановые ТО';
       case TaskSection.done:
-        return 'Сделано';
+        return 'Выполнено';
       case TaskSection.archive:
         return 'Архив';
     }
+  }
+
+  /// Короткая сводка справа в шапке секции: сколько там горящего.
+  ///
+  /// Нужна ровно потому, что секции теперь делятся по виду работы: авария
+  /// лежит среди заявок, просроченное ТО — среди плановых, и по одному
+  /// заголовку не видно, есть ли там что-то срочное.
+  static String? _sectionNote(TaskSection section, List<MechanicTask> tasks) {
+    switch (section) {
+      case TaskSection.now:
+        final int urgent = tasks.where((MechanicTask t) => t.urgent).length;
+        return urgent == 0 ? null : _plural(urgent, 'авария', 'аварии', 'аварий');
+      case TaskSection.maintenance:
+        final int overdue = tasks.where((MechanicTask t) => t.overdue).length;
+        return overdue == 0 ? null : '$overdue просрочено';
+      case TaskSection.done:
+      case TaskSection.archive:
+        return null;
+    }
+  }
+
+  static String _plural(int count, String one, String few, String many) {
+    final int mod100 = count % 100;
+    final int mod10 = count % 10;
+    if (mod100 >= 11 && mod100 <= 14) return '$count $many';
+    if (mod10 == 1) return '$count $one';
+    if (mod10 >= 2 && mod10 <= 4) return '$count $few';
+    return '$count $many';
   }
 }
 
@@ -196,10 +232,20 @@ class _SectionHeader extends StatelessWidget {
     required this.folded,
     required this.foldable,
     required this.onTap,
+    this.note,
+    this.alarming = false,
   });
 
   final String title;
   final int count;
+
+  /// Сводка по срочному внутри секции: «1 авария», «2 просрочено».
+  final String? note;
+
+  /// Красным сводка горит только у аварий; просроченное ТО — жёлтым: срок
+  /// вышел, но лифт стоит не обязательно.
+  final bool alarming;
+
   final bool folded;
   final bool foldable;
   final VoidCallback onTap;
@@ -219,11 +265,19 @@ class _SectionHeader extends StatelessWidget {
           const SizedBox(width: 8.0),
           Text('$count', style: MechanicLayout.cardSubtitle),
           const Spacer(),
+          if (note != null)
+            _Pill(
+              text: note!,
+              tone: alarming ? _Tone.alarm : _Tone.warning,
+            ),
           if (foldable)
-            Icon(
-              folded ? Icons.expand_more : Icons.expand_less,
-              size: 20.0,
-              color: ColorApp.myColorGrayText,
+            Padding(
+              padding: const EdgeInsets.only(left: 8.0),
+              child: Icon(
+                folded ? Icons.expand_more : Icons.expand_less,
+                size: 20.0,
+                color: ColorApp.myColorGrayText,
+              ),
             ),
         ],
       ),
@@ -294,16 +348,14 @@ class _TaskCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (_note(task) != null) ...<Widget>[
-                          const SizedBox(height: 4.0),
-                          Text(
-                            _note(task)!,
-                            style: TextStyle(
-                              fontSize: 11.0,
-                              fontWeight: FontWeight.w500,
-                              color: _noteColor(task, dimmed),
+                          const SizedBox(height: 6.0),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: _Pill(
+                              text: _note(task)!,
+                              tone: _noteTone(task),
+                              dimmed: dimmed,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ],
@@ -336,10 +388,19 @@ class _TaskCard extends StatelessWidget {
     );
   }
 
-  /// Третья строка карточки: у заявки — состояние, у ТО — сколько шагов
+  /// Пометка на карточке: у заявки — состояние, у ТО — срок и сколько шагов
   /// пройдено. В кадре её нет, но в кадре нет и работы по заявке.
   static String? _note(MechanicTask task) {
-    if (task.kind == TaskKind.maintenance) return task.progress;
+    if (task.kind == TaskKind.maintenance) {
+      final String? progress = task.progress;
+      if (task.overdue) {
+        return progress == null ? 'Срок вышел' : 'Срок вышел · $progress';
+      }
+      if (task.thisMonth) {
+        return progress == null ? 'Этот месяц' : 'Этот месяц · $progress';
+      }
+      return progress;
+    }
     switch (task.statusId) {
       case OrderStatus.accepted:
         return 'Принята';
@@ -354,15 +415,106 @@ class _TaskCard extends StatelessWidget {
     }
   }
 
-  static Color _noteColor(MechanicTask task, bool dimmed) {
-    if (dimmed) return ColorApp.myColorGrayText;
-    if (task.statusId == OrderStatus.problem) return ColorApp.myColorRed;
-    if (task.statusId == OrderStatus.done) return ColorApp.myColorGreenAuth;
-    return ColorApp.myColorGray;
+  static _Tone _noteTone(MechanicTask task) {
+    if (task.kind == TaskKind.maintenance) {
+      if (task.overdue) return _Tone.warning;
+      return task.thisMonth ? _Tone.good : _Tone.neutral;
+    }
+    switch (task.statusId) {
+      case OrderStatus.problem:
+        return _Tone.alarm;
+      case OrderStatus.done:
+        return _Tone.good;
+      case OrderStatus.inProgress:
+        return _Tone.good;
+      default:
+        return _Tone.neutral;
+    }
   }
 }
 
-/// Кружок слева. В кадре это фотография объекта, но списки её не отдают.
+/// Тон пометки. Цвета берём из общей палитры, а не заводим свои.
+enum _Tone { neutral, good, warning, alarm }
+
+/// Цвет текста и подложки под тон. Подложка — тот же цвет, разбавленный
+/// белым: держать в палитре по второму, светлому оттенку каждого цвета
+/// значит заводить пары, которые рано или поздно разъедутся.
+class _ToneColors {
+  const _ToneColors(this.ink, this.background);
+
+  final Color ink;
+  final Color background;
+
+  static _ToneColors of(_Tone tone, {bool dimmed = false}) {
+    if (dimmed) {
+      return const _ToneColors(
+        ColorApp.myColorGrayText,
+        ColorApp.myColorGrayShadow,
+      );
+    }
+    switch (tone) {
+      case _Tone.good:
+        return _ToneColors(
+          ColorApp.myColorGreenAuth,
+          ColorApp.myColorGreenAuth.withOpacity(0.12),
+        );
+      case _Tone.warning:
+        return _ToneColors(
+          ColorApp.myColorYellow,
+          ColorApp.myColorYellow.withOpacity(0.14),
+        );
+      case _Tone.alarm:
+        return _ToneColors(
+          ColorApp.myColorRed,
+          ColorApp.myColorRed.withOpacity(0.14),
+        );
+      case _Tone.neutral:
+        return const _ToneColors(
+          ColorApp.myColorGray,
+          ColorApp.myColorGrayShadow,
+        );
+    }
+  }
+}
+
+/// Пометка словами: состояние заявки, срок ТО, сводка в шапке секции.
+///
+/// Раньше это была третья строка карточки серым по белому — её приходилось
+/// вычитывать. Цвет и подложка отвечают на вопрос «горит или нет» до чтения.
+class _Pill extends StatelessWidget {
+  const _Pill({required this.text, required this.tone, this.dimmed = false});
+
+  final String text;
+  final _Tone tone;
+  final bool dimmed;
+
+  @override
+  Widget build(BuildContext context) {
+    final _ToneColors colors = _ToneColors.of(tone, dimmed: dimmed);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+      decoration: BoxDecoration(
+        color: colors.background,
+        borderRadius: BorderRadius.circular(10.0),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 11.0,
+          fontWeight: FontWeight.w500,
+          color: colors.ink,
+        ),
+      ),
+    );
+  }
+}
+
+/// Значок слева. В кадре здесь фотография объекта, но списки её не отдают,
+/// поэтому значок говорит, что это за работа и насколько она горит: авария —
+/// красный треугольник, просроченное ТО — жёлтый календарь, остальное —
+/// спокойный зелёный.
 class _Mark extends StatelessWidget {
   const _Mark({required this.task, required this.dimmed});
 
@@ -371,25 +523,31 @@ class _Mark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool urgent = task.urgent && !dimmed;
+    final _ToneColors colors = _ToneColors.of(_toneOf(task), dimmed: dimmed);
     return Container(
       width: 45.0,
       height: 45.0,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: urgent ? const Color(0xffFDEBEA) : ColorApp.myColorGrayShadow,
-        border: Border.all(color: ColorApp.myColorGrayBorder),
+        color: colors.background,
+        borderRadius: BorderRadius.circular(MechanicLayout.cardRadius),
       ),
-      child: Icon(
-        task.kind == TaskKind.maintenance
-            ? Icons.build_outlined
-            : (urgent ? Icons.warning_amber_rounded : Icons.assignment_outlined),
-        size: 20.0,
-        color: dimmed
-            ? ColorApp.myColorGrayText
-            : (urgent ? ColorApp.myColorRed : ColorApp.myColorGray),
-      ),
+      child: Icon(_iconOf(task), size: 22.0, color: colors.ink),
     );
+  }
+
+  static _Tone _toneOf(MechanicTask task) {
+    if (task.kind == TaskKind.maintenance) {
+      return task.overdue ? _Tone.warning : _Tone.good;
+    }
+    if (task.urgent) return _Tone.alarm;
+    return task.closed ? _Tone.neutral : _Tone.good;
+  }
+
+  static IconData _iconOf(MechanicTask task) {
+    if (task.kind == TaskKind.maintenance) {
+      return task.overdue ? Icons.event_busy_outlined : Icons.event_available_outlined;
+    }
+    return task.urgent ? Icons.warning_amber_rounded : Icons.build_outlined;
   }
 }
 
