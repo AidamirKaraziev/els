@@ -16,6 +16,7 @@ import 'package:http/http.dart' as http;
 
 import '../../helper/api_client.dart';
 import '../../helper/api_config.dart';
+import 'acts.dart';
 import 'local_store.dart';
 import 'mechanic_sync.dart';
 import 'notifications.dart';
@@ -196,6 +197,168 @@ class MechanicWorkspace {
   Future<void> markNotificationsRead() async {
     await journal.markAllRead();
     await _publishQueue();
+  }
+
+  /// Чек-лист акта: сначала с сервера, при отказе — то, что лежит на телефоне.
+  ///
+  /// Порядок именно такой, а не «сначала кэш»: регламент правит прораб, и
+  /// механик, открывший ТО на связи, должен увидеть свежий список пунктов.
+  /// Без связи открывается сохранённый — иначе в подвале чек-лист вообще
+  /// нельзя было бы посмотреть.
+  Future<ActDetails?> loadAct(int actId) async {
+    final Map<String, dynamic>? fresh = await _fetchAct(actId);
+    if (fresh != null) {
+      await _rememberAct(fresh);
+      return actFromRow(fresh);
+    }
+
+    final List<Map<String, dynamic>> rows =
+        await localStore.read(LocalCollection.acts);
+    for (final Map<String, dynamic> row in rows) {
+      if (asInt(row['id']) == actId) return actFromRow(row);
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> _fetchAct(int actId) async {
+    final Uri url = Uri.parse('${ApiConfig.base}/act-fact/$actId/');
+    http.Response response;
+    try {
+      response = await Api.get(url);
+    } catch (_) {
+      return null;
+    }
+    if (response.statusCode != 200) return null;
+
+    try {
+      final dynamic decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      final dynamic data = decoded is Map ? decoded['data'] : null;
+      if (data is! Map) return null;
+      return data.cast<String, dynamic>();
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Ставит в очередь правку чек-листа: отметку пункта, комментарий, начало
+  /// работы и закрытие акта — всё это один и тот же `PUT`.
+  ///
+  /// Чек-лист уходит целиком: отдельной ручки «отметить пункт» на бэкенде
+  /// нет, и это не упущение — пункт со своим номером считается тем же самым,
+  /// а без номера новым.
+  Future<void> sendActChecklist({
+    required ActDetails act,
+    required String title,
+    bool start = false,
+    bool finish = false,
+  }) async {
+    final int nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    await journal.rememberMyChange(
+      changeKey(
+        TaskKind.maintenance,
+        act.id,
+        finish ? 'closed' : act.doneCount,
+      ),
+    );
+
+    await outbox.enqueue(
+      title: title,
+      method: 'PUT',
+      path: '/act-fact/${act.id}/',
+      body: <String, dynamic>{
+        'checklist': act.checklistBody(),
+        if (start) 'started_at': nowSeconds,
+        if (finish) 'finished_at': nowSeconds,
+      },
+    );
+
+    await _rememberAct(act.toRow());
+    await _markActLocally(
+      act,
+      startedAt: start ? nowSeconds : null,
+      finishedAt: finish ? nowSeconds : null,
+    );
+    await _publishQueue();
+  }
+
+  /// Кладёт чек-лист в локальную базу, чтобы карточка открывалась без связи.
+  Future<void> _rememberAct(Map<String, dynamic> row) async {
+    final int? id = asInt(row['id']);
+    if (id == null) return;
+
+    final List<Map<String, dynamic>> rows =
+        await localStore.read(LocalCollection.acts);
+    rows.removeWhere((Map<String, dynamic> stored) => asInt(stored['id']) == id);
+    rows.add(row);
+    await localStore.write(LocalCollection.acts, rows);
+  }
+
+  /// Отмечает ход работы в строке списка ТО, не дожидаясь сервера.
+  ///
+  /// То же, зачем это делается у заявки: без отклика человек считает, что
+  /// кнопка не сработала. Синхронизация потом перезапишет строку серверной
+  /// версией — `steps_done` она считает сама.
+  Future<void> _markActLocally(
+    ActDetails act, {
+    int? startedAt,
+    int? finishedAt,
+  }) async {
+    final List<Map<String, dynamic>> rows =
+        await localStore.read(LocalCollection.maintenance);
+    for (final Map<String, dynamic> row in rows) {
+      if (asInt(row['act_id']) != act.id) continue;
+      row['steps_done'] = act.doneCount;
+      row['steps_total'] = act.total;
+      if (startedAt != null) row['started_at'] = startedAt;
+      if (finishedAt != null) row['finished_at'] = finishedAt;
+    }
+    await localStore.write(LocalCollection.maintenance, rows);
+  }
+
+  /// Ставит в очередь фотографию шага. Снимок уже сжат — этим занимается
+  /// `image_picker` на входе, как и у заявки.
+  Future<void> attachStepPhoto({
+    required int actId,
+    required int stepId,
+    required List<int> bytes,
+    required String fileName,
+  }) async {
+    await outbox.enqueue(
+      title: 'Фото к шагу $stepId, ТО №$actId',
+      method: 'POST',
+      path: '/act-fact/$actId/step/$stepId/photo/',
+      file: bytes,
+      fileName: fileName,
+    );
+    await _publishQueue();
+  }
+
+  /// Сколько снимков этого шага ещё не ушло на сервер.
+  Future<int> queuedStepPhotos(int actId, int stepId) async {
+    final Map<int, int> counts = await queuedStepPhotoCounts(actId);
+    return counts[stepId] ?? 0;
+  }
+
+  /// Сколько снимков ждёт связи по каждому шагу акта.
+  ///
+  /// Считается за один проход по очереди: экран шагов спрашивает это разом за
+  /// весь список, а не по пункту — очередь лежит в одном ключе хранилища, и
+  /// восемь отдельных чтений означали бы восемь разборов одного и того же
+  /// JSON.
+  Future<Map<int, int>> queuedStepPhotoCounts(int actId) async {
+    final RegExp shape = RegExp(r'^/act-fact/(\d+)/step/(\d+)/photo/$');
+    final Map<int, int> counts = <int, int>{};
+
+    for (final OutboxAction action in await outbox.pending()) {
+      if (action.fileKey == null) continue;
+      final RegExpMatch? match = shape.firstMatch(action.path);
+      if (match == null) continue;
+      if (int.tryParse(match.group(1)!) != actId) continue;
+      final int? stepId = int.tryParse(match.group(2)!);
+      if (stepId == null) continue;
+      counts[stepId] = (counts[stepId] ?? 0) + 1;
+    }
+    return counts;
   }
 
   /// Забывает всё про человека — при выходе из системы.

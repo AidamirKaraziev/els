@@ -114,8 +114,9 @@ class _MechanicShellState extends State<MechanicShell>
                   const MechanicOrdersScreen(),
                   const MechanicSoonScreen(
                     title: 'Объекты',
-                    note: 'Карточки объектов и чек-лист ТО появятся следующим '
-                        'обновлением. Сами ТО уже видны в списке работ.',
+                    note: 'Карточки объектов появятся следующим обновлением. '
+                        'Плановые ТО и их чек-листы уже открываются из списка '
+                        'работ.',
                     collection: LocalCollection.maintenance,
                   ),
                   const MechanicNotificationsScreen(),

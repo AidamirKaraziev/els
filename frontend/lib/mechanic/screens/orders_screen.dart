@@ -43,6 +43,7 @@ import '../data/local_store.dart';
 import '../data/mechanic_workspace.dart';
 import '../data/tasks.dart';
 import '../mechanic_theme.dart';
+import 'act_screen.dart';
 import 'order_screen.dart';
 
 class MechanicOrdersScreen extends StatefulWidget {
@@ -164,20 +165,12 @@ class _MechanicOrdersScreenState extends State<MechanicOrdersScreen> {
   }
 
   void _open(MechanicTask task) {
-    if (task.kind == TaskKind.maintenance) {
-      // Поток ТО — следующий этап. Молчаливая кнопка хуже честного ответа.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Экран ТО с чек-листом появится следующим обновлением'),
-        ),
-      );
-      return;
-    }
-
     Navigator.of(context)
         .push(
           MaterialPageRoute<void>(
-            builder: (BuildContext context) => MechanicOrderScreen(task: task),
+            builder: (BuildContext context) => task.kind == TaskKind.maintenance
+                ? MechanicActScreen(task: task)
+                : MechanicOrderScreen(task: task),
           ),
         )
         .then((_) => _reload());

@@ -104,6 +104,11 @@ class LocalCollection {
   /// Плановые ТО — `GET /act-fact/for-me`.
   static const String maintenance = 'maintenance';
 
+  /// Чек-листы открытых актов — `GET /act-fact/{id}/`. Отдельно от списка ТО:
+  /// список чек-листа не отдаёт, а качать регламенты всех тридцати ТО впрок
+  /// незачем — сюда попадают только те, что механик открывал.
+  static const String acts = 'acts';
+
   /// Журнал уведомлений. Считается на телефоне: на бэкенде уведомлений нет.
   static const String events = 'events';
 
