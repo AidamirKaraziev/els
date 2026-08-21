@@ -4,13 +4,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../helper/class_colors.dart';
 import '../../../helper/header/header.dart';
 import '../../../helper/my_user.dart';
+import '../../in_progress_works/bloc/in_progress_works_bloc.dart';
+import '../../in_progress_works/widgets/in_progress_section.dart';
 import '../bloc/submitted_works_bloc.dart';
 import '../models/submitted_work.dart';
 import '../unreviewed_counter.dart';
 import '../widgets/submitted_work_row.dart';
 
-/// Раздел «Сданные работы»: что механики закрыли и что из этого прораб уже
-/// посмотрел.
+/// Экран прораба: что механики ведут прямо сейчас и что уже сдали.
+///
+/// Две ленты в одной прокрутке. Сверху раздел «Сейчас в работе» — работы, в
+/// которые можно вмешаться сегодня; ниже, за разделителем, привычная лента
+/// сданных с фильтром, кнопками «Проверил» и страницами. Запроса два, экран
+/// для прораба один.
 ///
 /// Своего кадра в макете нет — дизайнер рисовал только экраны руководителя и
 /// телефон механика, — поэтому экран собран из приёмов соседних кадров: белая
@@ -25,9 +31,19 @@ class SubmittedWorksScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<SubmittedWorksBloc>(
-      create: (_) =>
-          SubmittedWorksBloc()..add(const SubmittedWorksRequested(page: 1)),
+    // Два блока рядом, а не один на оба списка: ручки разные, и сбой раздела
+    // не должен гасить ленту сданных работ.
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<SubmittedWorksBloc>(
+          create: (_) =>
+              SubmittedWorksBloc()..add(const SubmittedWorksRequested(page: 1)),
+        ),
+        BlocProvider<InProgressWorksBloc>(
+          create: (_) =>
+              InProgressWorksBloc()..add(const InProgressWorksRequested()),
+        ),
+      ],
       child: _SubmittedWorksView(drawer: drawer),
     );
   }
@@ -62,6 +78,16 @@ class _SubmittedWorksView extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(ColorApp.kPadding),
                   children: <Widget>[
+                    // Раздел текущих работ живёт своим блоком: его загрузка и
+                    // его сбой ленты сданных не касаются.
+                    BlocBuilder<InProgressWorksBloc, InProgressWorksState>(
+                      builder: (
+                        BuildContext context,
+                        InProgressWorksState inProgress,
+                      ) =>
+                          InProgressSection(state: inProgress),
+                    ),
+                    const _SectionDivider(),
                     _FiltersBar(state: state),
                     const SizedBox(height: 16.0),
                     ..._body(context, state),
@@ -181,6 +207,32 @@ class _Header extends StatelessWidget {
           const MyUser(),
         ],
       ),
+    );
+  }
+}
+
+/// Граница между двумя лентами: черта и подзаголовок.
+///
+/// Единственная граница — ни второй шапки, ни отступа в экран высотой:
+/// прокрутка одна, и лента сданных не должна выглядеть отдельной страницей,
+/// которую надо «закрыть».
+class _SectionDivider extends StatelessWidget {
+  const _SectionDivider({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SizedBox(height: 4.0),
+        Divider(color: ColorApp.myColorGrayBorder, height: 1.0),
+        SizedBox(height: 12.0),
+        Text(
+          'Сданные работы',
+          style: TextStyle(fontSize: 15.0, fontWeight: FontWeight.w700),
+        ),
+        SizedBox(height: 12.0),
+      ],
     );
   }
 }

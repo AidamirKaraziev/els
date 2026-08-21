@@ -21,7 +21,23 @@ COPY . .
 ARG API_ORIGIN=""
 ARG MAP_TILE_URL=""
 ARG OSM_USER_AGENT=""
-RUN flutter build web --release \
+# `--pwa-strategy=none` — сборка без service worker.
+#
+# Service worker держал копию приложения в CacheStorage и отдавал её вместо
+# того, что лежит на сервере. Заголовки nginx до этой копии не достают:
+# запрос до сети не доходит вовсе. После выката человек видел прошлую сборку
+# и чистил кэш руками — так было с «Топом поломок», так же было с разделом
+# «Сейчас в работе».
+#
+# Обновляться сам он больше не умеет: Flutter объявил свой service worker
+# устаревшим и подставляет в `serviceWorkerVersion` строку с текстом
+# предупреждения вместо чистой версии, из-за чего сравнение версий, на
+# котором держалось обновление, смысла не имеет.
+#
+# Терять нечего: офлайн приложению не нужен — без API оно пустое, — а
+# свежесть файлов и так обеспечивает nginx (`no-cache` + ETag: неизменившийся
+# `main.dart.js` стоит одного 304). Правило в `infra/nginx/app.conf`.
+RUN flutter build web --release --pwa-strategy=none \
       --dart-define=API_ORIGIN=${API_ORIGIN} \
       $( [ -n "${MAP_TILE_URL}" ] && echo --dart-define=MAP_TILE_URL=${MAP_TILE_URL} ) \
       $( [ -n "${OSM_USER_AGENT}" ] && echo --dart-define=OSM_USER_AGENT=${OSM_USER_AGENT} )
