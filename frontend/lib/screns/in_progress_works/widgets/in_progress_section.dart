@@ -25,8 +25,10 @@ class InProgressSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         // Число работ у заголовка есть только тогда, когда список на руках:
-        // в загрузке и в сбое показывать нечего, а ноль был бы враньём.
-        _Title(works: state is InProgressWorksFailure ? null : state.works),
+        // без списка показывать нечего, а ноль был бы враньём. Неудачный такт
+        // опроса счёт не сбивает — работы на экране остались, значит и число
+        // при них остаётся.
+        _Title(works: state.works),
         const SizedBox(height: 12.0),
         ..._body(state),
       ],
@@ -34,28 +36,38 @@ class InProgressSection extends StatelessWidget {
   }
 
   List<Widget> _body(InProgressWorksState state) {
-    if (state is InProgressWorksFailure) {
-      return <Widget>[
-        // Текст сбоя берём у репозитория: «не удалось загрузить» и «истёк
-        // вход» лечатся по-разному, и подменять одно другим нельзя.
-        _Message(
-          title: state.message,
-          subtitle: 'Проверьте связь и попробуйте ещё раз. Сданные работы '
-              'ниже — они на месте.',
-        ),
-      ];
+    final InProgressWorks? works = state.works;
+
+    // Списка на руках нет вовсе: либо это первая загрузка, либо она же и не
+    // удалась.
+    if (works == null) {
+      if (state is InProgressWorksFailure) {
+        return <Widget>[
+          // Текст сбоя берём у репозитория: «не удалось загрузить» и «истёк
+          // вход» лечатся по-разному, и подменять одно другим нельзя.
+          _Message(
+            title: state.message,
+            subtitle: 'Раздел обновится сам, как появится связь. Сданные '
+                'работы ниже — они на месте.',
+          ),
+        ];
+      }
+      return const <Widget>[_Skeleton()];
     }
 
-    final InProgressWorks? works = state.works;
-    if (works == null) return const <Widget>[_Skeleton()];
+    // Список устарел: последний запрос не дошёл. Кнопки «Повторить» у раздела
+    // нет намеренно — её работу делает опрос, поэтому про сбой говорим тихой
+    // строчкой под списком, а следующий удачный такт уберёт её сам.
+    final bool stale = state is InProgressWorksFailure;
 
     if (works.isEmpty) {
-      return const <Widget>[
-        _Message(
+      return <Widget>[
+        const _Message(
           title: 'Сейчас никто не работает',
           subtitle: 'Здесь появятся ТО и заявки, за которые механики '
               'взялись — сразу, как они начнут.',
         ),
+        if (stale) const _Footnote(text: _staleText),
       ];
     }
 
@@ -73,22 +85,40 @@ class InProgressSection extends StatelessWidget {
           onTap: null,
         ),
       ),
-      if (hidden > 0)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4.0),
-          child: Center(
-            child: Text(
-              'и ещё $hidden',
-              style: const TextStyle(
-                fontSize: 12.0,
-                color: ColorApp.myColorGray,
-              ),
-            ),
-          ),
-        ),
+      if (hidden > 0) _Footnote(text: 'и ещё $hidden'),
+      if (stale) const _Footnote(text: _staleText),
     ];
   }
 }
+
+/// Подпись под списком: «и ещё 3», «Не удалось обновить». Серая и мелкая —
+/// это оговорка к списку, а не событие.
+class _Footnote extends StatelessWidget {
+  const _Footnote({Key? key, required this.text}) : super(key: key);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Center(
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12.0,
+            color: ColorApp.myColorGray,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Строки на экране остались с прошлого удачного запроса. Про сам сбой словами
+/// репозитория здесь не говорим: список на месте, и человеку важно не что
+/// стряслось со связью, а что цифры перед ним — не сию минуту.
+const String _staleText = 'Не удалось обновить';
 
 /// «Сейчас в работе · 4 · 1 проблема».
 ///

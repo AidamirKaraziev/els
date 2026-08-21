@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../in_progress_counts.dart';
 import '../models/in_progress_work.dart';
 import '../repository/in_progress_works_repository.dart';
 
@@ -27,7 +28,8 @@ class InProgressWorksBloc
   final InProgressWorksRepository _repository;
 
   /// Номер последнего запроса: отсекает ответы, которые уже никому не нужны.
-  /// Пригодится авто-обновлению (этап 8.6), где запросы пойдут сами.
+  /// При опросе раз в минуту такое случается само — ответ на медленный запрос
+  /// может прийти после ответа на следующий и откатить список назад.
   int _requestId = 0;
 
   Future<void> _onRequested(
@@ -43,10 +45,19 @@ class InProgressWorksBloc
     try {
       final InProgressWorks works = await _repository.fetch();
       if (requestId != _requestId) return;
+      // Числа для бокового меню кладём здесь, а не в репозитории: решает, чей
+      // ответ считать настоящим, именно блок — устаревший не должен менять
+      // меню, как не меняет список.
+      inProgressCounts.value =
+          InProgressCounts(total: works.total, problems: works.problems);
       emit(InProgressWorksLoaded(works: works));
     } on InProgressWorksException catch (error) {
       if (requestId != _requestId) return;
-      emit(InProgressWorksFailure(message: error.message));
+      // Список с прошлого удачного запроса отдаём дальше: неудачный такт
+      // опроса должен добавлять на экран пометку, а не убирать с него работы.
+      emit(
+        InProgressWorksFailure(message: error.message, previous: state.works),
+      );
     }
   }
 }

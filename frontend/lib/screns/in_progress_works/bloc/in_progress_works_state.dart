@@ -35,8 +35,18 @@ class InProgressWorksLoaded extends InProgressWorksState {
 
 /// Раздел не загрузился. Лента сданных при этом живёт своей жизнью — это два
 /// независимых запроса, и падение одного не должно гасить второй.
+///
+/// Прежний список остаётся при сбое на руках: запросы идут сами раз в минуту,
+/// и обрыв связи на одну секунду не повод стирать с экрана работы, которые
+/// никуда не делись. Пусто [works] только тогда, когда списка ещё и не было.
 class InProgressWorksFailure extends InProgressWorksState {
-  const InProgressWorksFailure({required this.message});
+  const InProgressWorksFailure({required this.message, InProgressWorks? previous})
+      : _previous = previous;
 
   final String message;
+
+  final InProgressWorks? _previous;
+
+  @override
+  InProgressWorks? get works => _previous;
 }

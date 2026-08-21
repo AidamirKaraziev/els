@@ -9,12 +9,20 @@ class MenuButton extends StatefulWidget {
   final IconData myIcons;
   final Color colorButton;
 
+  /// Что стоит в конце строки — числа у пункта меню.
+  ///
+  /// Раньше их клали поверх кнопки через `Stack`, и с тремя числами они
+  /// наезжали на заголовок: «Сданные работ» без последней буквы. Здесь они
+  /// занимают своё место, а заголовку остаётся всё остальное.
+  final Widget? trailing;
+
   const MenuButton({
     Key? key,
     required this.title,
     required this.press,
     required this.myIcons,
     required this.colorButton,
+    this.trailing,
   }) : super(key: key);
 
   @override
@@ -48,11 +56,28 @@ class _MenuButtonState extends State<MenuButton> {
                     color: ColorApp.myColorGreenAuth,
                   ),
                   const SizedBox(width: 10.0),
-                  Text(
-                    widget.title,
-                    style: const TextStyle(
-                        fontSize: 15.0, fontWeight: FontWeight.w500),
-                  ),
+                  // Без чисел заголовок живёт как жил — своей шириной: так
+                  // ведут себя все остальные пункты меню, и трогать их
+                  // раскладку заодно ни к чему.
+                  if (widget.trailing == null)
+                    Text(
+                      widget.title,
+                      style: const TextStyle(
+                          fontSize: 15.0, fontWeight: FontWeight.w500),
+                    )
+                  else ...[
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15.0, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    const SizedBox(width: 8.0),
+                    widget.trailing!,
+                    const SizedBox(width: 8.0),
+                  ],
                 ],
               ),
             ),

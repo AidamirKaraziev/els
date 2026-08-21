@@ -114,4 +114,61 @@ void main() {
     expect(works.total, 0);
     expect(works.hidden, 0);
   });
+
+  test('пилюля считает время от заданного момента, а не от «сейчас»', () {
+    final InProgressWork work =
+        InProgressWorks.fromJson(_feed()).items.single;
+    final DateTime from = work.pillSince!;
+
+    expect(work.pillLabel(now: from.add(const Duration(minutes: 40))),
+        'Идёт · 40 мин');
+    expect(work.pillLabel(now: from.add(const Duration(minutes: 70))),
+        'Идёт · 1 ч 10 мин');
+    expect(work.pillLabel(now: from.add(const Duration(hours: 2))), 'Идёт · 2 ч');
+  });
+
+  test('заявку берут «в работу», а не «идёт»', () {
+    final InProgressWork work = InProgressWorks.fromJson(
+      _feed(
+        items: <Map<String, dynamic>>[_work(kind: 'breakdown', title: null)],
+      ),
+    ).items.single;
+
+    expect(work.pillLabel(now: work.pillSince!.add(const Duration(minutes: 25))),
+        'В работе · 25 мин');
+  });
+
+  test('у проблемы времени нет — и таймеру не от чего считать', () {
+    final InProgressWork work = InProgressWorks.fromJson(
+      _feed(
+        items: <Map<String, dynamic>>[
+          _work(state: 'problem', since: null, reason: 'Нет запчасти'),
+        ],
+      ),
+    ).items.single;
+
+    expect(work.pillSince, isNull);
+    expect(work.pillLabel(now: DateTime.now()), 'Проблема');
+  });
+
+  test('пауза считает от момента остановки', () {
+    final InProgressWork work = InProgressWorks.fromJson(
+      _feed(
+        items: <Map<String, dynamic>>[_work(state: 'paused')],
+      ),
+    ).items.single;
+
+    expect(work.pillLabel(now: work.pillSince!.add(const Duration(minutes: 70))),
+        'Пауза · 1 ч 10 мин');
+  });
+
+  test('часы прораба впереди серверных — счёт не уходит в минус', () {
+    final InProgressWork work =
+        InProgressWorks.fromJson(_feed()).items.single;
+
+    expect(
+      work.pillLabel(now: work.pillSince!.subtract(const Duration(minutes: 5))),
+      'Идёт · меньше минуты',
+    );
+  });
 }

@@ -1,21 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../helper/class_colors.dart';
 import '../../responsive_screens/responsive.dart';
 import '../models/in_progress_work.dart';
-
-/// Оттенки пилюль состояния. Светлая подложка, цветные буквы — так пилюля не
-/// спорит с бейджем вида работы и видно, что это разные вещи.
-///
-/// В `class_colors.dart` из них есть только зелёная подложка
-/// ([ColorApp.myColorGreenLine]); остальные живут здесь, а не в общем файле:
-/// он достался от подрядчика, и своими цветами мы его не разбавляем, пока они
-/// нужны одному разделу.
-const Color _pauseBackground = Color(0xffFBEFC7);
-const Color _pauseText = Color(0xff8A6A00);
-const Color _problemBackground = Color(0xffF7DCDB);
-const Color _problemText = Color(0xffB03F3B);
-const Color _runningText = Color(0xff4C7A1F);
+import '../state_colors.dart';
 
 /// Строка раздела «Сейчас в работе»: что делают, кто делает и что с работой
 /// происходит прямо сейчас.
@@ -292,13 +282,62 @@ class _StateLine extends StatelessWidget {
   }
 }
 
-class _Pill extends StatelessWidget {
+/// Пилюля состояния с живым счётом времени.
+///
+/// Тик минутный: экран прораба держат открытым подолгу, и застывшее
+/// «Идёт · 40 мин» врёт ровно тогда, когда важно, — когда человек решает,
+/// звонить механику или подождать. Секундной точности здесь не нужно.
+///
+/// Таймер на строку, а не один на раздел: список обрезан двадцатью строками,
+/// и двадцать минутных таймеров дешевле, чем перерисовка всего раздела.
+class _Pill extends StatefulWidget {
   const _Pill({Key? key, required this.work}) : super(key: key);
 
   final InProgressWork work;
 
   @override
+  State<_Pill> createState() => _PillState();
+}
+
+class _PillState extends State<_Pill> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _start();
+  }
+
+  @override
+  void didUpdateWidget(_Pill old) {
+    super.didUpdateWidget(old);
+    // Список перечитали: работа могла встать на паузу или уйти в проблему —
+    // отсчёт начинается заново, а у проблемы таймер лишний.
+    if (widget.work.pillSince != old.work.pillSince ||
+        widget.work.state != old.work.state) {
+      _tick?.cancel();
+      _start();
+    }
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  void _start() {
+    _tick = widget.work.pillSince == null
+        ? null
+        : Timer.periodic(
+            const Duration(minutes: 1),
+            (Timer _) => setState(() {}),
+          );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final InProgressWork work = widget.work;
     final Color background = _background(work.state);
     final Color foreground = _foreground(work.state);
 
@@ -309,7 +348,7 @@ class _Pill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999.0),
       ),
       child: Text(
-        work.pillLabel,
+        work.pillLabel(now: DateTime.now()),
         softWrap: false,
         style: TextStyle(
           fontSize: 12.0,
@@ -323,9 +362,9 @@ class _Pill extends StatelessWidget {
   Color _background(WorkState state) {
     switch (state) {
       case WorkState.problem:
-        return _problemBackground;
+        return problemBackground;
       case WorkState.paused:
-        return _pauseBackground;
+        return pauseBackground;
       case WorkState.running:
         return ColorApp.myColorGreenLine;
     }
@@ -334,11 +373,11 @@ class _Pill extends StatelessWidget {
   Color _foreground(WorkState state) {
     switch (state) {
       case WorkState.problem:
-        return _problemText;
+        return problemText;
       case WorkState.paused:
-        return _pauseText;
+        return pauseText;
       case WorkState.running:
-        return _runningText;
+        return runningText;
     }
   }
 }

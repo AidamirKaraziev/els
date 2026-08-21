@@ -140,23 +140,42 @@ class InProgressWork {
     }
   }
 
+  /// Момент, от которого пилюля ведёт счёт. У проблемы его нет: когда механик
+  /// её объявил, в базе не хранится.
+  ///
+  /// Наружу он нужен строке: по нему она решает, заводить ли минутный таймер,
+  /// и замечает, что отсчёт сменился, — как `waitingSince` у экрана механика.
+  DateTime? get pillSince {
+    switch (state) {
+      case WorkState.problem:
+        return null;
+      case WorkState.paused:
+        return since;
+      case WorkState.running:
+        return since ?? startedAt;
+    }
+  }
+
   /// Пилюля состояния: что с работой и сколько времени она в этом состоянии.
   ///
   /// «Идёт · 40 мин», «Пауза · 1 ч 10 мин», «Проблема», «В работе · 25 мин».
   /// У проблемы времени нет и быть не может — момент, когда механик её
   /// объявил, в базе не хранится, и часы по метке правки были бы выдумкой.
-  String get pillLabel {
+  ///
+  /// [now] задаётся снаружи, чтобы счёт можно было проверить тестом: без него
+  /// подпись зависела бы от минуты, в которую его запустили.
+  String pillLabel({DateTime? now}) {
     switch (state) {
       case WorkState.problem:
         return 'Проблема';
       case WorkState.paused:
-        return _withDuration('Пауза', since);
+        return _withDuration('Пауза', since, now: now);
       case WorkState.running:
         // Слово зависит от вида: механик ТО «идёт» по чек-листу, а заявку
         // берут «в работу». Разница пришла из макета и из речи прораба.
         final String word =
             kind == WorkKind.maintenance ? 'Идёт' : 'В работе';
-        return _withDuration(word, since ?? startedAt);
+        return _withDuration(word, pillSince, now: now);
     }
   }
 
@@ -288,18 +307,19 @@ WorkState _stateFromJson(dynamic value) {
 
 /// «Пауза · 1 ч 10 мин». Без момента отсчёта — просто слово: пилюля без
 /// времени честнее пилюли с нулём.
-String _withDuration(String word, DateTime? from) {
-  final String? duration = _durationLabel(from);
+String _withDuration(String word, DateTime? from, {DateTime? now}) {
+  final String? duration = _durationLabel(from, now: now);
   return duration == null ? word : '$word · $duration';
 }
 
 /// «меньше минуты» → «40 мин» → «1 ч 10 мин» → «2 ч».
 ///
-/// Считается один раз при отрисовке: тикающая пилюля — отдельная работа
-/// (этап 8.5).
-String? _durationLabel(DateTime? from) {
+/// Пересчитывается на каждой отрисовке, а раз в минуту строку перерисовывает
+/// её собственный таймер: экран прораба держат открытым подолгу, и застывшее
+/// «40 мин» говорило бы о времени открытия, а не о работе.
+String? _durationLabel(DateTime? from, {DateTime? now}) {
   if (from == null) return null;
-  final Duration passed = DateTime.now().difference(from);
+  final Duration passed = (now ?? DateTime.now()).difference(from);
   // Часы механика могут уйти вперёд серверных. Отрицательное «начал через
   // пять минут» показывать нельзя, а работа при этом идёт.
   if (passed.isNegative || passed.inMinutes < 1) return 'меньше минуты';

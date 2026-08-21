@@ -5,7 +5,7 @@ import '../../../helper/class_colors.dart';
 import '../../../helper/header/header.dart';
 import '../../../helper/my_user.dart';
 import '../../in_progress_works/bloc/in_progress_works_bloc.dart';
-import '../../in_progress_works/widgets/in_progress_section.dart';
+import '../../in_progress_works/widgets/in_progress_works_live.dart';
 import '../bloc/submitted_works_bloc.dart';
 import '../models/submitted_work.dart';
 import '../unreviewed_counter.dart';
@@ -79,14 +79,10 @@ class _SubmittedWorksView extends StatelessWidget {
                   padding: const EdgeInsets.all(ColorApp.kPadding),
                   children: <Widget>[
                     // Раздел текущих работ живёт своим блоком: его загрузка и
-                    // его сбой ленты сданных не касаются.
-                    BlocBuilder<InProgressWorksBloc, InProgressWorksState>(
-                      builder: (
-                        BuildContext context,
-                        InProgressWorksState inProgress,
-                      ) =>
-                          InProgressSection(state: inProgress),
-                    ),
+                    // его сбой ленты сданных не касаются. Перечитывает он себя
+                    // сам, раз в минуту, — лента сданных так не умеет, там
+                    // страницы и фильтр, которые сбрасывать под руками нельзя.
+                    const InProgressWorksLive(),
                     const _SectionDivider(),
                     _FiltersBar(state: state),
                     const SizedBox(height: 16.0),

@@ -6,8 +6,8 @@ import '../../screns/home_page/home_page.dart';
 import '../helper/button/side_menu_button.dart';
 import '../helper/class_colors.dart';
 import '../helper/session.dart';
+import '../screns/in_progress_works/widgets/work_counts_chips.dart';
 import '../screns/submitted_works/repository/submitted_works_repository.dart';
-import '../screns/submitted_works/unreviewed_counter.dart';
 import 'companies_foreman/companies_screen_foreman.dart';
 import 'employee_foreman/employees_screen_foreman.dart';
 import 'object_foreman/object_screen_foreman.dart';
@@ -148,43 +148,28 @@ class _DrawerForemanState extends State<DrawerForeman> {
               ),
 
               ///Сданные работы
-              Stack(
-                children: [
-                  MenuButton(
-                    myIcons: Icons.fact_check_outlined,
-                    title: 'Сданные работы',
-                    press: () {
-                      // Число могло устареть, пока прораб сидел в другом
-                      // разделе: механик закрывает заявки не спрашивая.
-                      const SubmittedWorksRepository()
-                          .unreviewedCount()
-                          .catchError((_) => 0);
-                      IntTest.indexScreensForeman = 25;
-                      IntTest.myTitle = 'Сданные работы';
-                      myStream.add(IntTest.indexScreensForeman);
-                      setState(() {});
-                    },
-                    colorButton: IntTest.indexScreensForeman == 25
-                        ? ColorApp.myColorGreenLine
-                        : Colors.transparent,
-                  ),
-                  // Число живёт в `ValueNotifier`, а не в глобальной `var`,
-                  // как `numberReports` рядом: то зашито константой и никогда
-                  // не меняется, а это обновляет сама лента после отметки.
-                  Positioned(
-                    right: 8.0,
-                    top: 8.0,
-                    child: ValueListenableBuilder<int>(
-                      valueListenable: unreviewedWorksCount,
-                      builder: (context, count, _) => count == 0
-                          ? const SizedBox.shrink()
-                          : AlertsWidget(
-                              alertsNumber: count,
-                              myColor: ColorApp.myColorRed,
-                            ),
-                    ),
-                  ),
-                ],
+              MenuButton(
+                myIcons: Icons.fact_check_outlined,
+                title: 'Сданные работы',
+                press: () {
+                  // Число могло устареть, пока прораб сидел в другом
+                  // разделе: механик закрывает заявки не спрашивая.
+                  const SubmittedWorksRepository()
+                      .unreviewedCount()
+                      .catchError((_) => 0);
+                  IntTest.indexScreensForeman = 25;
+                  IntTest.myTitle = 'Сданные работы';
+                  myStream.add(IntTest.indexScreensForeman);
+                  setState(() {});
+                },
+                colorButton: IntTest.indexScreensForeman == 25
+                    ? ColorApp.myColorGreenLine
+                    : Colors.transparent,
+                // Числа живут в `ValueNotifier`, а не в глобальной `var`, как
+                // `numberReports` рядом: то зашито константой и никогда не
+                // меняется, а эти обновляет сам экран сданных работ — лента
+                // после отметки, раздел текущих работ после опроса.
+                trailing: const WorkCountsChips(),
               ),
 
               ///Сотрудники
