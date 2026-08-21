@@ -529,6 +529,10 @@
       "role_id"
     ]
   },
+  "GET /api/v1/work/in-progress": {
+    "required_body": [],
+    "required_params": []
+  },
   "GET /api/v1/work/submitted": {
     "required_body": [],
     "required_params": []

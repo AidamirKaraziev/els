@@ -1,0 +1,105 @@
+"""Текущие работы глазами прораба: то, что механики ведут прямо сейчас.
+
+Отдельная схема, а не `SubmittedWork` с парой полей про запас: у сданной
+работы главный вопрос «кто сдал и смотрел ли я это», а у текущей — «что с ней
+происходит и почему она встала». Общего у них только шапка строки: объект,
+исполнитель, вид работы.
+
+Состояние словом в базе не лежит, оно собирается из статуса и дат — см.
+`crud/crud_in_progress_works.py`. Наружу отдаём уже разобранным: разбирать
+`status_id` вместе с `started_at` на каждом клиенте значит рано или поздно
+разойтись с телефоном механика.
+"""
+
+from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+from src.schemas.maintenance import MaintenanceObject
+from src.schemas.reports import WorkKind
+
+
+class WorkState(str, Enum):
+    """Что с работой прямо сейчас.
+
+    Незакрытая работа бывает только в этих трёх состояниях: механик её ведёт,
+    приостановил или сообщил о проблеме. Всё остальное — либо ещё не работа
+    (за неё не брались), либо уже сданная работа, и та живёт в другой ленте.
+    """
+
+    RUNNING = "running"
+    PAUSED = "paused"
+    PROBLEM = "problem"
+
+
+class WorkProgress(BaseModel):
+    """Сколько пунктов чек-листа отмечено. Пустой чек-лист — это не ноль.
+
+    Поэтому у работы без чек-листа поля `progress` нет вовсе: «не заполнен» и
+    «ничего не сделано» — разные вещи, и экран обязан говорить их разными
+    словами.
+    """
+
+    done: int = Field(..., ge=0, title="Отмечено пунктов")
+    total: int = Field(..., ge=0, title="Всего пунктов")
+
+
+class InProgressWork(BaseModel):
+    kind: WorkKind = Field(
+        ...,
+        title="Вид работы",
+        description="Пока только `maintenance` — начатое и незакрытое ТО.",
+    )
+    work_id: int = Field(
+        ...,
+        title="ID работы",
+        description="ID акта у ТО и ID заявки у остальных видов.",
+    )
+    object: Optional[MaintenanceObject] = Field(None, title="Объект")
+
+    task_text: Optional[str] = Field(
+        None,
+        title="Что просили сделать",
+        description="Только у заявок: у ТО задание — это чек-лист акта.",
+    )
+    performer: Optional[str] = Field(
+        None,
+        title="Кто ведёт работу",
+        description="Механик акта у ТО, исполнитель у заявки.",
+    )
+
+    state: WorkState = Field(..., title="Что с работой прямо сейчас")
+    since: Optional[int] = Field(
+        None,
+        title="С какого момента длится состояние",
+        description=(
+            "Секунды эпохи. У паузы — момент остановки, у идущей работы — "
+            "момент начала. **У проблемы пусто**: когда механик её объявил, в "
+            "системе не хранится, а метка правки записи меняется от любого "
+            "действия, и часы по ней были бы выдумкой."
+        ),
+    )
+    started_at: Optional[int] = Field(
+        None,
+        title="Когда механик взялся за работу",
+        description="Секунды эпохи. У работы в этой ленте заполнено всегда.",
+    )
+    reason: Optional[str] = Field(
+        None,
+        title="Причина словами механика",
+        description=(
+            "Комментарий ко всей работе: почему остановился или что не вышло. "
+            "Есть у паузы и проблемы, у идущей работы обычно пуст."
+        ),
+    )
+    title: Optional[str] = Field(
+        None,
+        title="Регламент",
+        description="«ТО-1», «ТО-3» — из чек-листа акта. У заявок пусто.",
+    )
+    progress: Optional[WorkProgress] = Field(
+        None,
+        title="Прогресс по чек-листу",
+        description="Пусто — чек-листа у работы нет; это не «ноль пунктов».",
+    )

@@ -18,6 +18,7 @@ from src.api.api_v1.endpoints import (
     fault_category,
     files,
     foreman,
+    in_progress_works,
     location,
     object,
     order,
@@ -77,5 +78,6 @@ api_router.include_router(order_photo.router)
 api_router.include_router(order.router)
 api_router.include_router(statistics.router)
 api_router.include_router(submitted_works.router)
+api_router.include_router(in_progress_works.router)
 api_router.include_router(reports.router)
 api_router.include_router(files.router)
