@@ -29,7 +29,6 @@ MechanicTask task() {
     kind: TaskKind.maintenance,
     id: 2481,
     title: 'Лифт 12',
-    subtitle: 'Срок: август 2026',
     section: TaskSection.maintenance,
     rank: 1,
     order: 0,

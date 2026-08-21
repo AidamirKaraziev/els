@@ -86,6 +86,29 @@ String orderStatusName(int? statusId) {
   }
 }
 
+/// Состояние заявки для строки списка.
+///
+/// Отличается от [orderStatusName] нарочно: тот повторяет справочник
+/// `statuses` слово в слово, потому что его подпись уходит в базу и должна
+/// совпасть с присланной сервером. Здесь же строка говорит о заявке —
+/// «Принята», а не «Принято», — и «Создано» не показывается вовсе: заявка,
+/// которую ещё не приняли, в списке механика ничем не отличается от любой
+/// другой ожидающей.
+String? orderStateName(int? statusId) {
+  switch (statusId) {
+    case OrderStatus.accepted:
+      return 'Принята';
+    case OrderStatus.inProgress:
+      return 'В работе';
+    case OrderStatus.done:
+      return 'Выполнена';
+    case OrderStatus.problem:
+      return 'Проблема';
+    default:
+      return null;
+  }
+}
+
 /// Состояние работы по ТО — тот же справочник `statuses`, что и у заявки.
 ///
 /// «Приостановлено» отдельным номером в справочнике нет и заводить его мы не
@@ -255,7 +278,6 @@ class MechanicTask {
     required this.kind,
     required this.id,
     required this.title,
-    required this.subtitle,
     required this.section,
     required this.rank,
     required this.order,
@@ -265,7 +287,9 @@ class MechanicTask {
     this.statusId,
     this.urgent = false,
     this.watchingOnly = false,
-    this.progress,
+    this.note,
+    this.meta,
+    this.waitingSince,
     this.overdue = false,
     this.thisMonth = false,
   });
@@ -278,13 +302,13 @@ class MechanicTask {
   /// Первая строка карточки — название объекта.
   final String title;
 
-  /// Вторая строка: срок у ТО, дата и категория у заявки.
-  final String subtitle;
-
-  /// Адрес объекта.
+  /// Вторая строка — адрес объекта. Место за ним закреплено: он одинаково
+  /// нужен и ТО, и заявке, и по ходу работы не меняется, а всё изменчивое
+  /// собрано ниже в [note] и [meta].
   final String? address;
 
-  /// Зелёный значок в углу карточки: тип оборудования у заявки, «ТО» у ТО.
+  /// Значок в углу карточки: название регламента у ТО («ТО-1»), тип
+  /// оборудования у заявки.
   final String? badge;
 
   final TaskSection section;
@@ -304,8 +328,18 @@ class MechanicTask {
   /// Я не исполнитель, а механик объекта: смотреть можно, отмечать нельзя.
   final bool watchingOnly;
 
-  /// «Сделано N из M» у ТО.
-  final String? progress;
+  /// Пилюля в строке: состояние работы у начатого ТО и у заявки, срочность у
+  /// неначатого ТО. Пусто — сказать нечего, и пилюли нет.
+  final String? note;
+
+  /// Серый хвост рядом с пилюлей: срок и прогресс у ТО, код категории и дата
+  /// у заявки. То, что нужно знать, но что не должно кричать.
+  final String? meta;
+
+  /// С какого времени человек ждёт. Заполнено только у открытой аварийной
+  /// заявки: в лифте может сидеть человек, и механику важнее, сколько авария
+  /// длится, чем когда её завели, — поэтому строка показывает растущий счёт.
+  final int? waitingSince;
 
   /// ТО, чей плановый месяц уже прошёл. Раньше такое ТО уезжало в секцию
   /// «сейчас» и там терялось среди заявок; теперь оно стоит первым в своей
@@ -341,7 +375,7 @@ List<MechanicTask> buildTaskList({
   final List<MechanicTask> tasks = <MechanicTask>[];
 
   for (final Map<String, dynamic> row in orders) {
-    final MechanicTask? task = taskFromOrder(row, userId: userId);
+    final MechanicTask? task = taskFromOrder(row, userId: userId, now: now);
     if (task != null) tasks.add(task);
   }
   for (final Map<String, dynamic> row in maintenance) {
@@ -365,7 +399,11 @@ List<MechanicTask> tasksOf(List<MechanicTask> all, TaskSection section) {
 }
 
 /// Заявка из строки `GET /order/for-me`.
-MechanicTask? taskFromOrder(Map<String, dynamic> row, {required int userId}) {
+MechanicTask? taskFromOrder(
+  Map<String, dynamic> row, {
+  required int userId,
+  required DateTime now,
+}) {
   final int? id = asInt(row['id']);
   if (id == null) return null;
 
@@ -401,14 +439,18 @@ MechanicTask? taskFromOrder(Map<String, dynamic> row, {required int userId}) {
           : createdAt);
 
   final String code = asString(category['code']) ?? '';
-  final String day = dayText(createdAt);
+  final String day = shortDayText(createdAt, now: now);
 
   return MechanicTask(
     kind: TaskKind.order,
     id: id,
     title: asString(object['name']) ?? 'Объект №${asInt(object['id']) ?? 0}',
     address: asString(object['address']),
-    subtitle: code.isEmpty ? 'Заявка от $day' : '$code · заявка от $day',
+    note: orderStateName(statusId),
+    meta: code.isEmpty ? 'от $day' : '$code · от $day',
+    // Счёт времени только у открытой аварии: у обычной заявки он превратился
+    // бы в укор за каждую заявку, которая просто ждёт своей очереди.
+    waitingSince: urgent && !closed && createdAt > 0 ? createdAt : null,
     badge: _typeOfObject(object),
     section: section,
     rank: rank,
@@ -484,27 +526,34 @@ MechanicTask? taskFromMaintenance(
   final int? total = asInt(row['steps_total']);
   final int? doneSteps = asInt(row['steps_done']);
 
+  // Название регламента приходит из чек-листа и бывает пустым: тогда в
+  // значке остаётся общее «ТО» — лучше, чем пустой угол карточки.
+  final String regulation = (asString(row['title']) ?? '').trim();
+
+  final String deadline = deadlineText(year, month, now: now);
+  final String? steps =
+      total == null || total == 0 ? null : '${doneSteps ?? 0} из $total';
+
   return MechanicTask(
     kind: TaskKind.maintenance,
     id: id,
     title: asString(object['name']) ?? 'Объект №${asInt(object['id']) ?? 0}',
     address: asString(object['address']),
-    // Взятое в работу подписано состоянием, а не сроком: оно стоит первым в
-    // списке, и человек должен видеть, почему именно оно там, — особенно
-    // приостановленное, которое иначе не отличить от идущего.
-    subtitle: started
+    // Пилюлю получает только то, что меняет решение механика: состояние
+    // начатой работы — особенно пауза, которую иначе не отличить от идущей
+    // работы, — и горящий срок. Спокойное будущее ТО обходится без неё:
+    // «Не начато» не добавляет к пустому прогрессу ничего.
+    note: started
         ? maintenanceStateName(state)
-        : 'Срок: ${monthText(year, month)}',
-    badge: 'ТО',
+        : (overdue ? 'Срок вышел' : (thisMonth ? 'Этот месяц' : null)),
+    meta: steps == null ? deadline : '$deadline · $steps',
+    badge: regulation.isEmpty ? 'ТО' : regulation,
     section: section,
     rank: rank,
     order: order,
     // Статус ТО карточке нужен, чтобы открыться в правильном состоянии без
     // связи: в списке он ни на что не влияет, там прогресс по шагам.
     statusId: asInt(row['status_id']),
-    progress: total == null || total == 0
-        ? null
-        : 'Сделано ${doneSteps ?? 0} из $total',
     overdue: overdue && section == TaskSection.maintenance,
     thisMonth: thisMonth && section == TaskSection.maintenance,
     raw: row,
@@ -545,6 +594,56 @@ String dayTimeText(int seconds) {
 String monthText(int year, int month) {
   if (month < 1 || month > 12) return '$year';
   return '${kMonthsNominative[month - 1].toLowerCase()} $year';
+}
+
+/// «до 31 августа» — последний день планового месяца.
+///
+/// Дня в графике нет, он месячный, и точную дату обещать нечестно. Но сказать,
+/// до какого числа месяц кончится, можно, и это ближе к вопросу механика
+/// «сколько у меня осталось», чем голое название месяца.
+///
+/// Год дописывается, только если он не текущий: у прошлогоднего просроченного
+/// ТО это единственное, чем «до 31 мая» отличается от близкого срока.
+String deadlineText(int year, int month, {required DateTime now}) {
+  if (year <= 0 || month < 1 || month > 12) return 'срок не задан';
+  // Нулевой день следующего месяца — последний день этого.
+  final int last = DateTime(year, month + 1, 0).day;
+  final String tail = year == now.year ? '' : ' $year';
+  return 'до $last ${kMonthsGenitive[month - 1]}$tail';
+}
+
+/// «12 мая» — дата без года, пока год текущий.
+String shortDayText(int seconds, {required DateTime now}) {
+  if (seconds <= 0) return 'неизвестной даты';
+  final DateTime at = DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+  final String tail = at.year == now.year ? '' : ' ${at.year}';
+  return '${at.day} ${kMonthsGenitive[at.month - 1]}$tail';
+}
+
+/// «2 ч 40 мин» — сколько уже идёт авария.
+///
+/// Крупные единицы впереди и без секунд: механик читает это на ходу, и ему
+/// нужен порядок величины, а не точность. Минуты держатся до часа, часы — до
+/// суток: «90 мин» о застрявшем человеке говорит хуже, чем «1 ч 30 мин».
+///
+/// Отрицательная разница — часы телефона ушли вперёд серверных — читается как
+/// «только что»: показывать отрицательное время хуже, чем округлить.
+String waitedText(int from, {required DateTime now}) {
+  final int seconds = now.millisecondsSinceEpoch ~/ 1000 - from;
+  if (seconds < 60) return 'только что';
+
+  final int minutes = seconds ~/ 60;
+  if (minutes < 60) return '$minutes мин';
+
+  final int hours = minutes ~/ 60;
+  if (hours < 24) {
+    final int rest = minutes % 60;
+    return rest == 0 ? '$hours ч' : '$hours ч $rest мин';
+  }
+
+  final int days = hours ~/ 24;
+  final int rest = hours % 24;
+  return rest == 0 ? '$days дн' : '$days дн $rest ч';
 }
 
 /// Разбор присланного: бэкенд отдаёт вложенные объекты, но любое поле может

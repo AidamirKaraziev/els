@@ -36,6 +36,8 @@
 /// виду работы.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../helper/class_colors.dart';
@@ -333,22 +335,40 @@ class _TaskCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 5.0),
-                        Text(
-                          task.subtitle,
-                          style: MechanicLayout.cardSubtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (_note(task) != null) ...<Widget>[
+                        // Адрес стоит второй строкой у любой работы: механик
+                        // читает список, решая, куда ехать. Объекта без
+                        // адреса в базе быть не должно, но если он приехал
+                        // пустым — карточка просто становится в две строки.
+                        if (task.address != null) ...<Widget>[
+                          const SizedBox(height: 5.0),
+                          Text(
+                            task.address!,
+                            style: MechanicLayout.cardSubtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        if (task.note != null || task.meta != null) ...<Widget>[
                           const SizedBox(height: 6.0),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: _Pill(
-                              text: _note(task)!,
-                              tone: _noteTone(task),
-                              dimmed: dimmed,
-                            ),
+                          Row(
+                            children: <Widget>[
+                              if (task.note != null)
+                                _StatePill(task: task, dimmed: dimmed),
+                              if (task.note != null && task.meta != null)
+                                const SizedBox(width: 8.0),
+                              // Режется хвост, а не пилюля: пилюля отвечает
+                              // на «горит или нет», и терять её нельзя, а
+                              // недочитанная дата беды не делает.
+                              if (task.meta != null)
+                                Flexible(
+                                  child: Text(
+                                    task.meta!,
+                                    style: MechanicLayout.cardSubtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
                           ),
                         ],
                       ],
@@ -381,38 +401,28 @@ class _TaskCard extends StatelessWidget {
     );
   }
 
-  /// Пометка на карточке: у заявки — состояние, у ТО — срок и сколько шагов
-  /// пройдено. В кадре её нет, но в кадре нет и работы по заявке.
-  static String? _note(MechanicTask task) {
-    if (task.kind == TaskKind.maintenance) {
-      final String? progress = task.progress;
-      if (task.overdue) {
-        return progress == null ? 'Срок вышел' : 'Срок вышел · $progress';
-      }
-      if (task.thisMonth) {
-        return progress == null ? 'Этот месяц' : 'Этот месяц · $progress';
-      }
-      return progress;
-    }
-    switch (task.statusId) {
-      case OrderStatus.accepted:
-        return 'Принята';
-      case OrderStatus.inProgress:
-        return 'В работе';
-      case OrderStatus.done:
-        return 'Выполнена';
-      case OrderStatus.problem:
-        return 'Проблема';
-      default:
-        return null;
-    }
-  }
-
+  /// Цвет пилюли. Слова в неё складывает [buildTaskList], а «горит или нет»
+  /// — вопрос оформления, и решается он здесь.
   static _Tone _noteTone(MechanicTask task) {
     if (task.kind == TaskKind.maintenance) {
-      if (task.overdue) return _Tone.warning;
-      return task.thisMonth ? _Tone.good : _Tone.neutral;
+      switch (maintenanceState(task.raw)) {
+        case MaintenanceState.problem:
+          return _Tone.alarm;
+        // Пауза не зелёная: работа стоит, и выглядеть благополучно она не
+        // должна, — но и не тревожная, механик приостановил её сам.
+        case MaintenanceState.paused:
+          return _Tone.neutral;
+        case MaintenanceState.inWork:
+          return _Tone.good;
+        case MaintenanceState.notStarted:
+        case MaintenanceState.done:
+          if (task.overdue) return _Tone.warning;
+          return task.thisMonth ? _Tone.good : _Tone.neutral;
+      }
     }
+    // Открытая авария красная в любом статусе: пока заявку не закрыли,
+    // человек может стоять в лифте, и «Принята» серым это скрывает.
+    if (task.urgent && !task.closed) return _Tone.alarm;
     switch (task.statusId) {
       case OrderStatus.problem:
         return _Tone.alarm;
@@ -423,6 +433,73 @@ class _TaskCard extends StatelessWidget {
       default:
         return _Tone.neutral;
     }
+  }
+}
+
+/// Пилюля состояния. У открытой аварийной заявки досчитывает время: «Принята
+/// · 2 ч 40 мин».
+///
+/// Счёт живой, раз в минуту, — иначе он врёт ровно тогда, когда важен: экран
+/// со списком механик держит открытым, пока едет, и застывшее «40 мин»
+/// говорит о времени открытия списка, а не о том, сколько человек ждёт.
+/// Секундной точности здесь не нужно, поэтому и тик минутный.
+class _StatePill extends StatefulWidget {
+  const _StatePill({required this.task, required this.dimmed});
+
+  final MechanicTask task;
+  final bool dimmed;
+
+  @override
+  State<_StatePill> createState() => _StatePillState();
+}
+
+class _StatePillState extends State<_StatePill> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _start();
+  }
+
+  @override
+  void didUpdateWidget(_StatePill old) {
+    super.didUpdateWidget(old);
+    // Заявку закрыли или список перечитали — таймер может стать лишним.
+    if (widget.task.waitingSince != old.task.waitingSince) {
+      _tick?.cancel();
+      _start();
+    }
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  void _start() {
+    _tick = widget.task.waitingSince == null
+        ? null
+        : Timer.periodic(
+            const Duration(minutes: 1),
+            (Timer _) => setState(() {}),
+          );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final MechanicTask task = widget.task;
+    final int? since = task.waitingSince;
+    final String text = since == null
+        ? task.note!
+        : '${task.note} · ${waitedText(since, now: DateTime.now())}';
+
+    return _Pill(
+      text: text,
+      tone: _TaskCard._noteTone(task),
+      dimmed: widget.dimmed,
+    );
   }
 }
 

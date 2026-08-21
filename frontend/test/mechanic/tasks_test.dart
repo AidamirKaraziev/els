@@ -60,6 +60,7 @@ Map<String, dynamic> maintenanceRow({
   int statusId = OrderStatus.created,
   int stepsTotal = 52,
   int stepsDone = 0,
+  String? regulation = 'ТО-1',
 }) {
   return <String, dynamic>{
     'act_id': actId,
@@ -70,7 +71,7 @@ Map<String, dynamic> maintenanceRow({
     },
     'year': year,
     'month': month,
-    'title': 'ТО $month',
+    'title': regulation,
     'steps_total': stepsTotal,
     'steps_done': stepsDone,
     'finished_at': finishedAt,
@@ -252,7 +253,7 @@ void main() {
       expect(tasks.map((MechanicTask task) => task.id), <int>[3, 2, 1]);
     });
 
-    test('состояние работы подписано вместо срока', () {
+    test('состояние начатой работы попадает в пилюлю', () {
       final List<MechanicTask> tasks = build(
         maintenance: <Map<String, dynamic>>[
           maintenanceRow(
@@ -264,7 +265,7 @@ void main() {
         ],
       );
 
-      expect(tasks.single.subtitle, 'Приостановлено');
+      expect(tasks.single.note, 'Приостановлено');
       expect(tasks.single.statusId, OrderStatus.accepted);
     });
 
@@ -407,17 +408,23 @@ void main() {
   });
 
   group('карточка', () {
-    test('заявка: название объекта, категория с датой, тип оборудования', () {
+    test('заявка: объект, адрес, код с датой и тип оборудования', () {
       final MechanicTask task = build(
         orders: <Map<String, dynamic>>[
-          orderRow(id: 1, code: 'AA', createdAt: DateTime(2026, 5, 12)),
+          orderRow(
+            id: 1,
+            code: 'AA',
+            statusId: OrderStatus.inProgress,
+            createdAt: DateTime(2026, 5, 12),
+          ),
         ],
       ).single;
 
       expect(task.title, 'Лифт № 30');
-      expect(task.subtitle, 'AA · заявка от 12 мая 2026');
-      expect(task.badge, 'Лифт без МП');
       expect(task.address, 'Крылатая улица 2');
+      expect(task.note, 'В работе');
+      expect(task.meta, 'AA · от 12 мая');
+      expect(task.badge, 'Лифт без МП');
     });
 
     test('заявка без категории обходится без разделителя', () {
@@ -427,19 +434,120 @@ void main() {
         ],
       ).single;
 
-      expect(task.subtitle, 'Заявка от 12 мая 2026');
+      expect(task.meta, 'от 12 мая');
     });
 
-    test('ТО: срок месяцем и прогресс по шагам', () {
+    test('заявка не этого года подписана годом', () {
+      final MechanicTask task = build(
+        orders: <Map<String, dynamic>>[
+          orderRow(id: 1, code: 'AA', createdAt: DateTime(2025, 12, 3)),
+        ],
+      ).single;
+
+      expect(task.meta, 'AA · от 3 декабря 2025');
+    });
+
+    test('заведённая, но не принятая заявка обходится без пилюли', () {
+      final MechanicTask task = build(
+        orders: <Map<String, dynamic>>[
+          orderRow(id: 1, statusId: OrderStatus.created),
+        ],
+      ).single;
+
+      expect(task.note, isNull);
+    });
+
+    test('ТО: регламент в значке, срок и прогресс в хвосте', () {
       final MechanicTask task = build(
         maintenance: <Map<String, dynamic>>[
           maintenanceRow(actId: 1, year: 2026, month: 5, stepsDone: 3),
         ],
       ).single;
 
-      expect(task.subtitle, 'Срок: май 2026');
-      expect(task.progress, 'Сделано 3 из 52');
+      expect(task.badge, 'ТО-1');
+      expect(task.address, 'улица Стасова 182');
+      expect(task.note, 'Этот месяц');
+      expect(task.meta, 'до 31 мая · 3 из 52');
+    });
+
+    test('ТО без названия регламента остаётся с общим значком', () {
+      // Поле необязательное: чек-лист могли завести без названия.
+      final MechanicTask task = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(actId: 1, regulation: '  '),
+        ],
+      ).single;
+
       expect(task.badge, 'ТО');
+    });
+
+    test('спокойное будущее ТО обходится без пилюли', () {
+      final MechanicTask task = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(actId: 1, year: 2026, month: 9),
+        ],
+      ).single;
+
+      expect(task.note, isNull);
+      expect(task.meta, 'до 30 сентября · 0 из 52');
+    });
+
+    test('просроченное ТО прошлого года подписано годом', () {
+      final MechanicTask task = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(actId: 1, year: 2025, month: 12),
+        ],
+      ).single;
+
+      expect(task.note, 'Срок вышел');
+      expect(task.meta, 'до 31 декабря 2025 · 0 из 52');
+    });
+
+    test('ТО без пунктов показывает один срок', () {
+      final MechanicTask task = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(actId: 1, stepsTotal: 0),
+        ],
+      ).single;
+
+      expect(task.meta, 'до 31 мая');
+    });
+
+    test('открытая авария считает время ожидания', () {
+      // В лифте может стоять человек: строка показывает, сколько он там уже.
+      final DateTime at = DateTime(2026, 5, 15, 9);
+      final MechanicTask task = build(
+        orders: <Map<String, dynamic>>[
+          orderRow(
+            id: 1,
+            urgent: true,
+            statusId: OrderStatus.accepted,
+            createdAt: at,
+          ),
+        ],
+      ).single;
+
+      expect(task.waitingSince, seconds(at));
+    });
+
+    test('обычная заявка времени не считает', () {
+      final MechanicTask task = build(
+        orders: <Map<String, dynamic>>[
+          orderRow(id: 1, statusId: OrderStatus.accepted),
+        ],
+      ).single;
+
+      expect(task.waitingSince, isNull);
+    });
+
+    test('закрытая авария времени не считает', () {
+      final MechanicTask task = build(
+        orders: <Map<String, dynamic>>[
+          orderRow(id: 1, urgent: true, statusId: OrderStatus.done),
+        ],
+      ).single;
+
+      expect(task.waitingSince, isNull);
     });
 
     test('строка без идентификатора не роняет список', () {
@@ -462,6 +570,38 @@ void main() {
 
       expect(tasks.single.title, 'Объект №0');
       expect(tasks.single.badge, isNull);
+    });
+  });
+
+  group('сроки и время словами', () {
+    test('срок ТО — последний день планового месяца', () {
+      expect(deadlineText(2026, 2, now: today), 'до 28 февраля');
+      expect(deadlineText(2024, 2, now: today), 'до 29 февраля 2024');
+    });
+
+    test('пустой год в графике не выдаёт выдуманный срок', () {
+      // Год в графике строковый и набит руками: нечисловой приезжает нулём.
+      expect(deadlineText(0, 5, now: today), 'срок не задан');
+      expect(deadlineText(2026, 0, now: today), 'срок не задан');
+    });
+
+    test('сколько человек уже ждёт', () {
+      String waited(Duration ago) =>
+          waitedText(seconds(today.subtract(ago)), now: today);
+
+      expect(waited(const Duration(seconds: 30)), 'только что');
+      expect(waited(const Duration(minutes: 14)), '14 мин');
+      expect(waited(const Duration(hours: 2, minutes: 40)), '2 ч 40 мин');
+      expect(waited(const Duration(hours: 3)), '3 ч');
+      expect(waited(const Duration(hours: 26)), '1 дн 2 ч');
+      expect(waited(const Duration(days: 2)), '2 дн');
+    });
+
+    test('часы телефона впереди серверных — не отрицательное время', () {
+      expect(
+        waitedText(seconds(today.add(const Duration(minutes: 5))), now: today),
+        'только что',
+      );
     });
   });
 }
