@@ -55,6 +55,9 @@ Map<String, dynamic> maintenanceRow({
   int month = 5,
   bool actual = true,
   int? finishedAt,
+  int? startedAt,
+  int? pausedAt,
+  int statusId = OrderStatus.created,
   int stepsTotal = 52,
   int stepsDone = 0,
 }) {
@@ -71,7 +74,9 @@ Map<String, dynamic> maintenanceRow({
     'steps_total': stepsTotal,
     'steps_done': stepsDone,
     'finished_at': finishedAt,
-    'status_id': 1,
+    'started_at': startedAt,
+    'paused_at': pausedAt,
+    'status_id': statusId,
     'updated_at': seconds(DateTime(2026, 5, 1)),
     'is_actual': actual,
   };
@@ -200,6 +205,99 @@ void main() {
       );
 
       expect(tasks.map((MechanicTask task) => task.id), <int>[1, 2, 3]);
+    });
+
+    test('взятое в работу стоит выше просроченного', () {
+      // Недоделанная своя работа важнее чужого срока: механик вернулся с
+      // аварийного вызова и ищет то, что бросил.
+      final List<MechanicTask> tasks = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(actId: 1, year: 2025, month: 12),
+          maintenanceRow(
+            actId: 2,
+            year: 2026,
+            month: 6,
+            startedAt: seconds(DateTime(2026, 5, 15, 9)),
+            statusId: OrderStatus.inProgress,
+          ),
+        ],
+      );
+
+      expect(tasks.map((MechanicTask task) => task.id), <int>[2, 1]);
+    });
+
+    test('приостановленное ТО остаётся наверху вместе с начатым', () {
+      final List<MechanicTask> tasks = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(actId: 1, year: 2025, month: 12),
+          maintenanceRow(
+            actId: 2,
+            year: 2026,
+            month: 6,
+            startedAt: seconds(DateTime(2026, 5, 15, 9)),
+            pausedAt: seconds(DateTime(2026, 5, 15, 11)),
+            statusId: OrderStatus.accepted,
+          ),
+          maintenanceRow(
+            actId: 3,
+            year: 2026,
+            month: 6,
+            startedAt: seconds(DateTime(2026, 5, 15, 14)),
+            statusId: OrderStatus.inProgress,
+          ),
+        ],
+      );
+
+      // За что взялись последним, то и сверху.
+      expect(tasks.map((MechanicTask task) => task.id), <int>[3, 2, 1]);
+    });
+
+    test('состояние работы подписано вместо срока', () {
+      final List<MechanicTask> tasks = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(
+            actId: 1,
+            startedAt: seconds(DateTime(2026, 5, 15, 9)),
+            pausedAt: seconds(DateTime(2026, 5, 15, 11)),
+            statusId: OrderStatus.accepted,
+          ),
+        ],
+      );
+
+      expect(tasks.single.subtitle, 'Приостановлено');
+      expect(tasks.single.statusId, OrderStatus.accepted);
+    });
+
+    test('статус «Проблема» у ТО не значит, что делать больше нечего', () {
+      // У заявки те же номера означают закрытие, и общий геттер `closed`
+      // раньше не различал сущности.
+      final List<MechanicTask> tasks = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(
+            actId: 1,
+            startedAt: seconds(DateTime(2026, 5, 15, 9)),
+            statusId: OrderStatus.problem,
+          ),
+        ],
+      );
+
+      expect(tasks.single.closed, isFalse);
+      expect(tasks.single.section, TaskSection.maintenance);
+    });
+
+    test('закрытый акт остаётся сданным при любом статусе', () {
+      final List<MechanicTask> tasks = build(
+        maintenance: <Map<String, dynamic>>[
+          maintenanceRow(
+            actId: 1,
+            startedAt: seconds(DateTime(2026, 5, 12, 9)),
+            finishedAt: seconds(DateTime(2026, 5, 12, 18)),
+            statusId: OrderStatus.problem,
+          ),
+        ],
+      );
+
+      expect(tasks.single.section, TaskSection.done);
     });
 
     test('сданное ТО пометок о сроке не носит', () {

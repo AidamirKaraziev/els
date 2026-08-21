@@ -101,6 +101,24 @@ class ActFactUpdate(BaseModel):
     )
     started_at: Optional[int]
     finished_at: Optional[int]
+    paused_at: Optional[int] = Field(
+        None,
+        title="Когда работа встала",
+        description=(
+            "Секунды эпохи, как и соседние даты. Ноль или `null` при "
+            "возобновлении: работа снова идёт, и момент паузы больше ни о чём "
+            "не говорит."
+        ),
+    )
+    commentary: Optional[str] = Field(
+        None,
+        title="Комментарий ко всей работе",
+        description=(
+            "Причина проблемы или запись при закрытии акта. Комментарий к "
+            "отдельному пункту регламента живёт внутри `checklist` и с этим "
+            "полем не пересекается."
+        ),
+    )
     foreman_id: Optional[int]
     main_mechanic_id: Optional[int]
     status_id: Optional[int]
@@ -125,6 +143,8 @@ class ActFactGet(BaseModel):
     created_at: Optional[datetime]
     started_at: Optional[datetime]
     finished_at: Optional[datetime]
+    paused_at: Optional[datetime] = Field(None, title="Когда работа встала")
+    commentary: Optional[str] = Field(None, title="Комментарий ко всей работе")
 
     foreman_id: Optional[int]
     main_mechanic_id: Optional[int]

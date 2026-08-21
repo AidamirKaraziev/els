@@ -86,14 +86,166 @@ String orderStatusName(int? statusId) {
   }
 }
 
-/// Группы внутри секции. В заявках сверху аварии, в ТО — просроченное и
-/// текущий месяц; в прочих секциях группа одна, и порядок задаёт только время.
+/// Состояние работы по ТО — тот же справочник `statuses`, что и у заявки.
+///
+/// «Приостановлено» отдельным номером в справочнике нет и заводить его мы не
+/// стали: пауза — это «Принято» при уже начатой работе, и отличает её от
+/// невзятого ТО заполненный `started_at`. Разбирает это [maintenanceState].
+enum MaintenanceState {
+  /// Механик за ТО ещё не брался.
+  notStarted,
+
+  /// Работа идёт прямо сейчас.
+  inWork,
+
+  /// Механик начал и приостановил: аварийный вызов, нет запчасти.
+  paused,
+
+  /// Работа встала, и прораб должен разобраться почему.
+  problem,
+
+  /// Работа завершена, акт закрыт.
+  done,
+}
+
+/// Состояние работы по строке списка ТО.
+///
+/// Порядок проверок важен: закрытый акт остаётся закрытым, каким бы ни был
+/// статус, а неначатое ТО не бывает ни на паузе, ни в проблеме — статус у
+/// таких строк по умолчанию «Создано», и читать его как состояние работы
+/// значило бы придумать работу там, где её не было.
+MaintenanceState maintenanceState(Map<String, dynamic> row) {
+  if (row['finished_at'] != null) return MaintenanceState.done;
+  if (row['started_at'] == null) return MaintenanceState.notStarted;
+
+  switch (asInt(row['status_id'])) {
+    case OrderStatus.problem:
+      return MaintenanceState.problem;
+    case OrderStatus.accepted:
+      return MaintenanceState.paused;
+    default:
+      return MaintenanceState.inWork;
+  }
+}
+
+/// Что делает главная — единственная зелёная — кнопка карточки ТО.
+enum ActAction {
+  /// Механик берётся за работу впервые.
+  start,
+
+  /// Работа идёт, кнопка просто открывает чек-лист.
+  open,
+
+  /// Возвращение к приостановленной или вставшей работе.
+  resume,
+
+  /// Все пункты отмечены, остаётся закрыть акт.
+  close,
+
+  /// Работа завершена — нажимать нечего.
+  none,
+}
+
+/// Кнопки карточки ТО в этом состоянии работы.
+///
+/// Отдельно от экрана, потому что это правило, а не вёрстка: именно оно
+/// решает, увидит ли механик «Завершить работу» вместо «Продолжить ТО» и
+/// можно ли из этого состояния приостановиться.
+class ActControls {
+  const ActControls({
+    required this.main,
+    required this.canPause,
+    required this.canReportProblem,
+  });
+
+  final ActAction main;
+
+  /// Приостановить можно только идущую работу: приостановленная уже стоит, а
+  /// за неначатую механик ещё не брался.
+  final bool canPause;
+
+  /// Сообщить о проблеме можно из любой начатой работы. До начала — нет:
+  /// проблема мешает делать, а делать ещё не начинали.
+  final bool canReportProblem;
+
+  /// Подпись главной кнопки.
+  String get mainLabel {
+    switch (main) {
+      case ActAction.start:
+        return 'Начать ТО';
+      case ActAction.close:
+        return 'Завершить работу';
+      case ActAction.open:
+      case ActAction.resume:
+        return 'Продолжить ТО';
+      case ActAction.none:
+        return '';
+    }
+  }
+}
+
+/// Разбирает состояние работы в набор кнопок.
+ActControls actControls(MaintenanceState state, {required bool allDone}) {
+  switch (state) {
+    case MaintenanceState.notStarted:
+      return const ActControls(
+        main: ActAction.start,
+        canPause: false,
+        canReportProblem: false,
+      );
+    case MaintenanceState.inWork:
+      return ActControls(
+        main: allDone ? ActAction.close : ActAction.open,
+        canPause: true,
+        canReportProblem: true,
+      );
+    case MaintenanceState.paused:
+      return const ActControls(
+        main: ActAction.resume,
+        canPause: false,
+        canReportProblem: true,
+      );
+    case MaintenanceState.problem:
+      return const ActControls(
+        main: ActAction.resume,
+        canPause: false,
+        canReportProblem: false,
+      );
+    case MaintenanceState.done:
+      return const ActControls(
+        main: ActAction.none,
+        canPause: false,
+        canReportProblem: false,
+      );
+  }
+}
+
+/// Состояние работы словами — одинаково в списке и в карточке ТО.
+String maintenanceStateName(MaintenanceState state) {
+  switch (state) {
+    case MaintenanceState.notStarted:
+      return 'Не начато';
+    case MaintenanceState.inWork:
+      return 'В работе';
+    case MaintenanceState.paused:
+      return 'Приостановлено';
+    case MaintenanceState.problem:
+      return 'Проблема';
+    case MaintenanceState.done:
+      return 'Завершено';
+  }
+}
+
+/// Группы внутри секции. В заявках сверху аварии, в ТО — взятое в работу,
+/// потом просроченное и текущий месяц; в прочих секциях группа одна, и
+/// порядок задаёт только время.
 class _Rank {
   static const int urgentOrder = 0;
   static const int order = 1;
-  static const int overdueMaintenance = 0;
-  static const int currentMaintenance = 1;
-  static const int futureMaintenance = 2;
+  static const int startedMaintenance = 0;
+  static const int overdueMaintenance = 1;
+  static const int currentMaintenance = 2;
+  static const int futureMaintenance = 3;
   static const int single = 0;
 }
 
@@ -167,8 +319,13 @@ class MechanicTask {
   final Map<String, dynamic> raw;
 
   /// Закрытая заявка: делать больше нечего.
+  ///
+  /// Только заявка: у ТО те же номера статусов значат другое — «Проблема»
+  /// означает вставшую работу, которую ещё доделывать, а закрытость ТО видна
+  /// по `finished_at`.
   bool get closed =>
-      statusId == OrderStatus.done || statusId == OrderStatus.problem;
+      kind == TaskKind.order &&
+      (statusId == OrderStatus.done || statusId == OrderStatus.problem);
 }
 
 /// Собирает список работ из двух коллекций локальной базы.
@@ -291,11 +448,19 @@ MechanicTask? taskFromMaintenance(
     section = TaskSection.maintenance;
   }
 
+  final MaintenanceState state = maintenanceState(row);
+  final bool started = state != MaintenanceState.notStarted &&
+      state != MaintenanceState.done;
+
   final int order;
   if (section == TaskSection.done) {
     order = -(asInt(row['finished_at']) ?? 0);
   } else if (section == TaskSection.archive) {
     order = -(asInt(row['updated_at']) ?? 0);
+  } else if (started) {
+    // За что взялись последним, то и сверху: механик вернулся с аварийного
+    // вызова и ищет ту работу, которую бросил, а не самую старую из начатых.
+    order = -(asInt(row['started_at']) ?? 0);
   } else {
     // Чем раньше плановый месяц, тем выше строка.
     order = plan;
@@ -304,6 +469,10 @@ MechanicTask? taskFromMaintenance(
   final int rank;
   if (section != TaskSection.maintenance) {
     rank = _Rank.single;
+  } else if (started) {
+    // Взятое в работу — включая приостановленное — стоит выше просроченного:
+    // недоделанная своя работа важнее чужого срока.
+    rank = _Rank.startedMaintenance;
   } else if (overdue) {
     rank = _Rank.overdueMaintenance;
   } else if (thisMonth) {
@@ -320,11 +489,19 @@ MechanicTask? taskFromMaintenance(
     id: id,
     title: asString(object['name']) ?? 'Объект №${asInt(object['id']) ?? 0}',
     address: asString(object['address']),
-    subtitle: 'Срок: ${monthText(year, month)}',
+    // Взятое в работу подписано состоянием, а не сроком: оно стоит первым в
+    // списке, и человек должен видеть, почему именно оно там, — особенно
+    // приостановленное, которое иначе не отличить от идущего.
+    subtitle: started
+        ? maintenanceStateName(state)
+        : 'Срок: ${monthText(year, month)}',
     badge: 'ТО',
     section: section,
     rank: rank,
     order: order,
+    // Статус ТО карточке нужен, чтобы открыться в правильном состоянии без
+    // связи: в списке он ни на что не влияет, там прогресс по шагам.
+    statusId: asInt(row['status_id']),
     progress: total == null || total == 0
         ? null
         : 'Сделано ${doneSteps ?? 0} из $total',
@@ -350,6 +527,18 @@ String dayText(int seconds) {
   if (seconds <= 0) return 'неизвестной даты';
   final DateTime at = DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
   return '${at.day} ${kMonthsGenitive[at.month - 1]} ${at.year}';
+}
+
+/// «21 августа, 15:20» — там, где час важен не меньше дня.
+///
+/// Пауза бывает на полчаса, и «работа стоит с 21 августа» на такое не
+/// отвечает: механик отошёл после обеда и вернулся к вечеру, и разницу видно
+/// только по часам.
+String dayTimeText(int seconds) {
+  if (seconds <= 0) return 'неизвестного времени';
+  final DateTime at = DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+  final String minute = at.minute.toString().padLeft(2, '0');
+  return '${at.day} ${kMonthsGenitive[at.month - 1]}, ${at.hour}:$minute';
 }
 
 /// «май 2026» — у ТО в графике есть только месяц.

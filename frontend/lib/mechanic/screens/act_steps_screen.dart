@@ -7,10 +7,10 @@
 ///   тем же самым, без номера — новым, поэтому список всегда уходит одним
 ///   куском (`PUT /act-fact/{id}/`). Всё через очередь: без связи отметка
 ///   ложится в телефон сразу.
-/// * **Закрыть акт можно и с неотмеченными пунктами.** Бэкенд этого не
+/// * **Завершить работу можно и с неотмеченными пунктами.** Бэкенд этого не
 ///   запрещает — `finished_at` пишется независимо от чек-листа, — и запрещать
 ///   на телефоне мы не стали: механик приехал, часть работ не сделал, и
-///   заставлять его врать в чек-листе ради закрытия хуже, чем показать
+///   заставлять его врать в чек-листе ради завершения хуже, чем показать
 ///   прорабу «5 из 8». Но спрашиваем подтверждение и пишем в нём, чего не
 ///   хватает.
 /// * **Просмотр без начала работы.** С карточки сюда можно зайти до нажатия
@@ -27,6 +27,7 @@ import '../data/mechanic_workspace.dart';
 import '../data/tasks.dart';
 import '../mechanic_theme.dart';
 import 'act_step_screen.dart';
+import 'close_act_sheet.dart';
 
 class MechanicActStepsScreen extends StatefulWidget {
   const MechanicActStepsScreen({
@@ -103,7 +104,7 @@ class _MechanicActStepsScreenState extends State<MechanicActStepsScreen> {
             const SizedBox(height: 16.0),
             _Note(
               _closed
-                  ? 'Акт закрыт. Прораб увидит работу в ленте сданных.'
+                  ? 'Работа завершена. Прораб увидит её в ленте сданных.'
                   : 'Это просмотр. Чтобы отмечать пункты, начните ТО в карточке.',
             ),
           ],
@@ -157,31 +158,29 @@ class _MechanicActStepsScreenState extends State<MechanicActStepsScreen> {
     await _countPhotos();
   }
 
-  /// Подтверждение закрытия — кадра в макете нет, лист собран из приёмов
-  /// соседних. Спрашиваем всегда: снять закрытие с телефона нечем.
+  /// Подтверждение — кадра в макете нет, лист собран из приёмов соседних.
+  /// Спрашиваем всегда: снять завершение с телефона нечем.
+  ///
+  /// Тот же лист показывает карточка ТО по кнопке «Завершить работу»: это одно
+  /// и то же действие, и живёт оно в `close_act_sheet.dart`.
   Future<void> _confirmClose() async {
     final int queued =
         _photos.values.fold<int>(0, (int sum, int count) => sum + count);
 
-    final bool? yes = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: ColorApp.myColorWhite,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
-      ),
-      builder: (BuildContext context) => _CloseSheet(
-        task: widget.task,
-        act: _act,
-        queuedPhotos: queued,
-      ),
+    final CloseActChoice? choice = await showCloseActSheet(
+      context,
+      task: widget.task,
+      act: _act,
+      queuedPhotos: queued,
     );
-    if (yes != true) return;
+    if (choice == null || !mounted) return;
 
     setState(() => _busy = true);
     await MechanicWorkspace.current?.sendActChecklist(
       act: _act,
-      title: 'ТО №${_act.id} — акт закрыт',
+      title: 'ТО №${_act.id} — работа завершена',
       finish: true,
+      commentary: choice.commentary,
     );
     if (!mounted) return;
     setState(() {
@@ -190,7 +189,7 @@ class _MechanicActStepsScreenState extends State<MechanicActStepsScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Акт закрыт. Уйдёт на сервер, как появится связь.'),
+        content: Text('Работа завершена. Уйдёт на сервер, как появится связь.'),
       ),
     );
     Navigator.of(context).pop(_act);
@@ -482,175 +481,13 @@ class _Bottom extends StatelessWidget {
                   ),
                 ),
                 child: const Text(
-                  'Закрыть акт',
+                  'Завершить работу',
                   style: TextStyle(fontSize: 15.0),
                 ),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Лист подтверждения: что именно уйдёт прорабу.
-class _CloseSheet extends StatelessWidget {
-  const _CloseSheet({
-    required this.task,
-    required this.act,
-    required this.queuedPhotos,
-  });
-
-  final MechanicTask task;
-  final ActDetails act;
-  final int queuedPhotos;
-
-  @override
-  Widget build(BuildContext context) {
-    final List<String> missing = act.steps
-        .where((ActStep step) => !step.done)
-        .map((ActStep step) => step.title.toLowerCase())
-        .toList();
-
-    // Лист прокручивается: неотмеченных пунктов бывает восемь, и их
-    // перечисление на маленьком экране лист не вмещает.
-    return SafeArea(
-      top: false,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20.0, 12.0, 20.0, 20.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Center(
-              child: Container(
-                width: 36.0,
-                height: 4.0,
-                decoration: BoxDecoration(
-                  color: ColorApp.myColorGrayBorder,
-                  borderRadius: BorderRadius.circular(2.0),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14.0),
-            Text(
-              act.title == null ? 'Закрыть акт?' : 'Закрыть акт ${act.title}?',
-              style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 10.0),
-            Text(
-              missing.isEmpty
-                  ? 'Все пункты отмечены. После закрытия работа уйдёт прорабу '
-                      'в ленту сданных.'
-                  : 'Не отмечено: ${missing.join(', ')}. После закрытия работа '
-                      'уйдёт прорабу в ленту сданных.',
-              style: const TextStyle(
-                fontSize: 14.0,
-                fontWeight: FontWeight.w300,
-                color: Color(0xff1C1C1E),
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 14.0),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14.0,
-                vertical: 12.0,
-              ),
-              decoration: BoxDecoration(
-                color: ColorApp.myColorTransparent,
-                borderRadius: BorderRadius.circular(MechanicLayout.cardRadius),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  _SheetLine(label: 'Объект', value: task.title),
-                  _SheetLine(
-                    label: 'Пройдено пунктов',
-                    value: progressText(act.doneCount, act.total),
-                  ),
-                  _SheetLine(
-                    label: 'Снимков в очереди',
-                    value: queuedPhotos == 0 ? 'нет' : '$queuedPhotos',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14.0),
-            SizedBox(
-              height: 48.0,
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: ColorApp.myColorGreenAuth,
-                  foregroundColor: ColorApp.myColorWhite,
-                  elevation: 0.0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(MechanicLayout.cardRadius),
-                  ),
-                ),
-                child: const Text(
-                  'Закрыть акт',
-                  style: TextStyle(fontSize: 15.0),
-                ),
-              ),
-            ),
-            SizedBox(
-              height: 48.0,
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                style: TextButton.styleFrom(
-                  foregroundColor: ColorApp.myColorGray,
-                ),
-                child: const Text(
-                  'Вернуться к пунктам',
-                  style: TextStyle(fontSize: 15.0),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SheetLine extends StatelessWidget {
-  const _SheetLine({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          SizedBox(
-            width: 130.0,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13.0,
-                fontWeight: FontWeight.w300,
-                color: ColorApp.myColorGray,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 13.0, color: Color(0xff1C1C1E)),
-            ),
-          ),
-        ],
       ),
     );
   }

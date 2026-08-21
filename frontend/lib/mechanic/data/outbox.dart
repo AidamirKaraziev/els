@@ -145,14 +145,26 @@ class Outbox {
     required ActionSender sender,
     KeyValueStore store = const PreferencesStore(),
     DateTime Function() now = DateTime.now,
+    void Function()? onChanged,
   })  : _sender = sender,
         _store = store,
-        _now = now;
+        _now = now,
+        _onChanged = onChanged;
 
   final int userId;
   final ActionSender _sender;
   final KeyValueStore _store;
   final DateTime Function() _now;
+
+  /// Очередь изменилась сама по себе: действие ушло на сервер или было
+  /// отклонено.
+  ///
+  /// Постановку в очередь колбэк не покрывает — её делает экран, и он же
+  /// обновляет полосу сразу. А вот удачная отправка происходит без всякого
+  /// экрана, и раньше её никто не замечал: работа уходила на сервер, а полоса
+  /// «Не отправлено: N» ещё две минуты, до таймера, говорила «не отправлено»
+  /// — то есть врала ровно про то, ради чего её показывают.
+  final void Function()? _onChanged;
 
   static const String _prefix = 'mechanic';
 
@@ -222,7 +234,10 @@ class Outbox {
   Future<List<OutboxAction>> rejected() => _load(_rejectedKey);
 
   /// Убирает отклонённое из показа — человек его увидел.
-  Future<void> forgetRejected() => _store.remove(_rejectedKey);
+  Future<void> forgetRejected() async {
+    await _store.remove(_rejectedKey);
+    _onChanged?.call();
+  }
 
   /// Отправляет очередь по порядку, до первой временной осечки.
   ///
@@ -292,6 +307,7 @@ class Outbox {
       }
 
       bool stop = false;
+      bool left = false;
       await _guard(() async {
         final List<OutboxAction> queue = await _load(_queueKey);
         // Ищем по `id`, а не берём первое: за время отправки список мог
@@ -327,7 +343,12 @@ class Outbox {
         } else {
           sent += 1;
         }
+        left = true;
       });
+
+      // Действие ушло с очереди — об этом надо сказать наружу. Внутри замка
+      // звать колбэк нельзя: он читает то же хранилище и встанет на нём же.
+      if (left) _onChanged?.call();
 
       if (stop) break;
     }
@@ -372,6 +393,7 @@ class Outbox {
         await _save(_rejectedKey, denied);
       }
     });
+    _onChanged?.call();
   }
 
   Future<List<int>?> _readFile(String key) async {

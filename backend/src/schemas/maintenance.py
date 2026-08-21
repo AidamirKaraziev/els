@@ -40,7 +40,20 @@ class MyMaintenanceItem(BaseModel):
         title="Когда акт закрыт",
         description="Пусто — ТО ещё не сделано. Именно по этой дате считается выполнение графика.",
     )
+    paused_at: Optional[int] = Field(
+        None,
+        title="Когда работа встала",
+        description=(
+            "Заполнено вместе со `started_at` и пустым `finished_at` — "
+            "механик взялся за ТО и приостановил его. Пусто, если работа идёт."
+        ),
+    )
     status_id: Optional[int] = Field(None, title="Статус акта")
+    commentary: Optional[str] = Field(
+        None,
+        title="Комментарий ко всей работе",
+        description="Причина проблемы или запись механика при закрытии акта.",
+    )
 
     updated_at: Optional[int] = Field(
         None,

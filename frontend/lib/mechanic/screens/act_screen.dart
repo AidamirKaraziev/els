@@ -6,9 +6,12 @@
 ///   начала работ. Механик же решает «браться ли сейчас» именно по составу
 ///   регламента, поэтому первые пункты и их число видны сразу, до нажатия
 ///   «Начать ТО»: список открывается на просмотр, отметки в нём недоступны.
-/// * **Состояние работы словами.** У акта три состояния — не начато, в
-///   работе, сдано, — и они меняют единственную кнопку экрана. В кадре кнопка
-///   одна и всегда одинаковая.
+/// * **Состояние работы словами.** У работы пять состояний — не начато, в
+///   работе, приостановлено, проблема, завершено, — и они меняют единственную
+///   зелёную кнопку экрана. В кадре кнопка одна и всегда одинаковая.
+/// * **Пауза и проблема тихими действиями под кнопкой.** Механик приходит
+///   сюда работать, а не выбирать из трёх равноправных кнопок; приостановить
+///   работу и сообщить о проблеме нужно редко, и в макете их нет вовсе.
 ///
 /// Даты берутся из строки списка ТО (`task.raw`), а не из ответа акта: в
 /// списке они числом, в акте строкой ISO, и два представления одного времени
@@ -25,6 +28,7 @@ import '../data/tasks.dart';
 import '../mechanic_theme.dart';
 import 'act_info_screen.dart';
 import 'act_steps_screen.dart';
+import 'close_act_sheet.dart';
 
 /// Сколько пунктов показываем в предпросмотре.
 ///
@@ -51,10 +55,27 @@ class _MechanicActScreenState extends State<MechanicActScreen> {
   /// открыли, остаётся прежней до следующего перечитывания.
   late int? _startedAt = asInt(widget.task.raw['started_at']);
   late int? _finishedAt = asInt(widget.task.raw['finished_at']);
+  late int? _statusId = asInt(widget.task.raw['status_id']);
+  late int? _pausedAt = asInt(widget.task.raw['paused_at']);
+  late String? _commentary = asString(widget.task.raw['commentary']);
 
-  bool get _started => _startedAt != null;
+  /// Состояние работы считает [maintenanceState] — то же, что и для списка.
+  /// Второй разбор тех же полей рано или поздно разошёлся бы с первым, и
+  /// карточка говорила бы одно, а строка списка другое.
+  MaintenanceState get _state => maintenanceState(<String, dynamic>{
+        'started_at': _startedAt,
+        'finished_at': _finishedAt,
+        'status_id': _statusId,
+      });
+
+  bool get _started => _state != MaintenanceState.notStarted && !_closed;
 
   bool get _closed => _finishedAt != null;
+
+  /// Отмечать пункты можно, только пока работа идёт: приостановленное ТО
+  /// потому и приостановлено, что механик занят другим. Посмотреть регламент
+  /// при этом можно всегда.
+  bool get _editable => _state == MaintenanceState.inWork;
 
   @override
   void initState() {
@@ -113,7 +134,7 @@ class _MechanicActScreenState extends State<MechanicActScreen> {
           _Rules(
             act: _act,
             loading: _loading,
-            onOpen: _act == null ? null : () => _openSteps(view: !_started),
+            onOpen: _act == null ? null : () => _openSteps(view: !_editable),
           ),
           const SizedBox(height: 16.0),
           _InfoRow(onTap: () => _openInfo(task)),
@@ -146,22 +167,50 @@ class _MechanicActScreenState extends State<MechanicActScreen> {
       ];
     }
 
+    // Одна зелёная кнопка в любом состоянии, тихие действия под ней. Три
+    // равноправные кнопки на этом экране означали бы, что механик каждый раз
+    // выбирает из трёх, — а он в девяти случаях из десяти просто идёт
+    // работать. Какие кнопки положены в этом состоянии, решает [actControls].
+    final ActControls controls = actControls(
+      _state,
+      allDone: act.doneCount == act.total,
+    );
+
     return <Widget>[
+      if (_state == MaintenanceState.paused || _state == MaintenanceState.problem)
+        _StatePlate(
+          state: _state,
+          progress: progressText(act.doneCount, act.total),
+          pausedAt: _pausedAt,
+          commentary: _commentary,
+        ),
       _Button(
-        label: _started ? 'Продолжить ТО' : 'Начать ТО',
-        onTap: _busy ? null : _start,
+        label: controls.mainLabel,
+        onTap: _busy ? null : () => _mainAction(controls.main),
       ),
+      if (controls.canPause || controls.canReportProblem)
+        _QuietActions(
+          controls: controls,
+          onPause: _busy ? null : _pause,
+          onProblem: _busy ? null : _reportProblem,
+        ),
       const _Note(
         'Отметка ложится в телефон сразу и уходит на сервер, как появится связь.',
       ),
     ];
   }
 
-  /// «Начать ТО» — это отметка времени начала, а не переход по статусу.
+  Future<void> _mainAction(ActAction action) {
+    return action == ActAction.close ? _close() : _start();
+  }
+
+  /// «Начать ТО» и «Продолжить ТО» — одна кнопка и один путь: работа после неё
+  /// идёт, и экран шагов открыт на отметки.
   ///
   /// Повторное открытие уже начатого ТО время начала не сдвигает: `started_at`
   /// отвечает на вопрос «когда механик взялся», и переписывать его при каждом
-  /// заходе значит потерять этот ответ.
+  /// заходе значит потерять этот ответ. Возобновление после паузы двигает
+  /// только статус.
   Future<void> _start() async {
     final ActDetails? act = _act;
     if (act == null) return;
@@ -176,11 +225,128 @@ class _MechanicActScreenState extends State<MechanicActScreen> {
       if (!mounted) return;
       setState(() {
         _startedAt = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        _statusId = OrderStatus.inProgress;
+        _pausedAt = null;
         _busy = false;
       });
+    } else if (!_editable) {
+      await _sendState(
+        statusId: OrderStatus.inProgress,
+        title: 'ТО №${act.id} — работа продолжена',
+      );
+      if (!mounted) return;
     }
 
     await _openSteps(view: false);
+  }
+
+  /// Пауза — одно нажатие и без вопросов: её жмут, когда уже приехал
+  /// аварийный вызов, а не когда есть время заполнять форму. Отметки остаются
+  /// на месте, вернуться можно той же кнопкой «Продолжить ТО».
+  Future<void> _pause() async {
+    final ActDetails? act = _act;
+    if (act == null) return;
+
+    await _sendState(
+      statusId: OrderStatus.accepted,
+      title: 'ТО №${act.id} — приостановлено',
+      paused: true,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Работа приостановлена.')),
+    );
+  }
+
+  /// «Проблема» — единственное состояние, которое спрашивает причину: прорабу
+  /// мало знать, что работа встала, ему разбираться почему.
+  Future<void> _reportProblem() async {
+    final ActDetails? act = _act;
+    if (act == null) return;
+
+    final String? reason = await _showProblemSheet(context);
+    if (reason == null || !mounted) return;
+
+    await _sendState(
+      statusId: OrderStatus.problem,
+      title: 'ТО №${act.id} — проблема',
+      commentary: reason,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Прораб увидит проблему в своём списке.')),
+    );
+  }
+
+  Future<void> _sendState({
+    required int statusId,
+    required String title,
+    bool paused = false,
+    String? commentary,
+  }) async {
+    final ActDetails? act = _act;
+    if (act == null) return;
+
+    setState(() => _busy = true);
+    await MechanicWorkspace.current?.sendActState(
+      actId: act.id,
+      statusId: statusId,
+      title: title,
+      paused: paused,
+      commentary: commentary,
+    );
+    if (!mounted) return;
+    setState(() {
+      _statusId = statusId;
+      _pausedAt = paused ? DateTime.now().millisecondsSinceEpoch ~/ 1000 : null;
+      if (commentary != null && commentary.trim().isNotEmpty) {
+        _commentary = commentary.trim();
+      }
+      _busy = false;
+    });
+  }
+
+  /// Завершение работы с карточки — то же действие, что кнопка внизу
+  /// чек-листа, и лист подтверждения у них общий.
+  Future<void> _close() async {
+    final ActDetails? act = _act;
+    if (act == null) return;
+
+    final Map<int, int> counts =
+        await MechanicWorkspace.current?.queuedStepPhotoCounts(act.id) ??
+            <int, int>{};
+    final int queued =
+        counts.values.fold<int>(0, (int sum, int count) => sum + count);
+    if (!mounted) return;
+
+    final CloseActChoice? choice = await showCloseActSheet(
+      context,
+      task: widget.task,
+      act: act,
+      queuedPhotos: queued,
+      cancelLabel: 'Не сейчас',
+    );
+    if (choice == null || !mounted) return;
+
+    setState(() => _busy = true);
+    await MechanicWorkspace.current?.sendActChecklist(
+      act: act,
+      title: 'ТО №${act.id} — работа завершена',
+      finish: true,
+      commentary: choice.commentary,
+    );
+    if (!mounted) return;
+    setState(() {
+      _finishedAt = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      _statusId = OrderStatus.done;
+      _pausedAt = null;
+      _busy = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Работа завершена. Уйдёт на сервер, как появится связь.'),
+      ),
+    );
   }
 
   Future<void> _openSteps({required bool view}) async {
@@ -215,6 +381,9 @@ class _MechanicActScreenState extends State<MechanicActScreen> {
       setState(() {
         _startedAt = asInt(row['started_at']);
         _finishedAt = asInt(row['finished_at']);
+        _statusId = asInt(row['status_id']);
+        _pausedAt = asInt(row['paused_at']);
+        _commentary = asString(row['commentary']);
       });
       return;
     }
@@ -233,11 +402,7 @@ class _MechanicActScreenState extends State<MechanicActScreen> {
     );
   }
 
-  String _stateText() {
-    if (_closed) return 'Сдано';
-    if (_started) return 'В работе';
-    return 'Не начато';
-  }
+  String _stateText() => maintenanceStateName(_state);
 
   String _dueText() {
     final int? year = asInt(widget.task.raw['year']);
@@ -451,6 +616,287 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+/// Плашка вставшей работы: почему она стоит и сколько успели сделать.
+///
+/// Стоит над кнопкой, а не в строке «Состояние»: строка отвечает на вопрос
+/// «что с этим ТО», а плашка — на вопрос «почему я вижу здесь „Продолжить“,
+/// хотя ничего не делаю». Прогресс в ней тот же, что в списке.
+class _StatePlate extends StatelessWidget {
+  const _StatePlate({
+    required this.state,
+    required this.progress,
+    this.pausedAt,
+    this.commentary,
+  });
+
+  final MaintenanceState state;
+  final String progress;
+  final int? pausedAt;
+  final String? commentary;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool problem = state == MaintenanceState.problem;
+    final Color ink = problem ? ColorApp.myColorRed : ColorApp.myColorYellow;
+    final int? at = pausedAt;
+
+    final String text = problem
+        ? (commentary?.trim().isNotEmpty == true
+            ? '${commentary!.trim()}. Отмечено $progress.'
+            : 'Прораб разбирается. Отмечено $progress.')
+        : at == null
+            ? 'Отмечено $progress. Работа ждёт вас.'
+            : 'Отмечено $progress. Работа стоит с ${dayTimeText(at)}.';
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
+      decoration: BoxDecoration(
+        color: ink.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(MechanicLayout.cardRadius),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(
+            problem ? Icons.error_outline : Icons.pause_circle_outline,
+            size: 18.0,
+            color: ink,
+          ),
+          const SizedBox(width: 8.0),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13.0,
+                height: 1.4,
+                color: Color(0xff1C1C1E),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Пауза и проблема — строкой под зелёной кнопкой.
+///
+/// Тихие, потому что редкие: сделать их равноправными кнопками значит каждый
+/// раз предлагать механику выбор из трёх, хотя обычно он просто идёт работать.
+class _QuietActions extends StatelessWidget {
+  const _QuietActions({
+    required this.controls,
+    required this.onPause,
+    required this.onProblem,
+  });
+
+  /// Какие действия положены в этом состоянии. Занятость экрана — отдельно:
+  /// на время отправки кнопка гаснет, но не исчезает, иначе строка под
+  /// кнопкой прыгает на каждое нажатие.
+  final ActControls controls;
+
+  final VoidCallback? onPause;
+  final VoidCallback? onProblem;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        children: <Widget>[
+          if (controls.canPause)
+            Expanded(
+              child: _QuietButton(
+                icon: Icons.pause_circle_outline,
+                label: 'Приостановить',
+                ink: ColorApp.myColorGray,
+                onTap: onPause,
+              ),
+            ),
+          if (controls.canReportProblem)
+            Expanded(
+              child: _QuietButton(
+                icon: Icons.error_outline,
+                label: 'Проблема',
+                ink: ColorApp.myColorRed,
+                onTap: onProblem,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuietButton extends StatelessWidget {
+  const _QuietButton({
+    required this.icon,
+    required this.label,
+    required this.ink,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color ink;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40.0,
+      child: TextButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 18.0),
+        label: Text(label, style: const TextStyle(fontSize: 14.0)),
+        style: TextButton.styleFrom(foregroundColor: ink),
+      ),
+    );
+  }
+}
+
+/// Лист «Проблема»: причина и ничего лишнего.
+///
+/// Причина обязательна — в этом вся разница между проблемой и паузой. Статус
+/// «стоит» прораб и так увидит, а вот что именно случилось, кроме механика,
+/// сказать некому.
+Future<String?> _showProblemSheet(BuildContext context) {
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: ColorApp.myColorWhite,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
+    ),
+    builder: (BuildContext context) => const _ProblemSheet(),
+  );
+}
+
+class _ProblemSheet extends StatefulWidget {
+  const _ProblemSheet();
+
+  @override
+  State<_ProblemSheet> createState() => _ProblemSheetState();
+}
+
+class _ProblemSheetState extends State<_ProblemSheet> {
+  final TextEditingController _reason = TextEditingController();
+  bool _empty = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _reason.addListener(() {
+      final bool empty = _reason.text.trim().isEmpty;
+      if (empty != _empty) setState(() => _empty = empty);
+    });
+  }
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          20.0,
+          12.0,
+          20.0,
+          20.0 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Center(
+              child: Container(
+                width: 36.0,
+                height: 4.0,
+                decoration: BoxDecoration(
+                  color: ColorApp.myColorGrayBorder,
+                  borderRadius: BorderRadius.circular(2.0),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14.0),
+            const Text(
+              'Что мешает доделать?',
+              style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 10.0),
+            const Text(
+              'Работа встанет, а прораб увидит причину у себя. Отметки '
+              'останутся на месте.',
+              style: TextStyle(
+                fontSize: 14.0,
+                fontWeight: FontWeight.w300,
+                color: Color(0xff1C1C1E),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 14.0),
+            TextField(
+              controller: _reason,
+              autofocus: true,
+              minLines: 2,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              style: const TextStyle(fontSize: 14.0),
+              decoration: InputDecoration(
+                hintText: 'Например: нет запчасти на складе',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(MechanicLayout.cardRadius),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14.0),
+            SizedBox(
+              height: 48.0,
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _empty
+                    ? null
+                    : () => Navigator.of(context).pop(_reason.text.trim()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ColorApp.myColorRed,
+                  foregroundColor: ColorApp.myColorWhite,
+                  elevation: 0.0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(MechanicLayout.cardRadius),
+                  ),
+                ),
+                child: const Text(
+                  'Сообщить о проблеме',
+                  style: TextStyle(fontSize: 15.0),
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 48.0,
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  foregroundColor: ColorApp.myColorGray,
+                ),
+                child: const Text('Отмена', style: TextStyle(fontSize: 15.0)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _Button extends StatelessWidget {
   const _Button({required this.label, required this.onTap});
 
@@ -493,7 +939,7 @@ class _Done extends StatelessWidget {
           SizedBox(width: 8.0),
           Expanded(
             child: Text(
-              'Акт закрыт. Прораб увидит работу в ленте сданных.',
+              'Работа завершена. Прораб увидит её в ленте сданных.',
               style: TextStyle(fontSize: 13.0, color: ColorApp.myColorGray),
             ),
           ),

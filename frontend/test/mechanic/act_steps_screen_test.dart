@@ -58,23 +58,23 @@ Future<void> show(WidgetTester tester, {required bool viewOnly}) {
 }
 
 void main() {
-  testWidgets('в работе видны прогресс, пункты и кнопка закрытия',
+  testWidgets('в работе видны прогресс, пункты и кнопка завершения',
       (WidgetTester tester) async {
     await show(tester, viewOnly: false);
     await tester.pumpAndSettle();
 
     expect(find.text('Пройдено 1 из 3'), findsOneWidget);
     expect(find.text('Осмотр канатов'), findsOneWidget);
-    expect(find.text('Закрыть акт'), findsOneWidget);
+    expect(find.text('Завершить работу'), findsOneWidget);
     expect(find.text('2 не отмечено'), findsOneWidget);
   });
 
-  testWidgets('на просмотре закрыть акт нельзя', (WidgetTester tester) async {
+  testWidgets('на просмотре завершить работу нельзя', (WidgetTester tester) async {
     await show(tester, viewOnly: true);
     await tester.pumpAndSettle();
 
     expect(find.text('Осмотр канатов'), findsOneWidget);
-    expect(find.text('Закрыть акт'), findsNothing);
+    expect(find.text('Завершить работу'), findsNothing);
     expect(
       find.textContaining('Чтобы отмечать пункты, начните ТО'),
       findsOneWidget,
@@ -94,15 +94,15 @@ void main() {
     expect(find.text('1 не отмечено'), findsOneWidget);
   });
 
-  testWidgets('подтверждение закрытия перечисляет неотмеченное',
+  testWidgets('подтверждение завершения перечисляет неотмеченное',
       (WidgetTester tester) async {
     await show(tester, viewOnly: false);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Закрыть акт'));
+    await tester.tap(find.text('Завершить работу'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Закрыть акт ТО-1?'), findsOneWidget);
+    expect(find.text('Завершить ТО-1?'), findsOneWidget);
     expect(
       find.textContaining('проверка тормоза лебёдки'),
       findsOneWidget,
@@ -111,7 +111,7 @@ void main() {
     expect(find.text('Вернуться к пунктам'), findsOneWidget);
   });
 
-  testWidgets('пустой регламент: отмечать нечего и закрывать нечего',
+  testWidgets('пустой регламент: отмечать нечего и завершать нечего',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -124,6 +124,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Регламент не заполнен'), findsOneWidget);
-    expect(find.text('Закрыть акт'), findsNothing);
+    expect(find.text('Завершить работу'), findsNothing);
   });
 }

@@ -26,7 +26,12 @@ import 'tasks.dart';
 class MechanicWorkspace {
   MechanicWorkspace._(this.userId, {KeyValueStore store = const PreferencesStore()})
       : localStore = LocalStore(userId: userId, store: store) {
-    outbox = Outbox(userId: userId, sender: _send, store: store);
+    outbox = Outbox(
+      userId: userId,
+      sender: _send,
+      store: store,
+      onChanged: () => unawaited(_publishQueue()),
+    );
     journal = NotificationJournal(store: localStore);
     sync = MechanicSync(store: localStore, journal: journal);
   }
@@ -251,6 +256,7 @@ class MechanicWorkspace {
     required String title,
     bool start = false,
     bool finish = false,
+    String? commentary,
   }) async {
     final int nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     await journal.rememberMyChange(
@@ -261,6 +267,15 @@ class MechanicWorkspace {
       ),
     );
 
+    // Начало и закрытие двигают ещё и статус: без него прораб видит только
+    // даты и не отличает идущую работу от вставшей. Пауза при этом снимается
+    // явным пустым `paused_at` — бэкенд отличает «не прислали» от «сбрось».
+    final int? statusId = finish
+        ? OrderStatus.done
+        : start
+            ? OrderStatus.inProgress
+            : null;
+
     await outbox.enqueue(
       title: title,
       method: 'PUT',
@@ -269,6 +284,12 @@ class MechanicWorkspace {
         'checklist': act.checklistBody(),
         if (start) 'started_at': nowSeconds,
         if (finish) 'finished_at': nowSeconds,
+        if (statusId != null) ...<String, dynamic>{
+          'status_id': statusId,
+          'paused_at': null,
+        },
+        if (commentary != null && commentary.trim().isNotEmpty)
+          'commentary': commentary.trim(),
       },
     );
 
@@ -277,6 +298,46 @@ class MechanicWorkspace {
       act,
       startedAt: start ? nowSeconds : null,
       finishedAt: finish ? nowSeconds : null,
+      statusId: statusId,
+      clearPause: statusId != null,
+      commentary: commentary,
+    );
+    await _publishQueue();
+  }
+
+  /// Ставит в очередь смену состояния работы по ТО: пауза, проблема,
+  /// возвращение к работе.
+  ///
+  /// Отдельно от [sendActChecklist], хотя ручка та же: чек-лист здесь не
+  /// нужен и слать его незачем — он весит сотни килобайт, а меняется одно
+  /// число. Пауза одним нажатием и без вопросов: её жмут, когда уже приехал
+  /// аварийный вызов.
+  Future<void> sendActState({
+    required int actId,
+    required int statusId,
+    required String title,
+    bool paused = false,
+    String? commentary,
+  }) async {
+    final int nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    await outbox.enqueue(
+      title: title,
+      method: 'PUT',
+      path: '/act-fact/$actId/',
+      body: <String, dynamic>{
+        'status_id': statusId,
+        'paused_at': paused ? nowSeconds : null,
+        if (commentary != null && commentary.trim().isNotEmpty)
+          'commentary': commentary.trim(),
+      },
+    );
+
+    await _markMaintenanceState(
+      actId,
+      statusId: statusId,
+      pausedAt: paused ? nowSeconds : null,
+      commentary: commentary,
     );
     await _publishQueue();
   }
@@ -302,6 +363,9 @@ class MechanicWorkspace {
     ActDetails act, {
     int? startedAt,
     int? finishedAt,
+    int? statusId,
+    bool clearPause = false,
+    String? commentary,
   }) async {
     final List<Map<String, dynamic>> rows =
         await localStore.read(LocalCollection.maintenance);
@@ -311,6 +375,35 @@ class MechanicWorkspace {
       row['steps_total'] = act.total;
       if (startedAt != null) row['started_at'] = startedAt;
       if (finishedAt != null) row['finished_at'] = finishedAt;
+      if (statusId != null) row['status_id'] = statusId;
+      if (clearPause) row['paused_at'] = null;
+      if (commentary != null && commentary.trim().isNotEmpty) {
+        row['commentary'] = commentary.trim();
+      }
+    }
+    await localStore.write(LocalCollection.maintenance, rows);
+  }
+
+  /// Отмечает состояние работы в строке списка ТО, не дожидаясь сервера.
+  ///
+  /// `status_id` у ТО — число, а не карта, как у заявки: так его отдаёт
+  /// список `/act-fact/for-me`, и записать сюда карту значило бы сломать
+  /// разбор своих же строк.
+  Future<void> _markMaintenanceState(
+    int actId, {
+    required int statusId,
+    int? pausedAt,
+    String? commentary,
+  }) async {
+    final List<Map<String, dynamic>> rows =
+        await localStore.read(LocalCollection.maintenance);
+    for (final Map<String, dynamic> row in rows) {
+      if (asInt(row['act_id']) != actId) continue;
+      row['status_id'] = statusId;
+      row['paused_at'] = pausedAt;
+      if (commentary != null && commentary.trim().isNotEmpty) {
+        row['commentary'] = commentary.trim();
+      }
     }
     await localStore.write(LocalCollection.maintenance, rows);
   }

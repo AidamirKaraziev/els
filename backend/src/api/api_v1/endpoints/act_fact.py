@@ -203,12 +203,22 @@ def create_act_fact(
 пишет чек-лист именно строкой. В базе оно всё равно сохраняется приведённым к
 канонической форме, а в ответе отдаётся обратно в форме старых экранов.
 
+### Состояние работы
+`status_id` вместе с датами описывает, что с работой прямо сейчас: `3` — идёт,
+`2` при заполненном `started_at` — приостановлена, `5` — проблема, `4` —
+выполнена. `paused_at` — момент, когда работа встала; при возобновлении его
+надо прислать пустым, иначе он останется от прошлой паузы. `commentary` —
+комментарий ко всей работе, не путать с комментарием к пункту внутри
+`checklist`.
+
 ### Схемы:
 **ActFactUpdate**:
 - `checklist` (Optional[ChecklistSet]): Чек-лист целиком, с номерами шагов.
 - `step_list_fact` (Optional[str]): **Устарело.** Список шагов строкой.
 - `started_at` (Optional[int]): Время начала в формате timestamp.
 - `finished_at` (Optional[int]): Время окончания в формате timestamp.
+- `paused_at` (Optional[int]): Время паузы в формате timestamp, пустое — работа идёт.
+- `commentary` (Optional[str]): Комментарий ко всей работе.
 - `foreman_id` (Optional[int]): Идентификатор ответственного прораба.
 - `main_mechanic_id` (Optional[int]): Идентификатор ответственного механика.
 - `status_id` (Optional[int]): Идентификатор статуса.
@@ -222,6 +232,8 @@ def create_act_fact(
 - `created_at` (Optional[datetime]): Время создания акта.
 - `started_at` (Optional[datetime]): Время начала.
 - `finished_at` (Optional[datetime]): Время окончания.
+- `paused_at` (Optional[datetime]): Время паузы.
+- `commentary` (Optional[str]): Комментарий ко всей работе.
 - `foreman_id` (Optional[int]): Идентификатор ответственного прораба.
 - `main_mechanic_id` (Optional[int]): Идентификатор ответственного механика.
 - `file` (Optional[str]): Ссылка на файл.

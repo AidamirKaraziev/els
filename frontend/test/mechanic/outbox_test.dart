@@ -292,6 +292,57 @@ void main() {
     });
   });
 
+  group('полоса очереди', () {
+    late MemoryStore store;
+
+    setUp(() => store = MemoryStore());
+
+    test('удачная отправка сообщает о себе — иначе полоса очереди врёт',
+        () async {
+      // Полоса «Не отправлено: N» пересчитывалась только по таймеру в две
+      // минуты: работа уходила на сервер, а человек всё это время видел, что
+      // она не ушла, и жал кнопку заново.
+      int changes = 0;
+      bool online = false;
+      final Outbox outbox = Outbox(
+        userId: 7,
+        store: store,
+        onChanged: () => changes++,
+        sender: (OutboxAction action) async =>
+            online ? SendOutcome.done : SendOutcome.retry,
+      );
+
+      await outbox.enqueue(title: 'в работу', method: 'PUT', path: '/order/1/');
+      await outbox.flush();
+      expect(changes, 0, reason: 'без связи очередь не менялась');
+
+      online = true;
+      await outbox.flush();
+
+      expect(changes, 1);
+      expect(await outbox.pending(), isEmpty);
+    });
+
+    test('отклонённое действие тоже меняет очередь', () async {
+      int changes = 0;
+      final Outbox outbox = Outbox(
+        userId: 7,
+        store: store,
+        onChanged: () => changes++,
+        sender: (OutboxAction action) async => SendOutcome.rejected,
+      );
+
+      await outbox.enqueue(title: 'в работу', method: 'PUT', path: '/order/1/');
+      await outbox.flush();
+
+      expect(changes, 1);
+      expect(await outbox.rejected(), hasLength(1));
+
+      await outbox.forgetRejected();
+      expect(changes, 2);
+    });
+  });
+
   group('outcomeForStatus', () {
     test('успех — это 2xx', () {
       expect(outcomeForStatus(200), SendOutcome.done);

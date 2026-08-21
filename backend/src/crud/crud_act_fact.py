@@ -229,6 +229,12 @@ class CrudActFact(CRUDBase[ActFact, ActFactCreate, ActFactUpdate]):
             update_data.started_at = datetime_from_timestamp(update_data.started_at)
         if update_data.finished_at is not None:
             update_data.finished_at = datetime_from_timestamp(update_data.finished_at)
+        # Явный `null` сюда не попадает и до колонки доезжает как есть: так
+        # телефон и снимает паузу, возобновляя работу. Обновление идёт с
+        # `exclude_unset=True`, поэтому «не прислали» и «прислали пусто» —
+        # разные вещи, и второе значит «сбрось».
+        if update_data.paused_at is not None:
+            update_data.paused_at = datetime_from_timestamp(update_data.paused_at)
         # проверка на ответственный прораб
         if update_data.foreman_id:
             foreman = (

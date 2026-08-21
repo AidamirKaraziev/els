@@ -20,6 +20,18 @@ class ActFact(Base):
     created_at = Column(DateTime, default=datetime.now)
     started_at = Column(DateTime)
     finished_at = Column(DateTime)
+
+    #: Когда работа встала. Заполнено вместе с `started_at` и пустым
+    #: `finished_at` — механик взялся за ТО и приостановил его: приехал
+    #: аварийный вызов, не оказалось запчасти. Отдельная колонка, а не статус
+    #: сам по себе: прорабу мало знать, что работа стоит, ему нужно с какого
+    #: момента.
+    paused_at = Column(DateTime)
+
+    #: Комментарий ко всей работе: причина проблемы или запись при закрытии
+    #: акта. Комментарий к отдельному пункту живёт внутри чек-листа и с этим
+    #: полем не пересекается.
+    commentary = Column(String)
     foreman_id = Column(
         Integer,
         ForeignKey("universal_users.id", ondelete="SET NULL", onupdate="CASCADE"),

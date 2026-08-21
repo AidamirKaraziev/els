@@ -55,6 +55,8 @@ def get_acts_facts(
         created_at=obj.created_at,
         started_at=obj.started_at,
         finished_at=obj.finished_at,
+        paused_at=obj.paused_at,
+        commentary=obj.commentary,
         foreman_id=obj.foreman_id,
         main_mechanic_id=obj.main_mechanic_id,
         file=file,
@@ -89,7 +91,9 @@ def get_my_maintenance(obj: ActFact, year: str, month: int) -> MyMaintenanceItem
         steps_done=checklist.done,
         started_at=utc_to_timestamp(obj.started_at),
         finished_at=utc_to_timestamp(obj.finished_at),
+        paused_at=utc_to_timestamp(obj.paused_at),
         status_id=obj.status_id,
+        commentary=obj.commentary,
         updated_at=utc_to_timestamp(obj.updated_at),
         is_actual=obj.is_actual,
     )
