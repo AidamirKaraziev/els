@@ -5,11 +5,6 @@ import '../bloc/in_progress_works_bloc.dart';
 import '../models/in_progress_work.dart';
 import 'in_progress_work_row.dart';
 
-/// Сколько строк раздел показывает, прежде чем свернуться в «и ещё N».
-/// Одновременно ведут единицы работ; двадцать — это уже аврал, и листать его
-/// прораб не станет.
-const int _visibleLimit = 20;
-
 /// Красная пометка в заголовке — единственное красное пятно вне бейджа аварии.
 const Color _flagColor = Color(0xffC25551);
 
@@ -64,12 +59,13 @@ class InProgressSection extends StatelessWidget {
       ];
     }
 
-    final List<InProgressWork> shown =
-        works.items.take(_visibleLimit).toList(growable: false);
-    final int hidden = works.items.length - shown.length;
+    // Список режет сервер, а не экран: он же считает, сколько работ не
+    // поместилось. Реши это экран сам — он не знал бы про отрезанные строки
+    // ничего, кроме того, что их нет.
+    final int hidden = works.hidden;
 
     return <Widget>[
-      ...shown.map(
+      ...works.items.map(
         (InProgressWork work) => InProgressWorkRow(
           work: work,
           // Карточка работы приезжает этапом 9.1; до неё строка подсвечивается

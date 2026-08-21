@@ -19,7 +19,14 @@ import pytest
 
 from src.config import settings
 from src.core.roles import Role
-from src.models import ActFact, Division, Object, UniversalUser, UserDivision
+from src.models import (
+    ActFact,
+    Division,
+    Object,
+    Order,
+    UniversalUser,
+    UserDivision,
+)
 
 FEED = f"{settings.API_V1_STR}/work/in-progress"
 
@@ -29,9 +36,13 @@ STATUS_DONE = 4
 STATUS_PROBLEM = 5
 
 
-def _items(response):
+def _feed(response):
     assert response.status_code == 200, response.text
     return response.json()["data"]
+
+
+def _items(response):
+    return _feed(response)["items"]
 
 
 def _checklist(title="ТО-1", done=0, total=3):
@@ -284,3 +295,133 @@ def test_client_does_not_see_the_feed(client_with_db, as_role, act):
     as_role(Role.CLIENT.value)
 
     assert client_with_db.get(FEED).status_code == 403
+
+
+@pytest.fixture
+def order(db_session, make_object, mechanic):
+    """Заявка в работе. Без категории неисправности — значит авария."""
+
+    def _make(
+        status_id=STATUS_IN_PROGRESS,
+        in_progress_at=datetime.datetime(2026, 8, 21, 10, 0),
+        obj=None,
+        is_actual=True,
+    ):
+        record = Order(
+            object_id=(obj or make_object()).id,
+            executor_id=mechanic.id,
+            task_text="Не открываются двери на четвёртом этаже",
+            status_id=status_id,
+            created_at=datetime.datetime(2026, 8, 21, 8, 0),
+            in_progress_at=in_progress_at,
+            is_actual=is_actual,
+        )
+        db_session.add(record)
+        db_session.flush()
+        return record
+
+    return _make
+
+
+@pytest.mark.integration
+def test_order_in_progress_is_in_the_feed(client_with_db, foreman, order):
+    record = order()
+
+    item = _items(client_with_db.get(FEED))[0]
+
+    assert item["work_id"] == record.id
+    assert item["kind"] == "breakdown"
+    assert item["state"] == "running"
+    assert item["task_text"] == "Не открываются двери на четвёртом этаже"
+    assert item["performer"] == "Механик Ковалёв"
+    # Счёт идёт от момента, когда заявку взяли в работу, а не от заведения.
+    assert item["since"] == item["started_at"]
+    # Чек-листа у заявки нет, и регламента тоже.
+    assert item["progress"] is None
+    assert item["title"] is None
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("status_id", [1, STATUS_ACCEPTED, STATUS_DONE, STATUS_PROBLEM])
+def test_order_outside_work_is_not_in_the_feed(
+    client_with_db, foreman, order, status_id
+):
+    """Взял, но не начал; выполнил; закрыл проблемой — всё это не «сейчас».
+
+    «Проблема» у заявки её закрывает и уводит в ленту сданных: съездил и не
+    смог — это отчёт о выходе, а не работа, которая идёт.
+    """
+    order(status_id=status_id)
+
+    assert _items(client_with_db.get(FEED)) == []
+
+
+@pytest.mark.integration
+def test_order_without_in_progress_mark_still_shows_its_time(
+    client_with_db, foreman, order
+):
+    """Заявки, взятые до появления `in_progress_at`, время не теряют."""
+    record = order(in_progress_at=None)
+
+    item = _items(client_with_db.get(FEED))[0]
+
+    assert item["work_id"] == record.id
+    assert item["since"] is not None
+
+
+@pytest.mark.integration
+def test_archived_order_is_not_in_the_feed(client_with_db, foreman, order):
+    order(is_actual=False)
+
+    assert _items(client_with_db.get(FEED)) == []
+
+
+@pytest.mark.integration
+def test_foreman_does_not_see_an_order_of_a_foreign_division(
+    client_with_db, foreman, db_session, order, make_object
+):
+    foreign = Division(title=f"Чужой участок {uuid.uuid4().hex[:6]}")
+    db_session.add(foreign)
+    db_session.flush()
+    mine = order()
+    order(obj=make_object(div=foreign))
+
+    items = _items(client_with_db.get(FEED))
+
+    assert [item["work_id"] for item in items] == [mine.id]
+
+
+@pytest.mark.integration
+def test_both_branches_share_one_order(client_with_db, foreman, act, order):
+    """Вставшее ТО и идущая заявка стоят в одном порядке, а не по очереди.
+
+    Ради этого ветки и объединяются в базе: склей их экран, вставшая работа
+    второй ветки навсегда осталась бы ниже любой идущей работы первой.
+    """
+    problem = act(status_id=STATUS_PROBLEM)
+    old_order = order(in_progress_at=datetime.datetime(2026, 8, 21, 9, 0))
+    fresh_act = act(started_at=datetime.datetime(2026, 8, 21, 11, 0))
+
+    items = _items(client_with_db.get(FEED))
+
+    assert [item["work_id"] for item in items] == [
+        problem.id,
+        old_order.id,
+        fresh_act.id,
+    ]
+
+
+@pytest.mark.integration
+def test_counts_are_taken_before_the_list_is_cut(client_with_db, foreman, act, order):
+    """`total` и `problems` — про всю выборку, а не про её видимую часть."""
+    for _ in range(21):
+        order()
+    act(status_id=STATUS_PROBLEM)
+
+    feed = _feed(client_with_db.get(FEED))
+
+    assert len(feed["items"]) == 20
+    assert feed["total"] == 22
+    assert feed["problems"] == 1
+    # Проблема не потерялась при обрезке: она стоит первой строкой.
+    assert feed["items"][0]["state"] == "problem"

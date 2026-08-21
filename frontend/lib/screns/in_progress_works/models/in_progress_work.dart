@@ -211,30 +211,47 @@ class InProgressWork {
 
 /// Раздел целиком: строки и два числа для заголовка.
 ///
-/// Страниц у ручки нет — одновременно ведут единицы работ, — поэтому список
-/// приходит одним куском.
+/// Страниц у ручки нет, но список обрезан сверху: больше двадцати
+/// одновременных работ — это не занятость бригады, а сломанный процесс.
+/// Поэтому [total] и [problems] приходят с сервера отдельными числами и
+/// считаются там **до** обрезки: посчитай их экран по своему списку — он
+/// сказал бы «20», умолчав об остальных, а красная пометка исчезла бы вместе
+/// с двадцать первой строкой.
 class InProgressWorks {
-  const InProgressWorks({required this.items});
+  const InProgressWorks({
+    required this.items,
+    required this.total,
+    required this.problems,
+  });
 
   final List<InProgressWork> items;
 
-  bool get isEmpty => items.isEmpty;
-
-  /// Сколько работ идёт. Ручка своего числа пока не отдаёт — оно приезжает
-  /// вместе с веткой заявок (этап 8.2). Пока считаем по списку: страниц нет,
-  /// и длина списка и есть всё, что идёт. Когда число появится на проводе,
-  /// меняется только это место.
-  int get total => items.length;
+  /// Сколько работ идёт всего — может быть больше длины [items].
+  final int total;
 
   /// Сколько из них с проблемой — красная пометка в заголовке раздела.
-  int get problems =>
-      items.where((InProgressWork work) => work.isProblem).length;
+  final int problems;
+
+  bool get isEmpty => items.isEmpty;
+
+  /// Сколько работ не поместилось в список. Ноль — поместились все.
+  int get hidden => total - items.length > 0 ? total - items.length : 0;
 
   factory InProgressWorks.fromJson(Map<String, dynamic> json) {
+    final dynamic data = json['data'];
+    final Map<String, dynamic> feed =
+        data is Map ? data.cast<String, dynamic>() : <String, dynamic>{};
+    final List<InProgressWork> items = _asList(feed['items'])
+        .map(InProgressWork.fromJson)
+        .toList(growable: false);
+
     return InProgressWorks(
-      items: _asList(json['data'])
-          .map(InProgressWork.fromJson)
-          .toList(growable: false),
+      items: items,
+      // Старый ответ без чисел читается как список без остатка: лучше
+      // показать раздел с честной длиной, чем уронить его на пустом поле.
+      total: _asInt(feed['total']) ?? items.length,
+      problems: _asInt(feed['problems']) ??
+          items.where((InProgressWork work) => work.isProblem).length,
     );
   }
 }

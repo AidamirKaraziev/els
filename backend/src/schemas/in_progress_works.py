@@ -12,7 +12,7 @@
 """
 
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -49,7 +49,11 @@ class InProgressWork(BaseModel):
     kind: WorkKind = Field(
         ...,
         title="Вид работы",
-        description="Пока только `maintenance` — начатое и незакрытое ТО.",
+        description=(
+            "`maintenance` — начатое и незакрытое ТО. Остальные виды приходят "
+            "из заявок в статусе «В работе» и делятся тем же правилом, что и "
+            "в отчётах: авария, обращение заказчика, прочее."
+        ),
     )
     work_id: int = Field(
         ...,
@@ -102,4 +106,28 @@ class InProgressWork(BaseModel):
         None,
         title="Прогресс по чек-листу",
         description="Пусто — чек-листа у работы нет; это не «ноль пунктов».",
+    )
+
+
+class InProgressFeed(BaseModel):
+    """Раздел целиком: строки и два числа к ним.
+
+    Не голый список: заголовок раздела подписывает, сколько работ идёт и
+    сколько из них с проблемой, а список при этом обрезан. Считай экран эти
+    числа по своей странице — при обрезке он сказал бы «20», умолчав об
+    остальных, и красная пометка пропала бы вместе с двадцать первой строкой.
+    """
+
+    items: List[InProgressWork] = Field([], title="Строки раздела")
+    total: int = Field(
+        0,
+        ge=0,
+        title="Сколько работ идёт всего",
+        description="Считается до обрезки списка: больше длины `items`.",
+    )
+    problems: int = Field(
+        0,
+        ge=0,
+        title="Сколько из них с проблемой",
+        description="Тоже по всей выборке — красная пометка в заголовке.",
     )
