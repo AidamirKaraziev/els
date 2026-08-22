@@ -11,6 +11,7 @@ import 'package:els/screns/in_progress_works/bloc/in_progress_works_bloc.dart';
 import 'package:els/screns/in_progress_works/models/in_progress_work.dart';
 import 'package:els/screns/in_progress_works/repository/in_progress_works_repository.dart';
 import 'package:els/screns/in_progress_works/widgets/in_progress_works_live.dart';
+import 'package:els/screns/in_progress_works/widgets/work_parts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,8 +47,8 @@ Map<String, dynamic> _feed(DateTime since) {
 
 /// Репозиторий, который считает запросы и умеет падать по команде.
 class _Repository extends InProgressWorksRepository {
-  _Repository({int secondsAgo = 40 * 60})
-      : _since = DateTime.now().subtract(Duration(seconds: secondsAgo));
+  _Repository({int secondsAgo = 40 * 60, DateTime? now})
+      : _since = (now ?? DateTime.now()).subtract(Duration(seconds: secondsAgo));
 
   /// Момент начала работы считается один раз: сервер его не переписывает от
   /// запроса к запросу, и подпись пилюли должна расти, а не топтаться на
@@ -90,9 +91,16 @@ Future<void> _close(WidgetTester tester) => tester.pumpWidget(const SizedBox());
 void main() {
   testWidgets('пилюля пересчитывается по своему таймеру, а не по нажатию',
       (WidgetTester tester) async {
-    // Работа началась 59 секунд назад: пока это «меньше минуты», но минута
-    // истечёт, пока тест идёт.
-    final _Repository repository = _Repository(secondsAgo: 59);
+    // Часы пилюли держим в руках. Раньше тест ждал настоящую секунду на
+    // работе, начатой 59 секунд назад, — и падал на загруженной машине, где
+    // минута истекала раньше первой проверки.
+    final DateTime start = DateTime(2026, 8, 21, 10);
+    DateTime moment = start;
+    workClock = () => moment;
+    addTearDown(() => workClock = DateTime.now);
+
+    // Работа началась 59 секунд назад: пока это «меньше минуты».
+    final _Repository repository = _Repository(secondsAgo: 59, now: start);
     final InProgressWorksBloc bloc = InProgressWorksBloc(repository: repository);
     addTearDown(bloc.close);
 
@@ -102,11 +110,9 @@ void main() {
 
     expect(find.text('Идёт · меньше минуты'), findsOneWidget);
 
-    // Настоящие часы уходят вперёд, а раздел не перерисовывается: чистый
-    // виджет сам себя не пересчитает.
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 1200)),
-    );
+    // Часы ушли вперёд, а раздел не перерисовывается: чистый виджет сам себя
+    // не пересчитает, и подпись остаётся прежней.
+    moment = start.add(const Duration(seconds: 2));
     await tester.pump();
     expect(find.text('Идёт · меньше минуты'), findsOneWidget);
 

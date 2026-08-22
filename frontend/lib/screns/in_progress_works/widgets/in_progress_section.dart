@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../helper/class_colors.dart';
-import '../../submitted_works/models/submitted_work.dart' show WorkKind;
 import '../bloc/in_progress_works_bloc.dart';
 import '../models/in_progress_work.dart';
 import '../view/work_card_screen.dart';
@@ -82,12 +81,9 @@ class InProgressSection extends StatelessWidget {
       ...works.items.map(
         (InProgressWork work) => InProgressWorkRow(
           work: work,
-          // Карточка есть пока только у ТО: у заявки нет чек-листа, зато есть
-          // задание и категория, и её карточка приезжает этапом 9.2. Строка
-          // заявки до тех пор подсвечивается нажатием, но никуда не ведёт.
-          onTap: work.kind == WorkKind.maintenance
-              ? () => _openCard(context, work)
-              : null,
+          // Открывается любая строка: у ТО за ней чек-лист, у заявки —
+          // задание и категория. Экран один, различает виды он сам.
+          onTap: () => _openCard(context, work),
         ),
       ),
       if (hidden > 0) _Footnote(text: 'и ещё $hidden'),

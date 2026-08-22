@@ -10,6 +10,7 @@ import '../../../helper/my_user.dart';
 import '../../responsive_screens/responsive.dart';
 import '../bloc/work_details_bloc.dart';
 import '../models/in_progress_work.dart';
+import '../models/order_details.dart';
 import '../models/work_details.dart';
 import '../repository/work_details_repository.dart';
 import '../state_colors.dart';
@@ -26,8 +27,10 @@ import 'employee_card.dart';
 /// Шапка рисуется из строки, по которой сюда пришли, и появляется сразу — до
 /// ответа сервера. Открыв карточку, прораб видит ровно то, на что нажал.
 ///
-/// Пока это карточка **ТО**: у заявки нет чек-листа, зато есть задание и
-/// категория — её карточка приезжает этапом 9.2.
+/// Виды работ различаются тем, что ниже шапки: у **ТО** — чек-лист и времена,
+/// у **заявки** — задание, категория и время заведения. Пустой блок
+/// «Чек-лист» заявке не рисуется: его у неё нет вовсе, и место под ним
+/// говорило бы, что механик ничего не отметил.
 class WorkCardScreen extends StatelessWidget {
   const WorkCardScreen({Key? key, required this.work, this.repository})
       : super(key: key);
@@ -41,9 +44,11 @@ class WorkCardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<WorkDetailsBloc>(
-      create: (_) =>
-          WorkDetailsBloc(actId: work.workId, repository: repository)
-            ..add(const WorkDetailsRequested()),
+      create: (_) => WorkDetailsBloc(
+        workId: work.workId,
+        kind: work.kind,
+        repository: repository,
+      )..add(const WorkDetailsRequested()),
       child: _WorkCardView(work: work),
     );
   }
@@ -102,7 +107,11 @@ class _WorkCardView extends StatelessWidget {
         ),
         const SizedBox(height: 12.0),
         _Sheet(child: _Times(work: work, state: state)),
-      ] else
+      ] else if (state is OrderReady)
+        // У заявки один блок вместо двух: времена ей заменяет строка
+        // «Заведена», а больше система о ней ничего не записывает.
+        _Sheet(child: _Order(state: state))
+      else
         const _Sheet(child: _Skeleton()),
     ];
 
@@ -245,8 +254,10 @@ class _Call extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final WorkDetailsReady? ready =
-        state is WorkDetailsReady ? state as WorkDetailsReady : null;
+    // Через общего предка: у ТО телефон приезжает из справочника, у заявки —
+    // вместе с ней самой, а разговор с прорабом про звонок один и тот же.
+    final WorkCardReady? ready =
+        state is WorkCardReady ? state as WorkCardReady : null;
     final Performer? performer = ready?.performer;
 
     // Имя показываем то, что пришло со строкой: справочник может отвечать
@@ -727,6 +738,58 @@ class _TimesState extends State<_Times> {
           'механик в своём телефоне.',
           style: TextStyle(fontSize: 11.0, color: ColorApp.myColorGrayText),
         ),
+      ],
+    );
+  }
+}
+
+/// Заявка: что просили сделать, чем это назвали и когда завели.
+///
+/// Чек-листа у заявки нет, и выдумывать ему замену карточка не станет:
+/// задание — это слова диспетчера, а не регламент. Снимки лежат общим рядом
+/// внизу, а не по пунктам: пунктов, к которым их можно было бы привязать, у
+/// заявки не бывает.
+class _Order extends StatelessWidget {
+  const _Order({Key? key, required this.state}) : super(key: key);
+
+  final OrderReady state;
+
+  @override
+  Widget build(BuildContext context) {
+    final OrderDetails order = state.order;
+    final String? task = order.taskLabel;
+    final String? reason = order.reasonLabel;
+    final String? created = order.createdLabel;
+    final List<String> photos = state.photos.items;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const _BlockTitle(text: 'Заявка'),
+        const SizedBox(height: 10.0),
+        // Строка задания остаётся на месте всегда: исчезнувшее поле прораб
+        // читает как «не загрузилось», а тут загружать нечего — диспетчер
+        // завёл заявку по звонку и текст не написал.
+        _Fact(
+          name: 'Задание',
+          value: task ?? 'Задание не описано',
+          faint: task == null,
+        ),
+        _Fact(name: 'Категория', value: order.categoryLabel),
+        // Причину неисправности заполняют, когда разобрались: у идущей заявки
+        // её обычно нет, и пустая строка сказала бы, что механик молчит.
+        if (reason != null) _Fact(name: 'Причина', value: reason),
+        if (created != null) _Fact(name: 'Заведена', value: created),
+        if (photos.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 4.0),
+          Wrap(
+            spacing: 6.0,
+            runSpacing: 6.0,
+            children: photos
+                .map((String photo) => _Thumb(photo: photo))
+                .toList(growable: false),
+          ),
+        ],
       ],
     );
   }

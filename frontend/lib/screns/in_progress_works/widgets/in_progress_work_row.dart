@@ -22,7 +22,8 @@ class InProgressWorkRow extends StatelessWidget {
   final InProgressWork work;
 
   /// Нажимается вся строка целиком: других целей в ней нет, промахнуться
-  /// некуда. `null` — у заявки: её карточка приезжает этапом 9.2.
+  /// некуда. `null` оставляет строку без карточки — так она выглядит там, где
+  /// её показывают, но открывать нечего.
   final VoidCallback? onTap;
 
   @override

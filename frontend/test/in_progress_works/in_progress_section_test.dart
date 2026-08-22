@@ -1,8 +1,8 @@
-/// Раздел «Сейчас в работе»: какие строки открываются, а какие нет.
+/// Раздел «Сейчас в работе»: строки открываются — все.
 ///
-/// Карточка есть пока только у ТО. У заявки нет чек-листа, зато есть задание и
-/// категория — её карточка приезжает этапом 9.2, и до тех пор строка заявки
-/// нажатием никуда не ведёт.
+/// Карточка одна на оба вида: у ТО за строкой чек-лист, у заявки — задание и
+/// категория. Строка, которая подсвечивается нажатием и никуда не ведёт, —
+/// худшее из состояний, и раздел его больше не показывает.
 library;
 
 import 'package:els/screns/in_progress_works/bloc/in_progress_works_bloc.dart';
@@ -26,7 +26,7 @@ InProgressWork _work(WorkKind kind, int id) {
 }
 
 void main() {
-  testWidgets('строка ТО открывается, строка заявки — нет',
+  testWidgets('открывается и строка ТО, и строка заявки',
       (WidgetTester tester) async {
     final InProgressWorks works = InProgressWorks(
       items: <InProgressWork>[
@@ -57,6 +57,6 @@ void main() {
     expect(rows[0].work.kind, WorkKind.maintenance);
     expect(rows[0].onTap, isNotNull);
     expect(rows[1].work.kind, WorkKind.breakdown);
-    expect(rows[1].onTap, isNull);
+    expect(rows[1].onTap, isNotNull);
   });
 }

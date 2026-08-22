@@ -117,6 +117,15 @@ class WorkReason extends StatelessWidget {
   }
 }
 
+/// Часы пилюли.
+///
+/// Подменяются в тестах. Подпись считается от настоящего времени, и проверить
+/// минутный такт иначе можно было бы только настоящим ожиданием: работа,
+/// начатая 59 секунд назад, переваливает за минуту, пока тест идёт, — и падал
+/// он не от ошибки, а от загруженной машины.
+@visibleForTesting
+DateTime Function() workClock = DateTime.now;
+
 /// Пилюля состояния с живым счётом времени.
 ///
 /// Тик минутный: экран прораба держат открытым подолгу, и застывшее
@@ -181,7 +190,7 @@ class _WorkPillState extends State<WorkPill> {
         borderRadius: BorderRadius.circular(999.0),
       ),
       child: Text(
-        work.pillLabel(now: DateTime.now()),
+        work.pillLabel(now: workClock()),
         softWrap: false,
         style: TextStyle(
           fontSize: 12.0,
