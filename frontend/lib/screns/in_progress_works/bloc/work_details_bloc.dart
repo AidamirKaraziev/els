@@ -12,6 +12,19 @@ import '../repository/work_details_repository.dart';
 part 'work_details_event.dart';
 part 'work_details_state.dart';
 
+/// В каком состоянии работа, ради которой открыли карточку.
+///
+/// От этого зависит ровно одно — что считать краем: у идущей работы уход
+/// означает, что её закрыли, у сданной — что её открыли заново. Всё остальное
+/// в блоке одинаково, поэтому это признак, а не второй блок.
+enum WorkPhase {
+  /// Открыта из раздела «Сейчас в работе».
+  inProgress,
+
+  /// Открыта из ленты сданных работ.
+  submitted,
+}
+
 /// Подробности одной работы: чек-лист либо задание, снимки, кому звонить.
 ///
 /// Один блок на оба вида работ, а не два похожих: экран у них общий, звонок
@@ -32,6 +45,7 @@ class WorkDetailsBloc extends Bloc<WorkDetailsEvent, WorkDetailsState> {
   WorkDetailsBloc({
     required this.workId,
     this.kind = WorkKind.maintenance,
+    this.phase = WorkPhase.inProgress,
     WorkDetailsRepository? repository,
   })  : _repository = repository ?? const WorkDetailsRepository(),
         super(const WorkDetailsLoading()) {
@@ -46,6 +60,9 @@ class WorkDetailsBloc extends Bloc<WorkDetailsEvent, WorkDetailsState> {
 
   /// Вид работы. От него зависит, за чем идти на сервер и что показывать.
   final WorkKind kind;
+
+  /// Откуда карточку открыли. От этого зависит, какой поворот считать краем.
+  final WorkPhase phase;
 
   final WorkDetailsRepository _repository;
 
@@ -100,11 +117,12 @@ class WorkDetailsBloc extends Bloc<WorkDetailsEvent, WorkDetailsState> {
       return;
     }
 
-    // Акт закрыт — работы в разделе больше нет. Проверка стоит и на первой
-    // загрузке: список мог устареть на минуту, и открытая по нему карточка
-    // обязана сказать правду сразу, а не через такт.
-    if (details.isFinished) {
-      emit(WorkGone.submitted);
+    // Работа ушла из того списка, по которому сюда пришли: закрытый акт — из
+    // раздела текущих, открытый заново — из ленты сданных. Проверка стоит и на
+    // первой загрузке: список мог устареть на минуту, и открытая по нему
+    // карточка обязана сказать правду сразу, а не через такт.
+    if (details.isFinished != (phase == WorkPhase.submitted)) {
+      emit(details.isFinished ? WorkGone.submitted : WorkGone.returned);
       return;
     }
 
@@ -146,8 +164,15 @@ class WorkDetailsBloc extends Bloc<WorkDetailsEvent, WorkDetailsState> {
     // Заявка ушла из «В процессе». Сдана она или её статус просто откатили —
     // разные новости, и слова у них разные: в ленте сданных прораб найдёт
     // только первую.
-    if (order.isGone) {
+    if (phase == WorkPhase.inProgress && order.isGone) {
       emit(order.isSubmitted ? WorkGone.submitted : WorkGone.stopped);
+      return;
+    }
+
+    // Из ленты сданных край другой: заявку вернули в работу — и в ленте её
+    // больше нет. Сдана она или снова идёт, решает тот же статус.
+    if (phase == WorkPhase.submitted && !order.isSubmitted) {
+      emit(WorkGone.returned);
       return;
     }
 

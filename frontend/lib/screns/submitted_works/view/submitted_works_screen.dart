@@ -10,6 +10,7 @@ import '../bloc/submitted_works_bloc.dart';
 import '../models/submitted_work.dart';
 import '../unreviewed_counter.dart';
 import '../widgets/submitted_work_row.dart';
+import 'submitted_work_card_screen.dart';
 
 /// Экран прораба: что механики ведут прямо сейчас и что уже сдали.
 ///
@@ -152,6 +153,9 @@ class _SubmittedWorksView extends StatelessWidget {
                     : () => context
                         .read<SubmittedWorksBloc>()
                         .add(SubmittedWorkReviewed(work)),
+                // Карточка открывается и во время запроса: читать сданную
+                // работу можно всегда, а перезапрос ленты её не касается.
+                onOpen: () => _openCard(context, work),
               ),
             ),
             if (page.pageCount > 1) ...<Widget>[
@@ -162,6 +166,25 @@ class _SubmittedWorksView extends StatelessWidget {
         ),
       ),
     ];
+  }
+
+  /// Карточка сданной работы поверх ленты.
+  ///
+  /// Отметку она делает не сама: событие уходит в тот же блок ленты, что и у
+  /// кнопки в строке. Строка чинится на месте, страница перезапрашивается,
+  /// счётчик в меню обновляет репозиторий — к возврату прораба лента уже
+  /// верна, а карточка не знает про сеть ничего лишнего.
+  void _openCard(BuildContext context, SubmittedWork work) {
+    final SubmittedWorksBloc bloc = context.read<SubmittedWorksBloc>();
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => SubmittedWorkCardScreen(
+          work: work,
+          onReview: () => bloc.add(SubmittedWorkReviewed(work)),
+        ),
+      ),
+    );
   }
 }
 

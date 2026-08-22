@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../helper/class_colors.dart';
 import '../../responsive_screens/responsive.dart';
 import '../models/submitted_work.dart';
+import 'submitted_work_parts.dart';
 
 /// Строка ленты: что и где сдали, кто сдал, когда и кнопка «Проверил».
 ///
@@ -10,11 +11,15 @@ import '../models/submitted_work.dart';
 /// что в «Топе поломок» на макете и в «Просроченных ТО»: если залить цветом
 /// всю строку, десять строк подряд кричат одинаково громко и вид работы
 /// перестаёт читаться.
+///
+/// Строка отвечает на «что и где сдали»; чем именно кончилась работа —
+/// чек-листом, снимками, словами механика — отвечает карточка за [onOpen].
 class SubmittedWorkRow extends StatelessWidget {
   const SubmittedWorkRow({
     Key? key,
     required this.work,
     required this.onReview,
+    this.onOpen,
   }) : super(key: key);
 
   final SubmittedWork work;
@@ -23,28 +28,35 @@ class SubmittedWorkRow extends StatelessWidget {
   /// добавит, а отметка на бэкенде и так идемпотентна.
   final VoidCallback? onReview;
 
+  /// Открыть карточку работы. Кнопка «Проверил» внутри строки её не
+  /// открывает: у неё своё действие, и нажатие туда — не «покажи подробнее».
+  final VoidCallback? onOpen;
+
   @override
   Widget build(BuildContext context) {
     final bool narrow = Responsive.isMobile(context);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
-        decoration: BoxDecoration(
-          color: ColorApp.myColorGrayShadow,
+      child: Material(
+        color: ColorApp.myColorGrayShadow,
+        borderRadius: BorderRadius.circular(10.0),
+        child: InkWell(
+          onTap: onOpen,
           borderRadius: BorderRadius.circular(10.0),
-        ),
-        child: narrow
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+            child: narrow
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Expanded(child: _Object(work: work)),
+                      Expanded(child: SubmittedWorkObject(work: work)),
                       const SizedBox(width: 8.0),
-                      _Badges(work: work),
+                      SubmittedWorkBadges(work: work),
                     ],
                   ),
                   const SizedBox(height: 8.0),
@@ -58,56 +70,21 @@ class SubmittedWorkRow extends StatelessWidget {
               )
             : Row(
                 children: <Widget>[
-                  Expanded(flex: 5, child: _Object(work: work)),
+                  Expanded(flex: 5, child: SubmittedWorkObject(work: work)),
                   const SizedBox(width: 8.0),
                   Expanded(flex: 4, child: _Performer(work: work)),
                   const SizedBox(width: 8.0),
-                  _Badges(work: work),
+                  SubmittedWorkBadges(work: work),
                   const SizedBox(width: 12.0),
-                  SizedBox(width: 200.0, child: _Review(work: work, onReview: onReview)),
+                  SizedBox(
+                    width: 200.0,
+                    child: _Review(work: work, onReview: onReview),
+                  ),
                 ],
               ),
-      ),
-    );
-  }
-}
-
-class _Object extends StatelessWidget {
-  const _Object({Key? key, required this.work}) : super(key: key);
-
-  final SubmittedWork work;
-
-  @override
-  Widget build(BuildContext context) {
-    final String? address = work.addressLabel;
-    final String? task = work.taskLabel;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          work.objectLabel,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ),
-        // Адрес второй строкой: по «Лифт 12» непонятно, о каком доме речь.
-        if (address != null)
-          Text(
-            address,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11.0, color: ColorApp.myColorGray),
-          ),
-        // Задание есть только у заявок: у ТО задание — это чек-лист акта.
-        if (task != null) ...<Widget>[
-          const SizedBox(height: 4.0),
-          Text(
-            task,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12.0),
-          ),
-        ],
-      ],
+      ),
     );
   }
 }
@@ -128,55 +105,6 @@ class _Performer extends StatelessWidget {
           style: const TextStyle(fontSize: 11.0, color: ColorApp.myColorGray),
         ),
       ],
-    );
-  }
-}
-
-class _Badges extends StatelessWidget {
-  const _Badges({Key? key, required this.work}) : super(key: key);
-
-  final SubmittedWork work;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        _Badge(text: work.kindLabel, color: work.kindColor),
-        // «Проблема» — отдельный бейдж, а не другой цвет вида работы: авария,
-        // которую не смогли устранить, остаётся аварией в отчётах.
-        if (work.isProblem) ...<Widget>[
-          const SizedBox(width: 6.0),
-          const _Badge(text: 'Проблема', color: ColorApp.myColorYellow),
-        ],
-      ],
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({Key? key, required this.text, required this.color})
-      : super(key: key);
-
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 12.0,
-          fontWeight: FontWeight.w700,
-          color: ColorApp.myColorWhite,
-        ),
-      ),
     );
   }
 }
