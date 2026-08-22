@@ -15,6 +15,7 @@ import 'employee_widget_foreman/editing_employee_foreman.dart';
 import 'employees_screen_foreman.dart';
 import 'package:els/helper/api_client.dart';
 import 'package:els/helper/api_image.dart';
+import 'package:els/helper/session.dart';
 
 /// Окно выбранного сотрудника
 
@@ -199,10 +200,14 @@ class _OpenViewEmployeeForemanState extends State<OpenViewEmployeeForeman> {
                                 ],
                               ),
                               child: IconButton(
-                                  onPressed: () async {
-                                   // await getListEmployee();
-                                    IntTest.indexScreensForeman = 5;
-                                    myStream.add(IntTest.indexScreensForeman);
+                                  // Экран открывают двумя способами: из списка
+                                  // сотрудников — сменой индекса оболочки, и
+                                  // маршрутом поверх карточки работы, когда у
+                                  // механика не заполнен телефон. «Назад»
+                                  // обязано вернуть туда, откуда пришли, —
+                                  // куда именно, знает `goBackFromSection`.
+                                  onPressed: () {
+                                    goBackFromSection(context, 5);
                                     setState(() {});
                                   },
                                   icon: const Icon(

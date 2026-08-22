@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../helper/class_colors.dart';
+import '../../submitted_works/models/submitted_work.dart' show WorkKind;
 import '../bloc/in_progress_works_bloc.dart';
 import '../models/in_progress_work.dart';
+import '../view/work_card_screen.dart';
 import 'in_progress_work_row.dart';
 
 /// Красная пометка в заголовке — единственное красное пятно вне бейджа аварии.
@@ -30,12 +32,12 @@ class InProgressSection extends StatelessWidget {
         // при них остаётся.
         _Title(works: state.works),
         const SizedBox(height: 12.0),
-        ..._body(state),
+        ..._body(context, state),
       ],
     );
   }
 
-  List<Widget> _body(InProgressWorksState state) {
+  List<Widget> _body(BuildContext context, InProgressWorksState state) {
     final InProgressWorks? works = state.works;
 
     // Списка на руках нет вовсе: либо это первая загрузка, либо она же и не
@@ -80,9 +82,12 @@ class InProgressSection extends StatelessWidget {
       ...works.items.map(
         (InProgressWork work) => InProgressWorkRow(
           work: work,
-          // Карточка работы приезжает этапом 9.1; до неё строка подсвечивается
-          // нажатием, но никуда не ведёт.
-          onTap: null,
+          // Карточка есть пока только у ТО: у заявки нет чек-листа, зато есть
+          // задание и категория, и её карточка приезжает этапом 9.2. Строка
+          // заявки до тех пор подсвечивается нажатием, но никуда не ведёт.
+          onTap: work.kind == WorkKind.maintenance
+              ? () => _openCard(context, work)
+              : null,
         ),
       ),
       if (hidden > 0) _Footnote(text: 'и ещё $hidden'),
@@ -239,4 +244,17 @@ class _Skeleton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Открыть карточку работы поверх раздела.
+///
+/// Маршрутом, а не переключением раздела оболочки: у карточки есть «назад», и
+/// возвращаться она обязана ровно туда, откуда пришли, — на то же место
+/// прокрутки ленты. Оболочки подрядчика истории переходов не держат.
+void _openCard(BuildContext context, InProgressWork work) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (BuildContext context) => WorkCardScreen(work: work),
+    ),
+  );
 }

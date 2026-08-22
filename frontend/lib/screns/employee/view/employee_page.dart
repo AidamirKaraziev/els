@@ -18,6 +18,7 @@ import 'employees_screen.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:els/helper/api_client.dart';
 import 'package:els/helper/api_image.dart';
+import 'package:els/helper/session.dart';
 
 /// Окно выбранного сотрудника
 
@@ -256,10 +257,14 @@ class _OpenViewEmployeeState extends State<OpenViewEmployee> {
                                 ],
                               ),
                               child: IconButton(
-                                  onPressed: () async {
-                                   // await getListEmployee();
-                                    IntTest.indexScreens = 6;
-                                    myStream.add(IntTest.indexScreens);
+                                  // Экран открывают двумя способами: из списка
+                                  // сотрудников — сменой индекса оболочки, и
+                                  // маршрутом поверх карточки работы, когда у
+                                  // механика не заполнен телефон. «Назад»
+                                  // обязано вернуть туда, откуда пришли, —
+                                  // куда именно, знает `goBackFromSection`.
+                                  onPressed: () {
+                                    goBackFromSection(context, 6);
                                     setState(() {});
                                   },
                                   icon: const Icon(

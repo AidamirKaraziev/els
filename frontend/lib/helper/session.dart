@@ -289,3 +289,24 @@ void leaveProfile() {
   _setSection(_sectionBeforeProfile ?? 0);
   _sectionBeforeProfile = null;
 }
+
+/// «Назад» с экрана, который оболочка показывает по индексу.
+///
+/// Такой экран живёт двумя жизнями. Обычно он — тело корневого маршрута своей
+/// оболочки, и «назад» в нём значит «переключить индекс на [fallbackSection]»:
+/// снимать нечего, маршрут один. Но его же можно открыть маршрутом поверх
+/// другого экрана — тогда «назад» обязано снять маршрут, иначе человек жмёт
+/// кнопку, а на экране ничего не меняется.
+///
+/// Различаем по [Navigator.canPop]: внутри оболочки попать некуда, поверх
+/// чужого экрана — есть куда. Так карточка сотрудника, открытая из карточки
+/// работы, возвращает в неё же, а открытая из списка сотрудников — в список,
+/// как было.
+void goBackFromSection(BuildContext context, int fallbackSection) {
+  final NavigatorState navigator = Navigator.of(context);
+  if (navigator.canPop()) {
+    navigator.pop();
+    return;
+  }
+  _setSection(fallbackSection);
+}
