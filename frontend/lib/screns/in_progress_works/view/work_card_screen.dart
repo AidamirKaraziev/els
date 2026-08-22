@@ -14,6 +14,7 @@ import '../models/order_details.dart';
 import '../models/work_details.dart';
 import '../repository/work_details_repository.dart';
 import '../state_colors.dart';
+import '../widgets/work_card_live.dart';
 import '../widgets/work_parts.dart';
 import 'employee_card.dart';
 
@@ -49,7 +50,7 @@ class WorkCardScreen extends StatelessWidget {
         kind: work.kind,
         repository: repository,
       )..add(const WorkDetailsRequested()),
-      child: _WorkCardView(work: work),
+      child: WorkCardLive(child: _WorkCardView(work: work)),
     );
   }
 }
@@ -84,6 +85,15 @@ class _WorkCardView extends StatelessWidget {
   }
 
   List<Widget> _body(BuildContext context, WorkDetailsState state) {
+    // Работы больше нет — вместо карточки одна плашка с дорогой обратно, и на
+    // телефоне, и на широком экране. Ни пилюли состояния, ни звонка: и то и
+    // другое говорило бы, что работа идёт прямо сейчас. Карточкой сданной
+    // работы этот экран тоже не притворяется — у той свой разговор, с кнопкой
+    // «Проверил».
+    if (state is WorkGone) {
+      return <Widget>[_Sheet(child: _Gone(work: work, state: state))];
+    }
+
     // На широком экране слева состояние и человек, справа чек-лист во всю
     // высоту; на телефоне то же самое встаёт друг под друга. Порог тот же,
     // что у строки списка, — иначе карточка и список разъедутся.
@@ -488,6 +498,15 @@ class _Checklist extends StatefulWidget {
   final WorkChecklist checklist;
   final WorkPhotos photos;
 
+  /// Механик прошёл чек-лист молча: ни одного комментария, ни одного снимка.
+  ///
+  /// Считаем по всем пунктам, а не по видимым: иначе подпись пропадала бы от
+  /// нажатия «и ещё N», хотя ничего не изменилось.
+  bool get wordless => checklist.steps.every(
+        (ChecklistStep step) =>
+            step.comment == null && photos.of(step).isEmpty,
+      );
+
   @override
   State<_Checklist> createState() => _ChecklistState();
 }
@@ -543,6 +562,15 @@ class _ChecklistState extends State<_Checklist> {
               ),
             ),
           ),
+        // Молчание механика подписано словами. Пустое место под пунктами
+        // прораб читает как потерянные фотографии — а их и не было.
+        if (widget.wordless) ...<Widget>[
+          const SizedBox(height: 8.0),
+          const Text(
+            'Снимков и комментариев механик не оставил.',
+            style: TextStyle(fontSize: 11.0, color: ColorApp.myColorGrayText),
+          ),
+        ],
       ],
     );
   }
@@ -856,6 +884,69 @@ class _BlockTitle extends StatelessWidget {
         color: ColorApp.myColorGray,
         letterSpacing: 0.6,
       ),
+    );
+  }
+}
+
+/// Работы под карточкой больше нет.
+///
+/// Остаётся только то, что не может устареть: какой это объект и какого вида
+/// была работа. Состояние, время и исполнитель ушли вместе с работой — «Идёт ·
+/// 41 мин» под закрытым актом было бы ровно тем враньём, ради которого этот
+/// экран и заведён.
+class _Gone extends StatelessWidget {
+  const _Gone({Key? key, required this.work, required this.state})
+      : super(key: key);
+
+  final InProgressWork work;
+  final WorkGone state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(child: WorkObject(work: work)),
+            const SizedBox(width: 8.0),
+            WorkBadge(work: work),
+          ],
+        ),
+        const SizedBox(height: 14.0),
+        Text(
+          state.title,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4.0),
+        Text(
+          state.text,
+          style: const TextStyle(fontSize: 13.0, color: ColorApp.myColorGray),
+        ),
+        const SizedBox(height: 12.0),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Material(
+            // Серая, а не зелёная: это не действие над работой, а выход из
+            // экрана, которому больше нечего показать.
+            color: ColorApp.myColorGray,
+            borderRadius: BorderRadius.circular(8.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8.0),
+              onTap: () => Navigator.of(context).maybePop(),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+                child: Text(
+                  'К списку',
+                  style:
+                      TextStyle(fontSize: 13.0, color: ColorApp.myColorWhite),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

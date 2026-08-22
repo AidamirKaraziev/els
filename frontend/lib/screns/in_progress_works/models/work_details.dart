@@ -120,6 +120,7 @@ class WorkDetails {
     required this.id,
     this.checklist = const WorkChecklist(),
     this.startedAt,
+    this.finishedAt,
     this.pausedAt,
     this.commentary,
     this.mainMechanicId,
@@ -129,6 +130,16 @@ class WorkDetails {
   final WorkChecklist checklist;
 
   final DateTime? startedAt;
+
+  /// Когда работу закрыли. Пусто — работа ещё идёт.
+  ///
+  /// По нему карточка понимает, что механик сдал работу, пока её читали:
+  /// раздел отбирает ТО ровно этим условием — начато и не закончено
+  /// (`crud_in_progress_works.py`), — и карточка обязана читать запись так же.
+  final DateTime? finishedAt;
+
+  /// Работа уже не идёт: её закрыли.
+  bool get isFinished => finishedAt != null;
 
   /// Когда работа встала. Пусто — работа не на паузе.
   final DateTime? pausedAt;
@@ -148,6 +159,7 @@ class WorkDetails {
       id: _asInt(act['id']) ?? 0,
       checklist: WorkChecklist.fromJson(act['checklist']),
       startedAt: _asMoment(act['started_at']),
+      finishedAt: _asMoment(act['finished_at']),
       pausedAt: _asMoment(act['paused_at']),
       commentary: _trimmed(_asString(act['commentary'])),
       mainMechanicId: _asInt(act['main_mechanic_id']),

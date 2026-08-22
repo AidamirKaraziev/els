@@ -16,6 +16,17 @@ library;
 
 import 'work_details.dart' show Performer;
 
+/// Статусы из засеянного справочника (`backend/src/core/db/init_db.py`):
+/// 1 «Создано», 2 «Принято», 3 «В процессе», 4 «Выполнено», 5 «Проблема».
+///
+/// Раздел «Сейчас в работе» отбирает заявки ровно по [kOrderInProgress]
+/// (`crud_in_progress_works.py`), а «Выполнено» и «Проблема» уводят заявку в
+/// ленту сданных. Карточка обязана читать статус теми же числами: одна и та же
+/// запись не может значить разное в списке и в карточке.
+const int kOrderInProgress = 3;
+const int kOrderDone = 4;
+const int kOrderProblem = 5;
+
 /// Ответ `GET /order/{id}/`.
 class OrderDetails {
   const OrderDetails({
@@ -26,6 +37,8 @@ class OrderDetails {
     this.reasonFault,
     this.createdAt,
     this.executor,
+    this.statusId,
+    this.statusName,
   });
 
   final int id;
@@ -49,6 +62,25 @@ class OrderDetails {
   /// Кому звонить. Приезжает вместе с заявкой — в `executor_id` лежит
   /// сотрудник целиком, с телефоном и специальностью.
   final Performer? executor;
+
+  /// Что с заявкой сейчас. `null` — статуса в ответе не было.
+  final int? statusId;
+
+  /// Имя статуса как в справочнике: «Выполнено». Показывать его карточка не
+  /// обязана, но сказать «статус изменился» без слова нечем.
+  final String? statusName;
+
+  /// Заявка ушла из раздела текущих работ.
+  ///
+  /// Статуса нет вовсе — считаем, что идёт: молчащее поле не повод объявить
+  /// работу сданной, а промолчать в обратную сторону дешевле, чем соврать.
+  bool get isGone => statusId != null && statusId != kOrderInProgress;
+
+  /// Заявку закрыли: «Выполнено» либо «Проблема» — оба уводят её в ленту
+  /// сданных работ. Возврат в «Создано» или «Принято» — не сдача, и говорить
+  /// о нём надо другими словами.
+  bool get isSubmitted =>
+      statusId == kOrderDone || statusId == kOrderProblem;
 
   /// Задание словами диспетчера либо `null`. Что сказать вместо него, решает
   /// экран: модель подписей не выдумывает.
@@ -99,6 +131,11 @@ class OrderDetails {
     final Map<String, dynamic> category = _asMap(order['fault_category_id']);
     final Map<String, dynamic> reason = _asMap(order['reason_fault_id']);
     final dynamic executor = order['executor_id'];
+    // Статус приходит объектом справочника. Голое число тоже принимаем: так
+    // это поле выглядит в соседних ручках, и разбиться о форму ответа
+    // карточка не должна.
+    final dynamic status = order['status_id'];
+    final Map<String, dynamic> statusMap = _asMap(status);
 
     return OrderDetails(
       id: _asInt(order['id']) ?? 0,
@@ -110,6 +147,8 @@ class OrderDetails {
       executor: executor is Map
           ? Performer.fromJson(executor.cast<String, dynamic>())
           : null,
+      statusId: status is Map ? _asInt(statusMap['id']) : _asInt(status),
+      statusName: _trimmed(_asString(statusMap['name'])),
     );
   }
 }

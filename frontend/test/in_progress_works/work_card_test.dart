@@ -71,7 +71,11 @@ InProgressWork _work({
   );
 }
 
-WorkDetails _details({int steps = 12, int? mechanicId = 7}) {
+WorkDetails _details({
+  int steps = 12,
+  int? mechanicId = 7,
+  bool comments = true,
+}) {
   return WorkDetails(
     id: 12,
     mainMechanicId: mechanicId,
@@ -85,11 +89,26 @@ WorkDetails _details({int steps = 12, int? mechanicId = 7}) {
           id: i + 1,
           title: 'Пункт ${i + 1}',
           done: i < 4,
-          comment: i == 1 ? 'Колодки в норме' : null,
+          comment: comments && i == 1 ? 'Колодки в норме' : null,
         ),
       ),
     ),
   );
+}
+
+/// Тот же акт, но закрытый: `finished_at` проставлен.
+extension on WorkDetails {
+  WorkDetails copyWithFinished(DateTime at) {
+    return WorkDetails(
+      id: id,
+      checklist: checklist,
+      startedAt: startedAt,
+      finishedAt: at,
+      pausedAt: pausedAt,
+      commentary: commentary,
+      mainMechanicId: mainMechanicId,
+    );
+  }
 }
 
 Future<void> _pump(
@@ -288,5 +307,83 @@ void main() {
     expect(find.text('Лифт 12, подъезд 1'), findsOneWidget);
     expect(find.text('Не удалось загрузить'), findsOneWidget);
     expect(find.text('Повторить'), findsOneWidget);
+  });
+
+  // Край этапа 9.3: акт закрыли до того, как карточка успела ответить. Список,
+  // по которому прораб сюда нажал, отстал на минуту — и карточка обязана
+  // сказать это сама, а не показать чек-лист сданной работы.
+  testWidgets('работу сдали — карточка говорит об этом, а не о чек-листе',
+      (WidgetTester tester) async {
+    await _pump(
+      tester,
+      repository: _FakeRepository(
+        details: _details().copyWithFinished(DateTime(2026, 8, 21, 11, 40)),
+        performer: const Performer(id: 7, name: 'Сафин Р.', phone: '9990000000'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Работу сдали'), findsOneWidget);
+    expect(find.text('К списку'), findsOneWidget);
+
+    // Ни чек-листа, ни звонка, ни пилюли: всё это говорило бы, что работа
+    // идёт прямо сейчас.
+    expect(find.textContaining('Чек-лист'), findsNothing);
+    expect(find.text('Позвонить'), findsNothing);
+    expect(find.textContaining('Пауза'), findsNothing);
+
+    // Объект и вид работы остаются: они не могут устареть.
+    expect(find.text('Лифт 12, подъезд 1'), findsOneWidget);
+    expect(find.text('ТО'), findsOneWidget);
+  });
+
+  // Пустое место под пунктами прораб читает как потерянные фотографии.
+  testWidgets('чек-лист без снимков и комментариев подписан',
+      (WidgetTester tester) async {
+    await _pump(
+      tester,
+      repository: _FakeRepository(details: _details(comments: false)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Снимков и комментариев механик не оставил.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('один комментарий — и подписи уже нет',
+      (WidgetTester tester) async {
+    await _pump(tester, repository: _FakeRepository(details: _details()));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Снимков и комментариев механик не оставил.'),
+      findsNothing,
+    );
+  });
+
+  // Снимок без комментария — тоже слово механика, и молчанием это не назвать.
+  testWidgets('снимок без комментария снимает подпись',
+      (WidgetTester tester) async {
+    await _pump(
+      tester,
+      repository: _FakeRepository(
+        details: _details(comments: false),
+        photos: const WorkPhotos(<int, List<String>>{
+          1: <String>['media/step-1.jpg'],
+        }),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Снимков и комментариев механик не оставил.'),
+      findsNothing,
+    );
+
+    // Сам файл в тесте не качается — ошибку загрузки снимаем, как в проверке
+    // снимков выше.
+    expect(tester.takeException(), isNotNull);
   });
 }

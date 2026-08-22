@@ -60,9 +60,13 @@ OrderDetails _order({
   String? task = 'Не открываются двери на четвёртом этаже',
   String? phone = '9990000000',
   bool executor = true,
+  int? statusId,
+  String? statusName,
 }) {
   return OrderDetails(
     id: 34,
+    statusId: statusId,
+    statusName: statusName,
     taskText: task,
     categoryName: 'AA (Застревание пассажира. Опасность)',
     categoryCode: 'AA',
@@ -225,5 +229,65 @@ void main() {
     expect(find.text('Лифт 1, подъезд 5'), findsOneWidget);
     expect(find.text('Не удалось загрузить'), findsOneWidget);
     expect(find.text('Повторить'), findsOneWidget);
+  });
+
+  // Заявку закрыли, пока прораб шёл в карточку. У неё это статус, а не
+  // `finished_at`, но разговор с прорабом тот же самый, что у ТО.
+  testWidgets('заявку выполнили — карточка говорит об этом',
+      (WidgetTester tester) async {
+    await _pump(
+      tester,
+      repository: _FakeRepository(
+        order: _order(statusId: kOrderDone, statusName: 'Выполнено'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Работу сдали'), findsOneWidget);
+    expect(find.text('К списку'), findsOneWidget);
+    expect(find.text('Задание'), findsNothing);
+    expect(find.text('Позвонить'), findsNothing);
+  });
+
+  // «Проблема» заявку тоже закрывает и уводит в ленту сданных.
+  testWidgets('заявка с проблемой уходит туда же',
+      (WidgetTester tester) async {
+    await _pump(
+      tester,
+      repository: _FakeRepository(
+        order: _order(statusId: kOrderProblem, statusName: 'Проблема'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Работу сдали'), findsOneWidget);
+  });
+
+  // А вот откат статуса — не сдача: в ленте сданных такой заявки не будет, и
+  // обещать её там нельзя.
+  testWidgets('статус откатили — это не «сдали»',
+      (WidgetTester tester) async {
+    await _pump(
+      tester,
+      repository: _FakeRepository(
+        order: _order(statusId: 2, statusName: 'Принято'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Работа больше не идёт'), findsOneWidget);
+    expect(find.text('Работу сдали'), findsNothing);
+    expect(find.text('К списку'), findsOneWidget);
+  });
+
+  // Статуса в ответе нет вовсе — молчащее поле не повод объявить работу
+  // сданной: карточка показывает заявку, как показывала.
+  testWidgets('без статуса заявка считается идущей',
+      (WidgetTester tester) async {
+    await _pump(tester, repository: _FakeRepository(order: _order()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Задание'), findsOneWidget);
+    expect(find.text('Работу сдали'), findsNothing);
   });
 }
