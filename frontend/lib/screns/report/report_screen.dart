@@ -23,7 +23,13 @@ import 'widgets/report_summary_view.dart';
 /// графиками»: строка объекта и цветные ячейки месяцев. Панель фильтров —
 /// белая полоса с чипами, как на «Компаниях».
 class ReportScreen extends StatelessWidget {
-  const ReportScreen({Key? key}) : super(key: key);
+  const ReportScreen({Key? key, this.drawer = const MyDrawer()})
+      : super(key: key);
+
+  /// Боковое меню экрана. Раздел общий для админа и прораба, а меню у них
+  /// разные: своё жёстко прошитое `MyDrawer` подменяло прорабу бургер на
+  /// админский. Передаём меню снаружи — тем же приёмом, что и лента сданных.
+  final Widget drawer;
 
   @override
   Widget build(BuildContext context) {
@@ -37,13 +43,15 @@ class ReportScreen extends StatelessWidget {
         // Год целиком — то, зачем раздел и заводили: показать клиенту, что
         // делалось на объектах за год.
       )..add(const WorksReportRequested()),
-      child: const _ReportView(),
+      child: _ReportView(drawer: drawer),
     );
   }
 }
 
 class _ReportView extends StatefulWidget {
-  const _ReportView({Key? key}) : super(key: key);
+  const _ReportView({Key? key, required this.drawer}) : super(key: key);
+
+  final Widget drawer;
 
   @override
   State<_ReportView> createState() => _ReportViewState();
@@ -75,7 +83,7 @@ class _ReportViewState extends State<_ReportView> {
 
     return Scaffold(
       key: myOpenDrawer,
-      drawer: const MyDrawer(),
+      drawer: widget.drawer,
       backgroundColor: ColorApp.myColorTransparent,
       body: BlocConsumer<WorksReportBloc, WorksReportState>(
         listener: (BuildContext context, WorksReportState state) {

@@ -94,8 +94,6 @@ class _MenuButtonState extends State<MenuButton> {
 ///Заявки
 var numberApplications = 5;
 
-///Отчеты
-var numberReports = 3;
 Color indicatorColor = Colors.transparent;
 
 ///Охрана Труда

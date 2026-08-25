@@ -226,6 +226,9 @@ class _MyDrawerState extends State<MyDrawer> {
                     ///Отчеты
                     Stack(
                       children: [
+                        // Бейджа у отчётов нет намеренно: здесь была
+                        // константа `numberReports = 3`, которая ничего
+                        // не считала.
                         MenuButton(
                           myIcons: Icons.bar_chart_outlined,
                           title: 'Отчеты',
@@ -239,14 +242,6 @@ class _MyDrawerState extends State<MyDrawer> {
                               ? ColorApp.myColorGreenLine
                               : Colors.transparent,
                         ),
-                        if (numberReports != 0)
-                          Positioned(
-                              right: 8.0,
-                              top: 8.0,
-                              child: AlertsWidget(
-                                alertsNumber: numberReports,
-                                myColor: ColorApp.myColorGreen,
-                              )),
                       ],
                     ),
 

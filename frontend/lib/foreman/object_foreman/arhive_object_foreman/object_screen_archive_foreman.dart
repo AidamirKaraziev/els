@@ -2,7 +2,7 @@ import 'package:els/screns/object/widgets/top_widget.dart';
 import 'package:flutter/material.dart';
 import '../../../helper/class_colors.dart';
 import '../../../helper/header/header.dart';
-import '../../../helper/my_drawer/my_drawer.dart';
+import 'package:els/foreman/drawer_foreman.dart';
 import '../../../helper/my_user.dart';
 import 'package:http/http.dart' as http;
 import '../../../screns/home_page/home_page.dart';
@@ -58,7 +58,7 @@ class _ObjectScreenArchiveForemanState extends State<ObjectScreenArchiveForeman>
     final Size size = MediaQuery.of(context).size;
     return Scaffold(
       key: myOpenDrawer,
-      drawer: const MyDrawer(),
+      drawer: const DrawerForeman(),
       body: SafeArea(
         child: Container(
           color: ColorApp.myColorTransparent,

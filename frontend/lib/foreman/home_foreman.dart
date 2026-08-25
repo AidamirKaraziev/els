@@ -13,6 +13,9 @@ import '../helper/class_colors.dart';
 import '../screns/companies/view/company_page.dart';
 import '../screns/employee/view/employee_page.dart';
 import '../screns/home_page/home_page.dart';
+import '../screns/in_progress_works/in_progress_counts.dart';
+import '../screns/in_progress_works/models/in_progress_work.dart';
+import '../screns/in_progress_works/repository/in_progress_works_repository.dart';
 import '../screns/report/report_screen.dart';
 import '../screns/schedule/schedule_page.dart';
 import '../screns/submitted_works/repository/submitted_works_repository.dart';
@@ -58,13 +61,13 @@ class _HomeForemanState extends State<HomeForeman> {
     const CompaniesScreenForeman(),
 
     ///Отчеты 4
-    const ReportScreen(),
+    const ReportScreen(drawer: DrawerForeman()),
 
     ///Сотрудники 5
     const EmployeesScreenForeman(),
 
     ///Окно Юзера 6
-    const MyProfile(),
+    const MyProfile(drawer: DrawerForeman()),
 
     ///Окно выбранной Компании 7
     const CompanyPage(),
@@ -131,12 +134,33 @@ class _HomeForemanState extends State<HomeForeman> {
     getListTaskForeman();
     getListCompanyForeman();
     getListEmployeeForeman();
-    // Счётчик непросмотренного нужен кнопке меню, а не экрану: число видно с
-    // любого раздела, поэтому и тянем его один раз при входе в оболочку.
-    // Ошибку глотаем молча — из-за неё нельзя не пустить прораба в систему.
+    // Счётчики нужны кнопке меню, а не экрану: числа видны с любого раздела,
+    // поэтому и тянем их один раз при входе в оболочку. Ошибку глотаем молча
+    // — из-за неё нельзя не пустить прораба в систему.
     const SubmittedWorksRepository().unreviewedCount().catchError((_) => 0);
+    _loadInProgressCounts();
     // TODO: implement initState
     super.initState();
+  }
+
+  /// Сколько работ идёт прямо сейчас — для таблеток в боковом меню.
+  ///
+  /// Раньше эти числа появлялись только после захода в «Сданные работы»:
+  /// класть их умел лишь блок раздела. Прораб открывал бургер и видел одну
+  /// серую таблетку, хотя работы шли.
+  ///
+  /// Пишем только в пустое значение: если прораб успел открыть раздел раньше,
+  /// чем вернулся этот запрос, свежие числа из блока затирать нечем.
+  Future<void> _loadInProgressCounts() async {
+    try {
+      final InProgressWorks works =
+          await const InProgressWorksRepository().fetch();
+      if (inProgressCounts.value != InProgressCounts.none) return;
+      inProgressCounts.value =
+          InProgressCounts(total: works.total, problems: works.problems);
+    } catch (_) {
+      // Пустое меню без чисел лучше, чем не пустить прораба в систему.
+    }
   }
 
   @override

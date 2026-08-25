@@ -121,30 +121,22 @@ class _DrawerForemanState extends State<DrawerForeman> {
               ),
 
               ///Отчеты
-              Stack(
-                children: [
-                  MenuButton(
-                    myIcons: Icons.bar_chart_outlined,
-                    title: 'Отчеты',
-                    press: () {
-                      IntTest.indexScreensForeman = 4;
-                      IntTest.myTitle = 'Отчеты';
-                      myStream.add(IntTest.indexScreensForeman);
-                      setState(() {});
-                    },
-                    colorButton: IntTest.indexScreensForeman == 4
-                        ? ColorApp.myColorGreenLine
-                        : Colors.transparent,
-                  ),
-                  if (numberReports != 0)
-                    Positioned(
-                        right: 8.0,
-                        top: 8.0,
-                        child: AlertsWidget(
-                          alertsNumber: numberReports,
-                          myColor: ColorApp.myColorGreen,
-                        )),
-                ],
+              // Бейджа у отчётов нет намеренно: подрядчик рисовал здесь
+              // константу `numberReports = 3`, которая ничего не считала и
+              // никогда не менялась. Считать тут пока нечего — раздел
+              // показывает историю за период, а не входящие события.
+              MenuButton(
+                myIcons: Icons.bar_chart_outlined,
+                title: 'Отчеты',
+                press: () {
+                  IntTest.indexScreensForeman = 4;
+                  IntTest.myTitle = 'Отчеты';
+                  myStream.add(IntTest.indexScreensForeman);
+                  setState(() {});
+                },
+                colorButton: IntTest.indexScreensForeman == 4
+                    ? ColorApp.myColorGreenLine
+                    : Colors.transparent,
               ),
 
               ///Сданные работы
@@ -166,9 +158,11 @@ class _DrawerForemanState extends State<DrawerForeman> {
                     ? ColorApp.myColorGreenLine
                     : Colors.transparent,
                 // Числа живут в `ValueNotifier`, а не в глобальной `var`, как
-                // `numberReports` рядом: то зашито константой и никогда не
-                // меняется, а эти обновляет сам экран сданных работ — лента
-                // после отметки, раздел текущих работ после опроса.
+                // было у подрядчика с `numberReports`: то было зашито
+                // константой и никогда не менялось, а эти обновляет сам экран
+                // сданных работ — лента после отметки, раздел текущих работ
+                // после опроса. Первое значение кладёт оболочка `HomeForeman`
+                // при входе, чтобы числа были видны сразу.
                 trailing: const WorkCountsChips(),
               ),
 

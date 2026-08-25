@@ -20,7 +20,12 @@ import '../home_page/home_page.dart';
 class MyProfile extends StatefulWidget {
   const MyProfile({
     Key? key,
+    this.drawer = const MyDrawer(),
   }) : super(key: key);
+
+  /// Боковое меню экрана. Профиль общий для всех ролей, а меню у них разные:
+  /// прошитый здесь `MyDrawer` показывал прорабу бургер админа.
+  final Widget drawer;
 
   @override
   State<MyProfile> createState() => _MyProfileState();
@@ -32,7 +37,7 @@ class _MyProfileState extends State<MyProfile> {
     final Size size = MediaQuery.of(context).size;
     return  Scaffold(
       key: myOpenDrawer,
-      drawer: const MyDrawer(),
+      drawer: widget.drawer,
       body: Container(
         color: ColorApp.myColorTransparent,
         child: SingleChildScrollView(
