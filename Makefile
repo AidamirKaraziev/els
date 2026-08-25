@@ -56,11 +56,59 @@ build:  ## только пересобрать образы фронта и бэ
 
 ## --- прод (запускать НА СЕРВЕРЕ) ---
 
+# Какие образы выкатываем.
+#
+# Не `latest`, а хеш коммита из рабочей копии — то есть ровно то, что забрал
+# `git pull`. С `latest` выкат врал: `git pull` проходит мгновенно, а CI
+# собирает образы 3–5 минут, и запуск в это окно тихо скачивал прошлую
+# сборку. `docker compose up` видел, что образ не менялся, ничего не
+# перезапускал и рапортовал успехом — обновление «доезжало» только со
+# второго запуска, вслепую.
+#
+# Теперь выкатить не тот код нельзя: образа с таким хешем в ghcr.io либо ещё
+# нет (ждём CI), либо нет вовсе (коммит не в main — CI его не собирал).
+#
+# Откат — тем же тегом, руками:
+#   IMAGE_TAG=sha-<полный хеш> make prod-deploy
+# Вне git-репозитория (распакованный архив) хеша нет — тогда `latest`,
+# как было раньше.
+IMAGE_TAG ?= $(or $(shell git rev-parse HEAD 2>/dev/null | sed 's/^/sha-/'),latest)
+export IMAGE_TAG
+
+# Сколько ждать образы из CI. Прогон занимает 3–5 минут; ждём с запасом,
+# прерывать ожидание можно Ctrl-C — на прод при этом ничего не поедет.
+IMAGE_WAIT_SECONDS ?= 600
+
 # Ничего не собирает: образы приезжают из ghcr.io готовыми, их собрал CI.
 # На машине с 1 ГБ памяти собрать фронт всё равно нельзя — dart2js упадёт по OOM.
-prod-deploy:  ## на сервере: забрать новые образы, накатить миграции, дождаться
+prod-deploy:  ## на сервере: забрать образы этого коммита, накатить миграции, дождаться
+	@echo "==> Выкатываем $(IMAGE_TAG)"
+	@# Проверяем, только если ветка origin/main вообще известна серверу:
+	@# на машине без неё это не повод не пускать выкат.
+	@if git rev-parse --verify --quiet origin/main >/dev/null; then \
+		git merge-base --is-ancestor HEAD origin/main || { \
+			echo; \
+			echo "!!! Этого коммита нет в origin/main — CI образы для него не собирал."; \
+			echo "    Сборка идёт только на push в main (.github/workflows/release.yml)."; \
+			echo "    Сделайте git pull, либо укажите тег явно:"; \
+			echo "      IMAGE_TAG=sha-<полный хеш> make prod-deploy"; \
+			exit 1; \
+		}; \
+	fi
+	@echo
 	@echo "==> Скачивание образов"
-	$(COMPOSE_PROD) pull
+	@deadline=$$(( $$(date +%s) + $(IMAGE_WAIT_SECONDS) )); \
+	until $(COMPOSE_PROD) pull; do \
+		if [ $$(date +%s) -ge $$deadline ]; then \
+			echo; \
+			echo "!!! Образов $(IMAGE_TAG) в ghcr.io так и не появилось."; \
+			echo "    Смотрите прогон release: https://github.com/AidamirKaraziev/Lift_app/actions"; \
+			exit 1; \
+		fi; \
+		echo; \
+		echo "... образы ещё не собраны, ждём CI — следующая попытка через 20 с"; \
+		sleep 20; \
+	done
 	@echo
 	@echo "==> Запуск и миграции (prestart.sh -> alembic upgrade head)"
 	@$(COMPOSE_PROD) up -d --wait || { \

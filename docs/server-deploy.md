@@ -134,8 +134,9 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 git push origin main
 ```
 
-Дождитесь зелёной джобы `release` в Actions. Пока она не прошла, на сервере
-делать нечего — там лежат прошлые образы.
+Дождитесь зелёной джобы `release` в Actions — она собирает образы 3–5 минут.
+Ждать необязательно: `make prod-deploy` теперь сам стоит и ждёт свои образы,
+пока CI их не выложит.
 
 ### 3.2 На сервере: обновить конфиги и выкатить
 
@@ -147,13 +148,23 @@ cd els && git pull
 make prod-deploy
 ```
 
-Команда скачивает образы, поднимает стек, ждёт, пока бэкенд станет здоровым
-(это и означает, что миграции прошли), и печатает накатанную ревизию Alembic.
+Команда скачивает образы **того коммита, который лежит в рабочей копии**
+(тег `sha-<хеш HEAD>`, не `latest`), поднимает стек, ждёт, пока бэкенд станет
+здоровым (это и означает, что миграции прошли), и печатает накатанную ревизию
+Alembic.
 
-Если `make` не установлен, то же самое напрямую:
+Если образов ещё нет — CI не закончил, — команда ждёт их до 10 минут, пробуя
+раз в 20 секунд, и печатает «ждём CI». Прервать ожидание можно Ctrl-C: на
+прод при этом ничего не поедет. Так сделано после случая, когда `git pull` и
+выкат прошли в окно сборки: `latest` в тот момент был ещё прошлый, стек не
+менялся, и команда рапортовала успехом — обновление доехало только со
+второго запуска.
+
+Если `make` не установлен, то же самое напрямую (тег подставить руками,
+иначе снова приедет `latest`):
 
 ```bash
-docker compose --project-directory . -f infra/docker-compose.prod.yml pull && docker compose --project-directory . -f infra/docker-compose.prod.yml up -d --wait
+IMAGE_TAG=sha-$(git rev-parse HEAD) docker compose --project-directory . -f infra/docker-compose.prod.yml pull && IMAGE_TAG=sha-$(git rev-parse HEAD) docker compose --project-directory . -f infra/docker-compose.prod.yml up -d --wait
 ```
 
 ### 3.3 Проверить
