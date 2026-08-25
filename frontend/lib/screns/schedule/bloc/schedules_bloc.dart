@@ -10,24 +10,37 @@ part 'schedules_event.dart';
 part 'schedules_state.dart';
 
 class SchedulesBloc extends Bloc<SchedulesEvent, SchedulesState> {
-  SchedulesBloc({SchedulesRepository? repository})
-      : _repository = repository ?? FixtureSchedulesRepository(),
-        super(const SchedulesInitial()) {
+  SchedulesBloc({SchedulesRepository? repository, ScheduleFilters? filters})
+      : this._(
+          repository ?? FixtureSchedulesRepository(),
+          filters ?? ScheduleFilters.currentYear(),
+        );
+
+  SchedulesBloc._(this._repository, ScheduleFilters filters)
+      : _filters = filters,
+        super(SchedulesInitial(filters: filters)) {
     on<SchedulesRequested>(_onRequested);
+    on<SchedulesFilterOptionsRequested>(_onFilterOptionsRequested);
     on<SchedulesNextPageRequested>(_onNextPageRequested);
   }
 
   final SchedulesRepository _repository;
   int _requestId = 0;
-  ScheduleFilters _lastFilters = ScheduleFilters.currentYear();
+
+  /// Отбор и значения выпадающих держим полями, а не выковыриваем из
+  /// состояния: догрузка страницы и приход значений происходят в отрыве от
+  /// того, что сейчас на экране, а спрашивать у экрана «с чем ты был» — верный
+  /// способ подгрузить вторую страницу под уже сменившийся фильтр.
+  ScheduleFilters _filters;
+  ScheduleFilterOptions _options = ScheduleFilterOptions.empty;
 
   Future<void> _onRequested(
     SchedulesRequested event,
     Emitter<SchedulesState> emit,
   ) async {
-    _lastFilters = event.filters;
+    _filters = event.filters;
     final int requestId = ++_requestId;
-    emit(const SchedulesLoading());
+    emit(SchedulesLoading(filters: _filters, options: _options));
 
     try {
       final page = await _repository.fetchRows(
@@ -38,6 +51,8 @@ class SchedulesBloc extends Bloc<SchedulesEvent, SchedulesState> {
       if (requestId != _requestId) return;
 
       emit(SchedulesLoaded(
+        filters: _filters,
+        options: _options,
         rows: page.items,
         page: page.page,
         hasNext: page.hasNext,
@@ -45,8 +60,30 @@ class SchedulesBloc extends Bloc<SchedulesEvent, SchedulesState> {
       ));
     } on SchedulesException catch (error) {
       if (requestId != _requestId) return;
-      emit(SchedulesFailure(message: error.message));
+      emit(SchedulesFailure(
+        filters: _filters,
+        options: _options,
+        message: error.message,
+      ));
     }
+  }
+
+  /// Значения выпадающих приходят отдельно от строк и могут не прийти вовсе.
+  ///
+  /// Неудача здесь экран не ломает: без значений фильтров человек всё равно
+  /// видит ленту, а плашка «не удалось» вместо списка объектов была бы обменом
+  /// нужного на второстепенное.
+  Future<void> _onFilterOptionsRequested(
+    SchedulesFilterOptionsRequested event,
+    Emitter<SchedulesState> emit,
+  ) async {
+    try {
+      _options = await _repository.fetchFilterOptions();
+    } on SchedulesException {
+      return;
+    }
+
+    emit(_withOptions(state));
   }
 
   Future<void> _onNextPageRequested(
@@ -63,13 +100,15 @@ class SchedulesBloc extends Bloc<SchedulesEvent, SchedulesState> {
 
     try {
       final page = await _repository.fetchRows(
-        filters: _lastFilters,
+        filters: _filters,
         page: nextPage,
       );
 
       if (requestId != _requestId) return;
 
       emit(SchedulesLoaded(
+        filters: _filters,
+        options: _options,
         rows: <ScheduleRow>[...state.rows, ...page.items],
         page: page.page,
         hasNext: page.hasNext,
@@ -79,5 +118,27 @@ class SchedulesBloc extends Bloc<SchedulesEvent, SchedulesState> {
       if (requestId != _requestId) return;
       emit(state.copyWith(isLoadingMore: false));
     }
+  }
+
+  /// Тот же экран, но со значениями фильтров.
+  ///
+  /// Пересобираем состояние того же вида, а не подменяем его на «загружено»:
+  /// значения могут прийти в любой момент, и подмена стёрла бы с экрана и
+  /// спиннер, и текст ошибки.
+  SchedulesState _withOptions(SchedulesState state) {
+    if (state is SchedulesLoaded) {
+      return state.copyWith(options: _options);
+    }
+    if (state is SchedulesFailure) {
+      return SchedulesFailure(
+        filters: state.filters,
+        options: _options,
+        message: state.message,
+      );
+    }
+    if (state is SchedulesLoading) {
+      return SchedulesLoading(filters: state.filters, options: _options);
+    }
+    return SchedulesInitial(filters: state.filters, options: _options);
   }
 }
