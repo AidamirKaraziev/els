@@ -74,7 +74,17 @@ class SubmittedWorkRow extends StatelessWidget {
                   const SizedBox(width: 8.0),
                   Expanded(flex: 4, child: _Performer(work: work)),
                   const SizedBox(width: 8.0),
-                  SubmittedWorkBadges(work: work),
+                  // Фиксированная ширина: иначе число и длина бейджей
+                  // («ТО» против «Заявка»+«Проблема») меняют место, оставшееся
+                  // двум Expanded-колонкам слева, и блок с механиком гуляет
+                  // по горизонтали от строки к строке.
+                  SizedBox(
+                    width: 190.0,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: SubmittedWorkBadges(work: work),
+                    ),
+                  ),
                   const SizedBox(width: 12.0),
                   SizedBox(
                     width: 200.0,
