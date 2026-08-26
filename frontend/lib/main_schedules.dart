@@ -45,7 +45,14 @@ class SchedulesPreviewApp extends StatelessWidget {
       // Роль меняется здесь руками: у админа раздел открывается списком
       // участков, у прораба — сразу лентой объектов, и посмотреть глазами надо
       // оба пути.
-      home: const ScheduleSection(role: ScheduleRole.admin),
+      //
+      // Меню тут заглушка: боевое `MyDrawer` тянет `UserBloc` и `TaskBloc`,
+      // которых в этом входе нет, — открыв его, мы получили бы красный экран
+      // вместо вёрстки раздела.
+      home: const ScheduleSection(
+        role: ScheduleRole.admin,
+        drawer: Drawer(child: Center(child: Text('меню приложения'))),
+      ),
     );
   }
 }

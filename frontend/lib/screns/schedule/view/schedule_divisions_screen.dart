@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../helper/class_colors.dart';
+import '../../../helper/my_drawer/my_drawer.dart';
 import '../bloc/schedule_divisions_bloc.dart';
 import '../bloc/schedules_bloc.dart';
 import '../models/schedule_division.dart';
 import '../models/schedule_filters.dart';
 import '../widgets/schedule_division_tile.dart';
 import '../widgets/schedule_year_picker.dart';
+import 'schedule_section.dart';
 import 'schedules_screen.dart';
 
 /// Первое окно «Графиков» у админа: участки за выбранный год.
@@ -15,7 +17,15 @@ import 'schedules_screen.dart';
 /// Прораб сюда не попадает — у него участок один, и лишний клик перед лентой
 /// объектов был бы платой ни за что. Развилку держит `ScheduleSection`.
 class ScheduleDivisionsScreen extends StatefulWidget {
-  const ScheduleDivisionsScreen({Key? key}) : super(key: key);
+  const ScheduleDivisionsScreen({
+    Key? key,
+    this.drawer = const MyDrawer(),
+  }) : super(key: key);
+
+  /// Боковое меню приложения. Раздел живёт внутри оболочки, у которой на узкой
+  /// ширине меню открывается только из экрана — без этого человек с телефона
+  /// проваливается в «Графики» и остаётся там без навигации.
+  final Widget drawer;
 
   @override
   State<ScheduleDivisionsScreen> createState() =>
@@ -55,7 +65,10 @@ class _ScheduleDivisionsScreenState extends State<ScheduleDivisionsScreen> {
               ),
             ),
           ),
-          child: const SchedulesScreen(role: ScheduleRole.admin),
+          child: SchedulesScreen(
+            role: ScheduleRole.admin,
+            drawer: widget.drawer,
+          ),
         ),
       ),
     );
@@ -67,7 +80,9 @@ class _ScheduleDivisionsScreenState extends State<ScheduleDivisionsScreen> {
       builder: (BuildContext context, ScheduleDivisionsState state) {
         return Scaffold(
           backgroundColor: ColorApp.myColorGrayShadow,
+          drawer: widget.drawer,
           appBar: AppBar(
+              automaticallyImplyLeading: scheduleShowsLeading(context),
               title: const Text('Графики'),
               elevation: 0,
               backgroundColor: Colors.white,

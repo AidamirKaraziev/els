@@ -1,6 +1,5 @@
 import 'package:els/foreman/companies_foreman/companies_screen_foreman.dart';
 import 'package:els/foreman/schedule_foreman/schedule_page_foreman.dart';
-import 'package:els/foreman/schedule_foreman/schedule_screen_foreman.dart';
 import 'package:els/foreman/task_foreman/task_completed_foreman/task_page_completed_foreman.dart';
 import 'package:els/foreman/task_foreman/task_completed_foreman/task_screen_completed_foreman.dart';
 import 'package:els/foreman/task_foreman/task_page_foreman.dart';
@@ -18,6 +17,8 @@ import '../screns/in_progress_works/models/in_progress_work.dart';
 import '../screns/in_progress_works/repository/in_progress_works_repository.dart';
 import '../screns/report/report_screen.dart';
 import '../screns/schedule/schedule_page.dart';
+import '../screns/schedule/view/schedule_section.dart';
+import '../screns/schedule/view/schedules_screen.dart';
 import '../screns/submitted_works/repository/submitted_works_repository.dart';
 import '../screns/submitted_works/view/submitted_works_screen.dart';
 import '../screns/task/view/task_page.dart';
@@ -52,7 +53,10 @@ class _HomeForemanState extends State<HomeForeman> {
     const ObjectScreenForeman(),
 
     ///Графики 1
-    const ScheduleScreenForeman(),
+    const ScheduleSection(
+      role: ScheduleRole.foreman,
+      drawer: DrawerForeman(),
+    ),
 
     ///Заявки 2
     const TaskScreenForeman(),
@@ -130,7 +134,8 @@ class _HomeForemanState extends State<HomeForeman> {
   @override
   void initState() {
     getListObjectForeman();
-    getListScheduleForeman();
+    // Список объектов для графиков больше не тянем: новый раздел «Графики»
+    // грузит себя сам, а этот вызов кормил только экран подрядчика.
     getListTaskForeman();
     getListCompanyForeman();
     getListEmployeeForeman();

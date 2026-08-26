@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../helper/class_colors.dart';
+import '../../../helper/my_drawer/my_drawer.dart';
 import '../bloc/schedules_bloc.dart';
 import '../models/month_cell.dart';
 import '../models/schedule_filters.dart';
 import '../models/schedule_row.dart';
 import '../widgets/schedule_filters_bar.dart';
 import '../widgets/schedule_row_tile.dart';
+import 'schedule_section.dart';
 import 'schedule_work_card_screen.dart';
 
 enum ScheduleRole { admin, foreman }
@@ -16,9 +18,14 @@ class SchedulesScreen extends StatefulWidget {
   const SchedulesScreen({
     Key? key,
     this.role = ScheduleRole.admin,
+    this.drawer = const MyDrawer(),
   }) : super(key: key);
 
   final ScheduleRole role;
+
+  /// Боковое меню приложения. У прораба лента — корень раздела, и на узкой
+  /// ширине это единственный способ уйти из «Графиков» куда-то ещё.
+  final Widget drawer;
 
   @override
   State<SchedulesScreen> createState() => _SchedulesScreenState();
@@ -99,7 +106,9 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     return Scaffold(
       // Фон серый, карточка списка белая — иначе карточки на экране не видно.
       backgroundColor: ColorApp.myColorGrayShadow,
+      drawer: widget.drawer,
       appBar: AppBar(
+        automaticallyImplyLeading: scheduleShowsLeading(context),
         title: const Text('Графики'),
         elevation: 0,
         backgroundColor: Colors.white,

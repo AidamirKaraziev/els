@@ -4,7 +4,8 @@ import 'package:els/screns/companies/view/company_page.dart';
 import 'package:els/screns/home/home_screen.dart';
 import 'package:els/screns/object/view/object_screen.dart';
 import 'package:els/screns/report/report_screen.dart';
-import 'package:els/screns/schedule/schedule_screen.dart';
+import 'package:els/screns/schedule/view/schedule_section.dart';
+import 'package:els/screns/schedule/view/schedules_screen.dart';
 import 'package:els/screns/task/view/task_screen.dart';
 import 'package:els/screns/user/user_page.dart';
 import 'package:flutter/material.dart';
@@ -66,7 +67,7 @@ class _HomePageState extends State<HomePage> {
     const HomeScreen(),
 
     ///Графики 1
-    const ScheduleScreen(),
+    const ScheduleSection(role: ScheduleRole.admin),
 
     ///Заявки 2
     const TaskScreen(),

@@ -1,4 +1,3 @@
-import 'package:els/foreman/schedule_foreman/schedule_screen_foreman.dart';
 import 'package:els/foreman/task_foreman/task_screen_foreman.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -64,8 +63,7 @@ class _DrawerForemanState extends State<DrawerForeman> {
               MenuButton(
                 myIcons: Icons.calendar_today,
                 title: 'График',
-                press: () async {
-                  await getListScheduleForeman();
+                press: () {
                   IntTest.indexScreensForeman = 1;
                   IntTest.myTitle = 'График';
                   myStream.add(IntTest.indexScreensForeman);

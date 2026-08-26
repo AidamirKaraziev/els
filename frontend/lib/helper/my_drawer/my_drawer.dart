@@ -9,7 +9,6 @@ import '../../screns/employee/bloc/employee_bloc.dart';
 import '../../screns/employee/view/employees_screen.dart';
 import '../../screns/home_page/home_page.dart';
 import '../../screns/object/bloc/object_bloc.dart';
-import '../../screns/schedule/schedule_screen.dart';
 import '../../screns/task/bloc_task/task_bloc.dart';
 import '../../screns/task/view/task_screen.dart';
 import '../button/side_menu_button.dart';
@@ -74,9 +73,7 @@ class _MyDrawerState extends State<MyDrawer> {
                     MenuButton(
                       myIcons: Icons.calendar_today,
                       title: 'График',
-                      press: () async {
-                        await getScheduleFun();
-                        dataSchedule = getScheduleList;
+                      press: () {
                         IntTest.indexScreens = 1;
                         IntTest.myTitle = 'График';
                         myStream.add(IntTest.indexScreens);
