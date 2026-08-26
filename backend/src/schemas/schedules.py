@@ -78,3 +78,26 @@ class ScheduleRow(BaseModel):
         title="Тип оборудования",
         description="Достаётся через модель завода: у объекта своего типа нет.",
     )
+
+
+class FilterOption(BaseModel):
+    """Значение выпадающего фильтра: что видит человек и что уходит на сервер."""
+
+    id: int = Field(..., title="Значение для выбора в списке")
+    title: str = Field(..., title="Что написано в списке")
+
+
+class ScheduleFilterOptions(BaseModel):
+    """Чем можно сузить ленту.
+
+    Списки строятся по видимым объектам, а не по справочникам целиком: иначе
+    прораб выбрал бы чужой участок и получил пустую ленту, не понимая, за что.
+
+    У названий и заводских номеров своего id нет — они уходят на сервер
+    значением. `id` здесь порядковый и нужен только списку на экране.
+    """
+
+    divisions: List[FilterOption] = Field(..., title="Участки")
+    types: List[FilterOption] = Field(..., title="Типы оборудования")
+    names: List[FilterOption] = Field(..., title="Названия объектов")
+    factory_numbers: List[FilterOption] = Field(..., title="Заводские номера")

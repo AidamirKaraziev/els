@@ -75,7 +75,9 @@ class ScheduleFiltersBar extends StatelessWidget {
           ),
           _FilterPill(
             hint: 'Участок',
-            items: options.divisions,
+            // «Без участка» стоит первым и приходит не с сервера: это не
+            // участок из справочника, а объекты, которым его не проставили.
+            items: <FilterOption>[kWithoutDivision, ...options.divisions],
             value: filters.division,
             onChanged: (FilterOption? option) => onChanged(
               filters.copyWith(division: option, clearDivision: option == null),
@@ -136,10 +138,17 @@ class _FilterPill extends StatelessWidget {
   Widget build(BuildContext context) {
     // Значение, которого нет в списке, роняет `DropdownButton`. Так бывает,
     // когда справочник приехал позже выбора или ужался под права человека.
-    final FilterOption? known = value != null &&
-            items.any((FilterOption item) => item.id == value!.id)
-        ? value
-        : null;
+    //
+    // Берём **пункт из списка**, а не пришедшее значение: `DropdownButton`
+    // сверяет их целиком, и участок с тем же id, но другим названием — так
+    // приходит выбор с главной — роняет экран той же ошибкой.
+    FilterOption? known;
+    for (final FilterOption item in items) {
+      if (item.id == value?.id) {
+        known = item;
+        break;
+      }
+    }
 
     return _PillShell(
       active: known != null,

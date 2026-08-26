@@ -91,6 +91,24 @@ void main() {
     expect(harness.last!.year, 2026);
   });
 
+  testWidgets('«Без участка» стоит в списке участков и уходит наверх',
+      (WidgetTester tester) async {
+    // С сервера этот пункт не приходит: это не участок из справочника, а
+    // объекты, которым его не проставили.
+    final _Harness harness = await _pump(
+      tester,
+      filters: const ScheduleFilters(year: 2026),
+    );
+
+    await _openPill(tester, 'Участок');
+    await tester.tap(find.text(kWithoutDivision.title).last);
+    await tester.pumpAndSettle();
+
+    expect(harness.last!.division, kWithoutDivision);
+    expect(harness.last!.toQuery()['without_division'], 'true');
+    expect(harness.last!.toQuery().containsKey('division_id'), isFalse);
+  });
+
   testWidgets('«Графики» отдают состояние ТО, а не пустое нажатие',
       (WidgetTester tester) async {
     final _Harness harness = await _pump(

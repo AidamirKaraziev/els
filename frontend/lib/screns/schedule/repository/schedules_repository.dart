@@ -1,4 +1,3 @@
-import '../models/schedule_division.dart';
 import '../models/schedule_filters.dart';
 import '../models/schedule_row.dart';
 
@@ -66,9 +65,6 @@ abstract class SchedulesRepository {
     required ScheduleFilters filters,
     required int page,
   });
-
-  /// Участки с процентом выполнения — первое окно у админа.
-  Future<List<ScheduleDivision>> fetchDivisions({required int year});
 
   /// Значения выпадающих фильтров.
   Future<ScheduleFilterOptions> fetchFilterOptions();

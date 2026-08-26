@@ -14,7 +14,12 @@ from typing import Dict, List
 
 from src.getters.reports import maintenance_status
 from src.schemas.reports import MaintenanceStatus
-from src.schemas.schedules import ScheduleCell, ScheduleRow
+from src.schemas.schedules import (
+    FilterOption,
+    ScheduleCell,
+    ScheduleFilterOptions,
+    ScheduleRow,
+)
 
 _MONTHS = range(1, 13)
 
@@ -72,3 +77,25 @@ def _cell(month: int, cell, now: datetime.datetime) -> ScheduleCell:
         to_name=cell.to_name,
         act_id=cell.act_id,
     )
+
+
+def get_filter_options(options) -> ScheduleFilterOptions:
+    """Значения выпадающих списков.
+
+    У участков и типов id настоящий — фронт шлёт его в `division_id` и
+    `type_object_id`. У названий и заводских номеров своего id нет, они
+    уходят на сервер значением, поэтому здесь номер порядковый: списку на
+    экране нужно чем-то отличать пункты друг от друга, и только.
+    """
+    return ScheduleFilterOptions(
+        divisions=[
+            FilterOption(id=row[0], title=row[1] or "") for row in options["divisions"]
+        ],
+        types=[FilterOption(id=row[0], title=row[1] or "") for row in options["types"]],
+        names=_numbered(options["names"]),
+        factory_numbers=_numbered(options["factory_numbers"]),
+    )
+
+
+def _numbered(values) -> List[FilterOption]:
+    return [FilterOption(id=index, title=value) for index, value in enumerate(values)]

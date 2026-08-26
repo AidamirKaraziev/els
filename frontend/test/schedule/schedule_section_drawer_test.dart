@@ -5,7 +5,7 @@
 /// человек с телефона провалится в «Графики» и останется там без навигации.
 library;
 
-import 'package:els/screns/schedule/repository/fixture_schedules_repository.dart';
+import 'fixture_schedules_repository.dart';
 import 'package:els/screns/schedule/view/schedule_section.dart';
 import 'package:els/screns/schedule/view/schedules_screen.dart';
 import 'package:flutter/material.dart';
@@ -67,17 +67,14 @@ void main() {
     });
   }
 
-  testWidgets('на вложенном экране кнопка «назад» остаётся и на широком окне',
+  testWidgets('обе роли начинают с ленты объектов',
       (WidgetTester tester) async {
-    await _pump(tester, ScheduleRole.admin, width: 1440);
+    // Окна участков перед лентой больше нет: разрез по участкам живёт на
+    // главной, в карточке «Выполнение графика».
+    for (final ScheduleRole role in ScheduleRole.values) {
+      await _pump(tester, role, width: 1440);
 
-    // Клик по участку открывает ленту поверх участков.
-    await tester.tap(find.text('Участок № 1'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(SchedulesScreen), findsOneWidget);
-    // Без этого уйти с ленты было бы нечем: на широком окне гамбургер скрыт,
-    // а «назад» рисуется той же кнопкой шапки.
-    expect(_appBar(tester).automaticallyImplyLeading, isTrue);
+      expect(find.byType(SchedulesScreen), findsOneWidget);
+    }
   });
 }

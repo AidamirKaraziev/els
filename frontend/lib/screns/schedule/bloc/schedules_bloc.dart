@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../models/schedule_filters.dart';
 import '../models/schedule_row.dart';
-import '../repository/fixture_schedules_repository.dart';
+import '../repository/api_schedules_repository.dart';
 import '../repository/schedules_repository.dart';
 
 part 'schedules_event.dart';
@@ -12,7 +12,7 @@ part 'schedules_state.dart';
 class SchedulesBloc extends Bloc<SchedulesEvent, SchedulesState> {
   SchedulesBloc({SchedulesRepository? repository, ScheduleFilters? filters})
       : this._(
-          repository ?? FixtureSchedulesRepository(),
+          repository ?? ApiSchedulesRepository(),
           filters ?? ScheduleFilters.currentYear(),
         );
 

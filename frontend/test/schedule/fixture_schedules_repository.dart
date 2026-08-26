@@ -1,18 +1,18 @@
-import '../models/month_cell.dart';
-import '../models/schedule_division.dart';
-import '../models/schedule_filters.dart';
-import '../models/schedule_row.dart';
-import 'schedules_repository.dart';
+import 'package:els/screns/schedule/models/month_cell.dart';
+import 'package:els/screns/schedule/models/schedule_filters.dart';
+import 'package:els/screns/schedule/models/schedule_row.dart';
+import 'package:els/screns/schedule/repository/schedules_repository.dart';
 
-/// Заглушка на время отрисовки экрана.
+/// Раздел «Графики» в памяти — подстава для тестов экрана.
 ///
-/// Живёт в памяти и повторяет поведение будущей ручки: страницы по тридцать
-/// строк, фильтры и поиск складываются, состояние клеток разное. Смысл — дать
-/// посмотреть на экран и поспорить о нём до того, как в прод-бэкенде появятся
-/// новые параметры.
+/// Живёт в `test/`, а не в `lib/`: боевой раздел ходит в сеть через
+/// `ApiSchedulesRepository`, и второй реализации в самом приложении быть не
+/// должно — с ней экран однажды собрался бы с выдуманными данными.
 ///
-/// Уходит вместе с фазой отрисовки: подпись у неё та же, что у сетевой
-/// реализации, поэтому замена — одна строка в месте создания блока.
+/// Повторяет поведение ручек: страницы по тридцать строк, фильтры и поиск
+/// складываются, состояние клеток разное. Тесты экрана держатся за неё
+/// сознательно — они проверяют вёрстку и переходы, а не разбор ответа
+/// сервера; разбор проверяет `api_schedules_repository_test.dart`.
 class FixtureSchedulesRepository implements SchedulesRepository {
   FixtureSchedulesRepository({
     this.delay = const Duration(milliseconds: 350),
@@ -53,29 +53,6 @@ class FixtureSchedulesRepository implements SchedulesRepository {
   }
 
   @override
-  Future<List<ScheduleDivision>> fetchDivisions({required int year}) async {
-    await Future<void>.delayed(delay);
-
-    return List<ScheduleDivision>.generate(_divisions.length, (int index) {
-      // Проценты подобраны так, чтобы на экране были все три цвета: иначе
-      // пороги не проверить глазами.
-      const List<double> percents = <double>[82, 63, 49, 94, 71];
-      final double percent = percents[index % percents.length];
-      final int planned = 40 + index * 3;
-
-      return ScheduleDivision(
-        divisionId: index + 1,
-        number: index + 1,
-        title: _divisions[index],
-        foreman: _foremen[index % _foremen.length],
-        plannedCount: planned,
-        completedCount: (planned * percent / 100).round(),
-        completionPercent: percent,
-      );
-    }, growable: false);
-  }
-
-  @override
   Future<ScheduleFilterOptions> fetchFilterOptions() async {
     await Future<void>.delayed(delay);
 
@@ -98,7 +75,10 @@ class FixtureSchedulesRepository implements SchedulesRepository {
 
   /// Фильтры и поиск складываются — то же правило, что будет на сервере.
   bool _matches(ScheduleRow row, ScheduleFilters filters) {
-    if (filters.division != null && row.division != filters.division!.title) {
+    if (filters.division == kWithoutDivision) {
+      if (row.division != null) return false;
+    } else if (filters.division != null &&
+        row.division != filters.division!.title) {
       return false;
     }
     if (filters.typeObject != null && row.typeName != filters.typeObject!.title) {

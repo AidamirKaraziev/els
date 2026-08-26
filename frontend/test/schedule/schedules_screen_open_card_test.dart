@@ -12,7 +12,7 @@ library;
 import 'package:els/screns/schedule/bloc/schedules_bloc.dart';
 import 'package:els/screns/schedule/models/month_cell.dart';
 import 'package:els/screns/schedule/models/schedule_row.dart';
-import 'package:els/screns/schedule/repository/fixture_schedules_repository.dart';
+import 'fixture_schedules_repository.dart';
 import 'package:els/screns/schedule/view/schedule_work_card_screen.dart';
 import 'package:els/screns/schedule/view/schedules_screen.dart';
 import 'package:els/screns/schedule/widgets/schedule_row_tile.dart';

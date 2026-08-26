@@ -16,9 +16,10 @@ import uuid
 import pytest
 
 from src.core.access import AccessScope, ScopeKind
+from src.core.roles import Role
 from src.crud.crud_schedules import crud_schedules, schedule_year
 from src.crud.crud_statistics import _PLANNED_MONTH_COLUMN
-from src.getters.schedules import get_schedule_rows
+from src.getters.schedules import get_filter_options, get_schedule_rows
 from src.models import (
     ActBase,
     ActFact,
@@ -314,6 +315,42 @@ class TestFilters:
             db_session, period, factory_number=exact.factory_number
         ) == {exact.id}
 
+    @pytest.mark.integration
+    def test_without_division_takes_only_orphans(
+        self, db_session, make_object, period
+    ):
+        # «Без участка» нельзя выразить через `division_id`: `None` там
+        # означает «не фильтруем», и объекты без участка иначе не отобрать.
+        division = _make_division(db_session)
+        orphan = make_object()
+        assigned = make_object(division_id=division.id)
+
+        found = _ids(db_session, period, without_division=True)
+
+        assert orphan.id in found
+        assert assigned.id not in found
+
+    @pytest.mark.integration
+    def test_cells_follow_the_same_filter(
+        self, db_session, make_object, plan_to, period
+    ):
+        # Клетки отбираются тем же условием, что и строки. Разойдись они —
+        # объект приехал бы в ленту с чужим графиком.
+        division = _make_division(db_session)
+        assigned = make_object(division_id=division.id)
+        plan_to(assigned, months={3: None})
+
+        cells = crud_schedules.cells(
+            db=db_session,
+            scope=ALL_SCOPE,
+            period=period,
+            object_ids=[assigned.id],
+            without_division=True,
+        )
+
+        assert cells == []
+
+
 
 class TestScheduleState:
     """«Где болит» — состояние всей годовой ленты."""
@@ -495,3 +532,87 @@ class TestRowFields:
         assert row.foreman == foreman.name
         assert row.address == "ул. Ленина, 1"
         assert row.year == YEAR
+
+
+def _make_division(db_session, prefix="Участок"):
+    division = Division(title=f"{prefix} {uuid.uuid4().hex[:6]}")
+    db_session.add(division)
+    db_session.flush()
+    return division
+
+
+def _make_foreman(db_session, name, division_id=None):
+    foreman = UniversalUser(
+        name=name,
+        email=f"{uuid.uuid4().hex[:12]}@example.com",
+        hashed_password="x",
+        is_active=True,
+        role_id=Role.FOREMAN,
+        division_id=division_id,
+    )
+    db_session.add(foreman)
+    db_session.flush()
+    return foreman
+
+
+class TestFilterOptions:
+    """Значения выпадающих списков."""
+
+    @pytest.mark.integration
+    def test_lists_are_built_from_visible_objects(
+        self, db_session, make_object, period
+    ):
+        division = _make_division(db_session)
+        model = FactoryModel(
+            type_object_id=TYPE_OBJECT_ESCALATOR,
+            factory=f"З-{uuid.uuid4().hex[:6]}",
+            model="М",
+        )
+        db_session.add(model)
+        db_session.flush()
+        obj = make_object(division_id=division.id, factory_model_id=model.id)
+
+        options = get_filter_options(
+            crud_schedules.filter_options(db=db_session, scope=ALL_SCOPE)
+        )
+
+        assert division.id in {item.id for item in options.divisions}
+        assert TYPE_OBJECT_ESCALATOR in {item.id for item in options.types}
+        assert obj.name in {item.title for item in options.names}
+        assert obj.factory_number in {item.title for item in options.factory_numbers}
+
+    @pytest.mark.integration
+    def test_foreign_division_is_not_offered(self, db_session, make_object, period):
+        # Иначе прораб выбрал бы чужой участок и получил пустую ленту, не
+        # понимая, за что.
+        mine = _make_division(db_session)
+        theirs = _make_division(db_session)
+        make_object(division_id=mine.id)
+        theirs_object = make_object(division_id=theirs.id)
+
+        scope = AccessScope(
+            kind=ScopeKind.DIVISIONS,
+            user_id=0,
+            division_ids=frozenset({mine.id}),
+            company_id=None,
+        )
+        options = get_filter_options(
+            crud_schedules.filter_options(db=db_session, scope=scope)
+        )
+
+        assert theirs.id not in {item.id for item in options.divisions}
+        assert theirs_object.name not in {item.title for item in options.names}
+
+    @pytest.mark.integration
+    def test_values_come_once(self, db_session, make_object):
+        # Два объекта на одном участке — участок в списке один.
+        division = _make_division(db_session)
+        make_object(division_id=division.id)
+        make_object(division_id=division.id)
+
+        options = get_filter_options(
+            crud_schedules.filter_options(db=db_session, scope=ALL_SCOPE)
+        )
+        ours = [item for item in options.divisions if item.id == division.id]
+
+        assert len(ours) == 1

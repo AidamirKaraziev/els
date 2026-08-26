@@ -4,9 +4,11 @@ import '../../../helper/hints/hint_icon.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
+import '../../../helper/app_section.dart';
 import '../../../helper/calendar/month_picker.dart';
 import '../../../helper/class_colors.dart';
 import '../../responsive_screens/responsive.dart';
+import '../../schedule/models/schedule_filters.dart';
 import 'bloc/schedule_execution_bloc.dart';
 import 'models/schedule_execution_report.dart';
 
@@ -202,6 +204,7 @@ class _Body extends StatelessWidget {
       }
       return _Report(
         report: current.report,
+        year: month.year,
         showResponsible: showResponsible,
         bounded: bounded,
       );
@@ -229,11 +232,18 @@ class _Report extends StatelessWidget {
   const _Report({
     Key? key,
     required this.report,
+    required this.year,
     required this.showResponsible,
     required this.bounded,
   }) : super(key: key);
 
   final ScheduleExecutionReport report;
+
+  /// Год выбранного в шапке месяца. Именно он уходит в «Графики»: человек
+  /// смотрит на декабрь прошлого года — и ленту должен увидеть за него, а не
+  /// за текущий.
+  final int year;
+
   final bool showResponsible;
   final bool bounded;
 
@@ -242,6 +252,7 @@ class _Report extends StatelessWidget {
     final List<Widget> rows = report.items
         .map((ScheduleExecutionDivision item) => _DivisionRow(
               item: item,
+              year: year,
               showResponsible: showResponsible,
             ))
         .toList(growable: false);
@@ -336,11 +347,24 @@ class _DivisionRow extends StatelessWidget {
   const _DivisionRow({
     Key? key,
     required this.item,
+    required this.year,
     required this.showResponsible,
   }) : super(key: key);
 
   final ScheduleExecutionDivision item;
+  final int year;
   final bool showResponsible;
+
+  /// Отбор, с которым откроются «Графики».
+  ///
+  /// У строки «Без участка» своего `division_id` нет — она уходит отдельным
+  /// пунктом фильтра: объекты без участка иначе не отобрать.
+  ScheduleFilters get _filters => ScheduleFilters(
+        year: year,
+        division: item.divisionId == null
+            ? kWithoutDivision
+            : FilterOption(id: item.divisionId!, title: item.divisionLabel),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -348,62 +372,68 @@ class _DivisionRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10.0),
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-          return LinearPercentIndicator(
-            // Ширину задаём явно: без неё индикатор берёт ширину экрана и
-            // вылезает за карточку на узких раскладках.
-            width: constraints.maxWidth,
-            padding: EdgeInsets.zero,
-            barRadius: const Radius.circular(20.0),
-            lineHeight: 40.0,
-            percent: item.fraction,
-            progressColor: item.color,
-            backgroundColor: ColorApp.myColorTransparent,
-            center: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      item.divisionLabel,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                  if (showResponsible) ...[
-                    const SizedBox(width: 8.0),
+          // Клик уводит в «Графики» этого участка: карточка отвечает на
+          // вопрос «где болит», а лечится это уже там, на ленте объектов.
+          return InkWell(
+            onTap: () => openSchedules(filters: _filters),
+            borderRadius: BorderRadius.circular(20.0),
+            child: LinearPercentIndicator(
+              // Ширину задаём явно: без неё индикатор берёт ширину экрана и
+              // вылезает за карточку на узких раскладках.
+              width: constraints.maxWidth,
+              padding: EdgeInsets.zero,
+              barRadius: const Radius.circular(20.0),
+              lineHeight: 40.0,
+              percent: item.fraction,
+              progressColor: item.color,
+              backgroundColor: ColorApp.myColorTransparent,
+              center: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                child: Row(
+                  children: [
                     Expanded(
-                      flex: 4,
+                      flex: 3,
                       child: Text(
-                        item.responsibleLabel,
+                        item.divisionLabel,
                         overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    if (showResponsible) ...[
+                      const SizedBox(width: 8.0),
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          item.responsibleLabel,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 8.0),
+                    SizedBox(
+                      width: 84.0,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            _percent(item.completionPercent),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          // Без этой подписи «50 %» одинаково выглядит и у
+                          // участка с двумя ТО, и у участка с сорока.
+                          Text(
+                            '${item.completedCount} из ${item.plannedCount}',
+                            style: const TextStyle(
+                              fontSize: 11.0,
+                              color: ColorApp.myColorGray,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                  const SizedBox(width: 8.0),
-                  SizedBox(
-                    width: 84.0,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          _percent(item.completionPercent),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        // Без этой подписи «50 %» одинаково выглядит и у
-                        // участка с двумя ТО, и у участка с сорока.
-                        Text(
-                          '${item.completedCount} из ${item.plannedCount}',
-                          style: const TextStyle(
-                            fontSize: 11.0,
-                            color: ColorApp.myColorGray,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           );

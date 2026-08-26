@@ -5,9 +5,8 @@
 library;
 
 import 'package:els/screns/schedule/bloc/schedules_bloc.dart';
-import 'package:els/screns/schedule/models/schedule_division.dart';
 import 'package:els/screns/schedule/models/schedule_filters.dart';
-import 'package:els/screns/schedule/repository/fixture_schedules_repository.dart';
+import 'fixture_schedules_repository.dart';
 import 'package:els/screns/schedule/repository/schedules_repository.dart';
 import 'package:els/screns/schedule/view/schedules_screen.dart';
 import 'package:els/screns/schedule/widgets/schedule_row_tile.dart';
@@ -37,12 +36,6 @@ class _CountingRepository implements SchedulesRepository {
     requestedPages.add(page);
     return _inner.fetchRows(filters: filters, page: page);
   }
-
-  @override
-  Future<List<ScheduleDivision>> fetchDivisions({
-    required int year,
-  }) =>
-      _inner.fetchDivisions(year: year);
 
   @override
   Future<ScheduleFilterOptions> fetchFilterOptions() =>

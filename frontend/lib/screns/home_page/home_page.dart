@@ -4,6 +4,7 @@ import 'package:els/screns/companies/view/company_page.dart';
 import 'package:els/screns/home/home_screen.dart';
 import 'package:els/screns/object/view/object_screen.dart';
 import 'package:els/screns/report/report_screen.dart';
+import 'package:els/screns/schedule/models/schedule_filters.dart';
 import 'package:els/screns/schedule/view/schedule_section.dart';
 import 'package:els/screns/schedule/view/schedules_screen.dart';
 import 'package:els/screns/task/view/task_screen.dart';
@@ -61,13 +62,44 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  /// Раздел «Графики». Держится полем, а не строится заново на каждое
+  /// событие `myStream`: пересоздание сбрасывало бы у ленты прокрутку и уже
+  /// подгруженные страницы при любом переключении раздела.
+  Widget _scheduleSection = const ScheduleSection(role: ScheduleRole.admin);
+
+  /// Счётчик заходов с главной. Он же ключ раздела: два клика подряд по
+  /// одному участку обязаны дать чистую ленту, а не то, что человек успел
+  /// нафильтровать внутри между ними.
+  int _scheduleRequests = 0;
+
+  /// Экран по индексу оболочки.
+  ///
+  /// «Графики» — единственный, кого просят открыть с готовым отбором: с
+  /// главной по клику на участке. Заявка забирается один раз, поэтому вход
+  /// из меню по-прежнему показывает все объекты.
+  Widget _screenAt(int index) {
+    if (index != 1) return _screens[index];
+
+    final ScheduleFilters? requested = ScheduleSectionRequest.take();
+    if (requested != null) {
+      _scheduleSection = ScheduleSection(
+        role: ScheduleRole.admin,
+        initialFilters: requested,
+        // Без ключа Flutter переиспользовал бы состояние прежней ленты, и
+        // новый фильтр приехал бы к старым строкам.
+        key: ValueKey<int>(++_scheduleRequests),
+      );
+    }
+    return _scheduleSection;
+  }
+
   ///Список Страниц
   final List<Widget> _screens = [
     ///Главная 0
     const HomeScreen(),
 
-    ///Графики 1
-    const ScheduleSection(role: ScheduleRole.admin),
+    ///Графики 1 — заглушка: раздел строится в `_scheduleSection`.
+    const SizedBox.shrink(),
 
     ///Заявки 2
     const TaskScreen(),
@@ -153,7 +185,7 @@ class _HomePageState extends State<HomePage> {
                             stream: myStream.stream,
                             builder: (context, ind) => Expanded(
                               flex: 9,
-                              child: _screens[IntTest.indexScreens],
+                              child: _screenAt(IntTest.indexScreens),
                             ),
                           )
                         ],

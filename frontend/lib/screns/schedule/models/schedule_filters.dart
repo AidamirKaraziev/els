@@ -58,6 +58,18 @@ class FilterOption {
   int get hashCode => Object.hash(id, title);
 }
 
+/// Пункт «Без участка» в фильтре участков.
+///
+/// Объекты, которым участок не проставлен. Значением `division_id` это не
+/// выразить: пусто там означает «не фильтруем», и такие объекты иначе не
+/// отобрать вовсе — поэтому на сервер уходит отдельный `without_division`.
+///
+/// Отрицательный `id` взят намеренно: настоящие id участков положительные,
+/// и пункт спокойно живёт в одном списке с ними — панели фильтров не нужно
+/// знать, что он особенный.
+const FilterOption kWithoutDivision =
+    FilterOption(id: -1, title: 'Без участка');
+
 /// Набор условий, которыми сужен список.
 ///
 /// Поиск и фильтры **складываются**: ищем внутри выбранных фильтров, а не
@@ -146,7 +158,10 @@ class ScheduleFilters {
     return <String, String>{
       'year': '$year',
       if (text.isNotEmpty) 'search': text,
-      if (division != null) 'division_id': '${division!.id}',
+      if (division == kWithoutDivision)
+        'without_division': 'true'
+      else if (division != null)
+        'division_id': '${division!.id}',
       if (typeObject != null) 'type_object_id': '${typeObject!.id}',
       if (name != null) 'name': name!.title,
       if (factoryNumber != null) 'factory_number': factoryNumber!.title,

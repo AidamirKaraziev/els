@@ -7,7 +7,7 @@ library;
 
 import 'package:els/screns/schedule/bloc/schedules_bloc.dart';
 import 'package:els/screns/schedule/models/schedule_filters.dart';
-import 'package:els/screns/schedule/repository/fixture_schedules_repository.dart';
+import 'fixture_schedules_repository.dart';
 import 'package:els/screns/schedule/view/schedules_screen.dart';
 import 'package:els/screns/schedule/widgets/schedule_filters_bar.dart';
 import 'package:flutter/material.dart';

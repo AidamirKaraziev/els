@@ -16,7 +16,7 @@ import pytest
 from src.config import settings
 from src.core.roles import ADMIN, CLIENT_ID, DISPATCHER, FOREMAN, MECHANIC
 from src.crud.crud_statistics import _PLANNED_MONTH_COLUMN
-from src.models import ActBase, ActFact, Object, PlannedTO
+from src.models import ActBase, ActFact, Division, Object, PlannedTO
 
 URL = f"{settings.API_V1_STR}/schedules/rows"
 
@@ -247,3 +247,134 @@ class TestPagination:
 
         assert len(response["data"]) == 3
         assert response["meta"]["paginator"] is None
+
+
+FILTERS_URL = f"{settings.API_V1_STR}/schedules/filters"
+
+
+@pytest.fixture
+def division(db_session):
+    row = Division(title=f"Участок {uuid.uuid4().hex[:6]}")
+    db_session.add(row)
+    db_session.flush()
+    return row
+
+
+class TestFilterOptionsAccess:
+    """Права те же, что у ленты: отдельного права на фильтры нет."""
+
+    @pytest.mark.integration
+    @pytest.mark.parametrize(
+        "role",
+        [ADMIN, FOREMAN, MECHANIC, DISPATCHER],
+        ids=["админ", "прораб", "механик", "диспетчер"],
+    )
+    def test_roles_with_planned_to_read_are_allowed(
+        self, client_with_db, as_role, role
+    ):
+        as_role(role)
+
+        assert client_with_db.get(FILTERS_URL).status_code == 200
+
+    @pytest.mark.integration
+    def test_client_is_denied(self, client_with_db, as_role):
+        as_role(CLIENT_ID)
+
+        assert client_with_db.get(FILTERS_URL).status_code == 403
+
+    @pytest.mark.integration
+    def test_anonymous_is_denied(self, client_with_db):
+        assert client_with_db.get(FILTERS_URL).status_code == 401
+
+
+class TestFilterOptionsShape:
+    """Форма ответа фильтров: её разбирает `ScheduleFilterOptions`."""
+
+    @pytest.mark.integration
+    def test_four_lists_of_pairs(
+        self, client_with_db, as_role, make_object, division
+    ):
+        obj = make_object(division_id=division.id)
+        as_role(ADMIN)
+
+        data = _data(client_with_db.get(FILTERS_URL))
+
+        assert set(data) == {"divisions", "types", "names", "factory_numbers"}
+        assert {"id", "title"} == set(data["divisions"][0])
+        assert division.id in {item["id"] for item in data["divisions"]}
+        assert obj.name in {item["title"] for item in data["names"]}
+        assert obj.factory_number in {
+            item["title"] for item in data["factory_numbers"]
+        }
+
+    @pytest.mark.integration
+    def test_chosen_value_narrows_the_feed(
+        self, client_with_db, as_role, make_object, division
+    ):
+        # Значение из списка обязано работать фильтром ленты — иначе список
+        # предлагает то, чего лента не понимает.
+        wanted = make_object(division_id=division.id)
+        make_object()
+        as_role(ADMIN)
+
+        data = _data(client_with_db.get(FILTERS_URL))
+        option = next(
+            item for item in data["divisions"] if item["id"] == division.id
+        )
+        rows = _data(
+            client_with_db.get(URL, params={"division_id": option["id"]})
+        )
+
+        assert {row["object_id"] for row in rows} == {wanted.id}
+
+
+class TestWithoutDivision:
+    """«Без участка» — отдельное условие, а не пустой `division_id`."""
+
+    @pytest.mark.integration
+    def test_only_objects_with_no_division(
+        self, client_with_db, as_role, make_object, division
+    ):
+        orphan = make_object()
+        make_object(division_id=division.id)
+        as_role(ADMIN)
+
+        rows = _data(client_with_db.get(URL, params={"without_division": True}))
+
+        assert orphan.id in {row["object_id"] for row in rows}
+        assert all(row["division"] is None for row in rows)
+
+    @pytest.mark.integration
+    def test_without_the_flag_they_are_all_here(
+        self, client_with_db, as_role, make_object, division
+    ):
+        # Фильтр включается только флагом: без него объект с участком из
+        # ленты пропадать не должен.
+        orphan = make_object()
+        with_division = make_object(division_id=division.id)
+        as_role(ADMIN)
+
+        found = {row["object_id"] for row in _data(client_with_db.get(URL))}
+
+        assert {orphan.id, with_division.id} <= found
+
+    @pytest.mark.integration
+    def test_together_with_division_id_gives_nothing(
+        self, client_with_db, as_role, make_object, division
+    ):
+        # Два условия складываются, как и все остальные фильтры: «этот
+        # участок» и «без участка» вместе не выполняются никогда. Отдельной
+        # ошибки на это нет — пустая лента и есть честный ответ.
+        make_object(division_id=division.id)
+        make_object()
+        as_role(ADMIN)
+
+        rows = _data(
+            client_with_db.get(
+                URL,
+                params={"division_id": division.id, "without_division": True},
+            )
+        )
+
+        assert rows == []
+

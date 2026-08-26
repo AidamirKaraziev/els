@@ -1,7 +1,8 @@
 """Раздел «Графики»: годовая лента ТО по объектам.
 
-Одна ручка. Отдаёт строку «объект + двенадцать клеток» с посчитанным на
-сервере состоянием каждой клетки.
+Две ручки: лента и значения выпадающих фильтров. Лента отдаёт строку
+«объект + двенадцать клеток» с посчитанным на сервере состоянием каждой
+клетки.
 
 Считать состояние на клиенте нельзя: «просрочено» отличается от «назначено»
 только тем, кончился ли плановый месяц, а часы браузера у каждого свои — на
@@ -17,10 +18,14 @@ from fastapi import APIRouter, Depends, Query
 
 from src.api import deps
 from src.core.permissions import Permission
-from src.core.response import ListOfEntityResponse, Meta
+from src.core.response import ListOfEntityResponse, Meta, SingleEntityResponse
 from src.crud.crud_schedules import crud_schedules, schedule_year
-from src.getters.schedules import get_schedule_rows
-from src.schemas.schedules import ScheduleRow, ScheduleState
+from src.getters.schedules import get_filter_options, get_schedule_rows
+from src.schemas.schedules import (
+    ScheduleFilterOptions,
+    ScheduleRow,
+    ScheduleState,
+)
 
 router = APIRouter()
 
@@ -54,6 +59,9 @@ TAGS = ["Графики ТО"]
         "Выполненное с опозданием чистоту не портит, и не портят её месяцы, "
         "которые ещё не наступили; объект без графика вовсе сюда не "
         "попадает.\n\n"
+        "`without_division` — про объекты, которым участок **не проставлен**, "
+        "а не «любой участок». Вместе с `division_id` эти два условия "
+        "складываются и дают пустую выдачу: отдельной ошибки на это нет.\n\n"
         "Выдача режется областью видимости: прораб видит объекты своих "
         "участков, отдельной ручки «по прорабу» для этого не нужно."
     ),
@@ -76,6 +84,9 @@ def schedule_rows(
     ),
     search: str = Query(None, title="Поиск по объекту, участку, типу и виду ТО"),
     division_id: int = Query(None, title="Только объекты этого участка"),
+    without_division: bool = Query(
+        False, title="Только объекты, которым участок не проставлен"
+    ),
     type_object_id: int = Query(None, title="Только этот тип оборудования"),
     factory_number: str = Query(None, title="Заводской номер целиком"),
     name: str = Query(None, title="Название объекта целиком"),
@@ -90,6 +101,7 @@ def schedule_rows(
 
     filters = {
         "division_id": division_id,
+        "without_division": without_division,
         "type_object_id": type_object_id,
         "factory_number": factory_number,
         "name": name,
@@ -121,4 +133,34 @@ def schedule_rows(
             now=period.now,
         ),
         meta=Meta(paginator=paginator),
+    )
+
+
+@router.get(
+    path="/schedules/filters",
+    response_model=SingleEntityResponse[ScheduleFilterOptions],
+    name="schedule_filter_options",
+    summary="Значения выпадающих фильтров ленты",
+    description=(
+        "🔽 Чем можно сузить ленту: участки, типы оборудования, названия "
+        "объектов и заводские номера.\n\n"
+        "Списки строятся по видимым объектам, а не по справочникам целиком: "
+        "иначе прораб выбрал бы в фильтре чужой участок и получил пустую "
+        "ленту, не понимая, за что.\n\n"
+        "От года и от уже выбранных фильтров списки не зависят намеренно — "
+        "иначе набор участков менялся бы от того, какая страница объектов "
+        "сейчас открыта.\n\n"
+        "У участков и типов `id` настоящий, его и надо слать в `division_id` "
+        "и `type_object_id`. У названий и заводских номеров своего `id` нет: "
+        "они уходят на сервер значением, а номер здесь порядковый."
+    ),
+    tags=TAGS,
+)
+def schedule_filter_options(
+    session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.PLANNED_TO_READ)),
+    scope=Depends(deps.get_read_scope),
+):
+    return SingleEntityResponse(
+        data=get_filter_options(crud_schedules.filter_options(db=session, scope=scope))
     )

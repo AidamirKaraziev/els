@@ -21,7 +21,7 @@
 """
 
 import datetime
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy import and_, literal, not_, select
 from sqlalchemy.orm import Session, aliased
@@ -66,15 +66,23 @@ class CrudSchedules(CrudReports):
         type_object_id: Optional[int] = None,
         factory_number: Optional[str] = None,
         name: Optional[str] = None,
+        without_division: bool = False,
         **filters,
     ) -> List:
-        """Условия отчёта плюс три фильтра, которых там не было.
+        """Условия отчёта плюс четыре фильтра, которых там не было.
 
         `name` и `factory_number` сравниваются точно, а не по вхождению: на
         экране это значения выпадающих списков, а не свободный текст. Текст
         живёт отдельно, в поиске.
+
+        `without_division` — не «любой участок», а «участок не проставлен».
+        Значением `division_id` это не выразить: `None` там означает «не
+        фильтруем», и объекты без участка иначе не отобрать вовсе.
         """
         conditions = super()._object_conditions(**filters)
+
+        if without_division:
+            conditions.append(Object.division_id.is_(None))
 
         if type_object_id is not None:
             # Подзапросом, а не соединением: своего `type_object_id` у
@@ -312,6 +320,58 @@ class CrudSchedules(CrudReports):
             .order_by(Object.id.asc(), cells.c.month.asc())
             .all()
         )
+
+    # ------------------------------------------------------------------
+    # Значения выпадающих фильтров
+    # ------------------------------------------------------------------
+
+    def filter_options(self, *, db: Session, scope: AccessScope) -> Dict[str, List]:
+        """Что можно выбрать в фильтрах ленты.
+
+        Всё строится поверх видимых объектов, а не поверх справочников
+        целиком: иначе прораб выбрал бы в списке чужой участок и получил
+        пустую ленту, не понимая, за что.
+
+        Год и уже выбранные фильтры на списки намеренно не влияют. Список
+        участков не должен зависеть от того, какая страница объектов сейчас
+        открыта, — иначе фильтр показывал бы только те участки, что попали в
+        первые тридцать строк.
+        """
+        objects = self._objects_query(db=db, scope=scope)
+
+        divisions = (
+            objects.join(Division, Object.division_id == Division.id)
+            .with_entities(Division.id, Division.title)
+            .distinct()
+            .order_by(Division.title.asc())
+            .all()
+        )
+        types = (
+            objects.join(FactoryModel, Object.factory_model_id == FactoryModel.id)
+            .join(TypeObject, TypeObject.id == FactoryModel.type_object_id)
+            .with_entities(TypeObject.id, TypeObject.name)
+            .distinct()
+            .order_by(TypeObject.name.asc())
+            .all()
+        )
+
+        return {
+            "divisions": divisions,
+            "types": types,
+            "names": self._distinct_column(objects, Object.name),
+            "factory_numbers": self._distinct_column(objects, Object.factory_number),
+        }
+
+    def _distinct_column(self, objects, column) -> List[str]:
+        """Непустые значения колонки объекта — по одному разу, по алфавиту."""
+        rows = (
+            objects.with_entities(column)
+            .filter(column.isnot(None), column != "")
+            .distinct()
+            .order_by(column.asc())
+            .all()
+        )
+        return [row[0] for row in rows]
 
 
 crud_schedules = CrudSchedules()
