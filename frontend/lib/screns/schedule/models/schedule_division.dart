@@ -45,8 +45,18 @@ class ScheduleDivision {
     return ColorApp.myColorRed;
   }
 
+  /// Текст на пилюле процента.
+  ///
+  /// Тот же приём, что у клетки месяца (`MonthStatus.foreground`): на жёлтом
+  /// белые цифры не читаются, на зелёном и красном — читаются.
+  Color get foreground =>
+      color == ColorApp.myColorYellow ? ColorApp.myColorBlack : ColorApp.myColorWhite;
+
   static const double kGoodPercent = 90;
   static const double kFairPercent = 70;
+
+  /// «82 %» — без хвоста «.0», как в карточке «Выполнение графика» на главной.
+  String get percentLabel => '${completionPercent.round()} %';
 
   /// График на участке не заводили — процент считать не от чего.
   bool get hasNoPlan => plannedCount == 0;

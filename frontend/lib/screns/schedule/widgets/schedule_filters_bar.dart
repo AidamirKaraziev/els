@@ -4,6 +4,7 @@ import '../../../helper/class_colors.dart';
 import '../models/schedule_filters.dart';
 import '../repository/schedules_repository.dart';
 import 'schedule_search_field.dart';
+import 'schedule_year_picker.dart';
 
 /// Панель над лентой графиков: год, пять фильтров и поиск.
 ///
@@ -49,7 +50,7 @@ class ScheduleFiltersBar extends StatelessWidget {
         runSpacing: 8,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: <Widget>[
-          _YearPicker(
+          ScheduleYearPicker(
             year: filters.year,
             onChanged: (int year) => onChanged(filters.copyWith(year: year)),
           ),
@@ -111,90 +112,6 @@ class ScheduleFiltersBar extends StatelessWidget {
               onPressed: () => onChanged(filters.cleared()),
             ),
         ],
-      ),
-    );
-  }
-}
-
-/// Переключатель года «‹ 2026 ›».
-///
-/// Стоит в одном ряду с фильтрами, но фильтром не является: сброс отбора его
-/// не трогает — год это не условие, а то, на что мы смотрим.
-class _YearPicker extends StatelessWidget {
-  const _YearPicker({
-    Key? key,
-    required this.year,
-    required this.onChanged,
-  }) : super(key: key);
-
-  final int year;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: ScheduleFiltersBar._pillHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      decoration: BoxDecoration(
-        color: ColorApp.myColorWhite,
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: ColorApp.myColorGreenAuth),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          _YearArrow(
-            icon: Icons.chevron_left,
-            tooltip: 'Предыдущий год',
-            onPressed: () => onChanged(year - 1),
-          ),
-          Text(
-            '$year',
-            style: const TextStyle(
-              fontSize: ScheduleFiltersBar._fontSize,
-              fontWeight: FontWeight.w600,
-              color: ColorApp.myColorBlack,
-            ),
-          ),
-          _YearArrow(
-            icon: Icons.chevron_right,
-            tooltip: 'Следующий год',
-            onPressed: () => onChanged(year + 1),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Стрелка года.
-///
-/// Не `IconButton`: у того минимальная область нажатия 48 и он растянул бы
-/// пилюлю вдвое против кадра. Поле нажатия при этом остаётся во всю высоту
-/// пилюли, а не по размеру самой стрелки.
-class _YearArrow extends StatelessWidget {
-  const _YearArrow({
-    Key? key,
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  }) : super(key: key);
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onPressed,
-        child: SizedBox(
-          width: 20,
-          height: ScheduleFiltersBar._pillHeight,
-          child: Icon(icon, size: 14, color: ColorApp.myColorGreenAuth),
-        ),
       ),
     );
   }

@@ -25,13 +25,16 @@ class SchedulesScreen extends StatefulWidget {
 }
 
 class _SchedulesScreenState extends State<SchedulesScreen> {
+  /// За сколько пикселей до конца списка просить следующую страницу.
+  static const double _loadMoreThreshold = 300;
+
   late ScrollController _scrollController;
   late SchedulesBloc _bloc;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    _scrollController = ScrollController()..addListener(_onScroll);
     _bloc = context.read<SchedulesBloc>();
     _bloc.add(SchedulesRequested(filters: _bloc.state.filters));
     // Значения выпадающих просим отдельно и один раз: они не меняются от того,
@@ -41,8 +44,31 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
+  }
+
+  /// Догрузка следующей страницы.
+  ///
+  /// Порог в пикселях, а не «доскроллил до самого низа»: страница должна
+  /// успеть приехать до того, как человек упрётся в конец списка.
+  ///
+  /// Состояние берём у блока, а не из замыкания над тем, что нарисовал
+  /// `BlocBuilder`: слушатель живёт дольше одной отрисовки и с чужим снимком
+  /// послал бы второй запрос за уже загруженной страницей.
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+
+    final ScrollPosition position = _scrollController.position;
+    if (position.pixels < position.maxScrollExtent - _loadMoreThreshold) return;
+
+    final SchedulesState state = _bloc.state;
+    if (state is! SchedulesLoaded) return;
+    if (!state.hasNext || state.isLoadingMore) return;
+
+    _bloc.add(const SchedulesNextPageRequested());
   }
 
   /// Клик по клетке открывает карточку работы за ней.
@@ -139,25 +165,29 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
           color: ColorApp.myColorWhite,
           borderRadius: BorderRadius.circular(5),
         ),
-        child: ListView.separated(
-          controller: _scrollController,
-          itemCount: state.rows.length + (state.isLoadingMore ? 1 : 0),
-          separatorBuilder: (BuildContext context, int index) => const Divider(
-            height: 1,
-            thickness: 1,
-            color: ColorApp.myColorGrayBorder,
-          ),
-          itemBuilder: (BuildContext context, int index) {
-            if (index == state.rows.length) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
+        child: Builder(
+          builder: (BuildContext context) {
+            // Подвал считаем до списка: когда его нет, нет и лишней строки, а
+            // значит нет разделителя, висящего под последним объектом.
+            final Widget? footer = _footer(state);
 
-            return ScheduleRowTile(
-              row: state.rows[index],
-              onCellTap: _onCellTap,
+            return ListView.separated(
+              controller: _scrollController,
+              itemCount: state.rows.length + (footer == null ? 0 : 1),
+              separatorBuilder: (BuildContext context, int index) =>
+                  const Divider(
+                height: 1,
+                thickness: 1,
+                color: ColorApp.myColorGrayBorder,
+              ),
+              itemBuilder: (BuildContext context, int index) {
+                if (index == state.rows.length) return footer!;
+
+                return ScheduleRowTile(
+                  row: state.rows[index],
+                  onCellTap: _onCellTap,
+                );
+              },
             );
           },
         ),
@@ -165,6 +195,38 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     }
 
     return const SizedBox.shrink();
+  }
+
+  /// Что стоит под последним объектом: спиннер догрузки, отбивка «это всё» или
+  /// ничего.
+  ///
+  /// Подпись показываем только после реальной догрузки (`page > 1`): под
+  /// списком из трёх объектов «Это все объекты» звучит как отчёт о проделанной
+  /// работе там, где листать было нечего.
+  Widget? _footer(SchedulesLoaded state) {
+    if (state.isLoadingMore) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!state.hasNext && state.page > 1) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(
+          child: Text(
+            'Это все объекты',
+            style: TextStyle(
+              fontSize: 13,
+              color: ColorApp.myColorGrayText,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return null;
   }
 }
 

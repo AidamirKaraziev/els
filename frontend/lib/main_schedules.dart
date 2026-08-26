@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'screns/schedule/bloc/schedules_bloc.dart';
+import 'screns/schedule/view/schedule_section.dart';
 import 'screns/schedule/view/schedules_screen.dart';
 
 /// Отладочный вход в раздел «Графики» на время фазы отрисовки.
@@ -43,10 +42,10 @@ class SchedulesPreviewApp extends StatelessWidget {
       theme: ThemeData(
         textTheme: GoogleFonts.ubuntuTextTheme(),
       ),
-      home: BlocProvider<SchedulesBloc>(
-        create: (_) => SchedulesBloc(),
-        child: const SchedulesScreen(),
-      ),
+      // Роль меняется здесь руками: у админа раздел открывается списком
+      // участков, у прораба — сразу лентой объектов, и посмотреть глазами надо
+      // оба пути.
+      home: const ScheduleSection(role: ScheduleRole.admin),
     );
   }
 }
