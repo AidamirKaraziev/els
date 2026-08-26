@@ -23,6 +23,14 @@ enum WorkPhase {
 
   /// Открыта из ленты сданных работ.
   submitted,
+
+  /// Открыта не из списка работ, а из графика ТО.
+  ///
+  /// Уходить такой карточке неоткуда: клетка месяца показывает работу в
+  /// любом состоянии — назначенную, идущую и закрытую, — и «работа ушла из
+  /// списка» для неё не событие, а обычная жизнь. Проверку края блок для
+  /// этой фазы не делает.
+  standalone,
 }
 
 /// Подробности одной работы: чек-лист либо задание, снимки, кому звонить.
@@ -121,7 +129,8 @@ class WorkDetailsBloc extends Bloc<WorkDetailsEvent, WorkDetailsState> {
     // раздела текущих, открытый заново — из ленты сданных. Проверка стоит и на
     // первой загрузке: список мог устареть на минуту, и открытая по нему
     // карточка обязана сказать правду сразу, а не через такт.
-    if (details.isFinished != (phase == WorkPhase.submitted)) {
+    if (phase != WorkPhase.standalone &&
+        details.isFinished != (phase == WorkPhase.submitted)) {
       emit(details.isFinished ? WorkGone.submitted : WorkGone.returned);
       return;
     }

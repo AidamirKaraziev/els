@@ -1,3 +1,4 @@
+import 'package:els/screns/schedule/bloc/schedules_bloc.dart';
 import 'package:els/foreman/companies_foreman/companies_screen_foreman.dart';
 import 'package:els/foreman/schedule_foreman/schedule_page_foreman.dart';
 import 'package:els/foreman/task_foreman/task_completed_foreman/task_page_completed_foreman.dart';
@@ -46,17 +47,38 @@ class HomeForeman extends StatefulWidget {
 }
 
 class _HomeForemanState extends State<HomeForeman> {
+  /// Блок ленты «Графиков». Живёт у оболочки по той же причине, что и у
+  /// админа (`home_page.dart`): разделы стоят в дереве одной позицией, и уход
+  /// в «Заявки» уносит раздел вместе с его блоком. Прораб, вернувшийся в
+  /// «Графики», должен увидеть тот же год и тот же отбор, что оставил.
+  SchedulesBloc? _scheduleBloc;
+
+  @override
+  void dispose() {
+    _scheduleBloc?.close();
+    super.dispose();
+  }
+
+  /// Экран по индексу оболочки.
+  Widget _screenAt(int index) {
+    if (index != 1) return _screensForeman[index];
+
+    _scheduleBloc ??= SchedulesBloc();
+    return ScheduleSection(
+      role: ScheduleRole.foreman,
+      bloc: _scheduleBloc,
+      drawer: const DrawerForeman(),
+    );
+  }
+
   ///Список Страниц
   final List<Widget> _screensForeman = [
 
     ///Обьекты 0
     const ObjectScreenForeman(),
 
-    ///Графики 1
-    const ScheduleSection(
-      role: ScheduleRole.foreman,
-      drawer: DrawerForeman(),
-    ),
+    ///Графики 1 — заглушка: раздел строится в `_scheduleSection`.
+    const SizedBox.shrink(),
 
     ///Заявки 2
     const TaskScreenForeman(),
@@ -195,7 +217,7 @@ class _HomeForemanState extends State<HomeForeman> {
                             stream: myStream.stream,
                             builder: (context, ind) => Expanded(
                               flex: 9,
-                              child: _screensForeman[IntTest.indexScreensForeman],
+                              child: _screenAt(IntTest.indexScreensForeman),
                             ),
                           )
                         ],

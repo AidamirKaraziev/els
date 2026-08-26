@@ -62,6 +62,7 @@ class ScheduleSection extends StatelessWidget {
     required this.role,
     this.repository,
     this.initialFilters,
+    this.bloc,
     this.drawer = const MyDrawer(),
   }) : super(key: key);
 
@@ -78,8 +79,28 @@ class ScheduleSection extends StatelessWidget {
   /// подменяется в тестах.
   final SchedulesRepository? repository;
 
+  /// Готовый блок ленты, если им владеет оболочка.
+  ///
+  /// Оболочка подрядчика держит разделы не стопкой, а одной позицией в
+  /// дереве: уходя в «Заявки», человек выносит «Графики» из дерева целиком, и
+  /// созданный здесь блок умирает вместе с ними. Возвращаясь, он получал
+  /// чистую ленту — год снова текущий, отбор пуст. Поэтому блок живёт у
+  /// оболочки (`home_page.dart`, `home_foreman.dart`), а раздел его только
+  /// получает; закрывает его тоже она.
+  final SchedulesBloc? bloc;
+
   @override
   Widget build(BuildContext context) {
+    final SchedulesBloc? owned = bloc;
+    if (owned != null) {
+      // `value`, а не `create`: блок чужой, и закрыть его здесь значило бы
+      // оставить оболочку с мёртвой лентой на следующем заходе.
+      return BlocProvider<SchedulesBloc>.value(
+        value: owned,
+        child: SchedulesScreen(role: role, drawer: drawer),
+      );
+    }
+
     return BlocProvider<SchedulesBloc>(
       create: (_) => SchedulesBloc(
         repository: repository,

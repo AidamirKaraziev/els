@@ -25,7 +25,10 @@ class ScheduleWorkCardScreen extends StatelessWidget {
       create: (_) => WorkDetailsBloc(
         workId: workId,
         kind: WorkKind.maintenance,
-        phase: WorkPhase.submitted,
+        // Клетка ведёт в работу любого состояния: назначенную, идущую и
+        // закрытую. Фазы списка тут нет — иначе незакрытая работа приезжала
+        // бы как «ушла из ленты», а экран показывал бы пустоту.
+        phase: WorkPhase.standalone,
         repository: repository,
       )..add(const WorkDetailsRequested()),
       child: _CardView(objectName: objectName),
@@ -75,7 +78,14 @@ class _CardView extends StatelessWidget {
                     details: state.details,
                     isProblem: false,
                     showFinished: true,
-                    note: 'Информация о выполнении работы',
+                    // У назначенной работы времён нет ни одного, и блок
+                    // «Времена» остался бы пустым заголовком. Сноска говорит,
+                    // почему он пуст: работу ещё не делали.
+                    note: state.details.isFinished
+                        ? 'Информация о выполнении работы'
+                        : state.details.startedAt == null
+                            ? 'Работа ещё не начата'
+                            : 'Работа идёт',
                   ),
                 ],
               ),

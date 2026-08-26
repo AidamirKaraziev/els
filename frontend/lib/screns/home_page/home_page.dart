@@ -4,6 +4,7 @@ import 'package:els/screns/companies/view/company_page.dart';
 import 'package:els/screns/home/home_screen.dart';
 import 'package:els/screns/object/view/object_screen.dart';
 import 'package:els/screns/report/report_screen.dart';
+import 'package:els/screns/schedule/bloc/schedules_bloc.dart';
 import 'package:els/screns/schedule/models/schedule_filters.dart';
 import 'package:els/screns/schedule/view/schedule_section.dart';
 import 'package:els/screns/schedule/view/schedules_screen.dart';
@@ -62,15 +63,22 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  /// Раздел «Графики». Держится полем, а не строится заново на каждое
-  /// событие `myStream`: пересоздание сбрасывало бы у ленты прокрутку и уже
-  /// подгруженные страницы при любом переключении раздела.
-  Widget _scheduleSection = const ScheduleSection(role: ScheduleRole.admin);
+  /// Блок ленты «Графиков». Живёт у оболочки, а не внутри раздела: разделы
+  /// стоят в дереве одной позицией, и уход в «Заявки» выносит «Графики»
+  /// оттуда целиком. Блок внутри раздела умирал бы вместе с ними, и человек,
+  /// вернувшийся из другого раздела, получал бы год и отбор заново.
+  SchedulesBloc? _scheduleBloc;
 
   /// Счётчик заходов с главной. Он же ключ раздела: два клика подряд по
   /// одному участку обязаны дать чистую ленту, а не то, что человек успел
   /// нафильтровать внутри между ними.
   int _scheduleRequests = 0;
+
+  @override
+  void dispose() {
+    _scheduleBloc?.close();
+    super.dispose();
+  }
 
   /// Экран по индексу оболочки.
   ///
@@ -82,15 +90,23 @@ class _HomePageState extends State<HomePage> {
 
     final ScheduleFilters? requested = ScheduleSectionRequest.take();
     if (requested != null) {
-      _scheduleSection = ScheduleSection(
-        role: ScheduleRole.admin,
-        initialFilters: requested,
-        // Без ключа Flutter переиспользовал бы состояние прежней ленты, и
-        // новый фильтр приехал бы к старым строкам.
-        key: ValueKey<int>(++_scheduleRequests),
-      );
+      // Заход с главной начинает ленту с нуля: прежний отбор человек не
+      // просил, он нажал на участок. Старый блок закрываем — второго
+      // владельца у него нет.
+      _scheduleBloc?.close();
+      _scheduleBloc = SchedulesBloc(filters: requested);
+      ++_scheduleRequests;
     }
-    return _scheduleSection;
+
+    _scheduleBloc ??= SchedulesBloc();
+
+    return ScheduleSection(
+      role: ScheduleRole.admin,
+      bloc: _scheduleBloc,
+      // Ключ меняется только на заходе с главной: иначе Flutter переиспользовал
+      // бы состояние прежней ленты, и новый фильтр приехал бы к старым строкам.
+      key: ValueKey<int>(_scheduleRequests),
+    );
   }
 
   ///Список Страниц
