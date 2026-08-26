@@ -28,6 +28,7 @@ from src.api.api_v1.endpoints import (
     reason_fault,
     reports,
     role,
+    schedules,
     statistics,
     status,
     step,
@@ -80,4 +81,5 @@ api_router.include_router(statistics.router)
 api_router.include_router(submitted_works.router)
 api_router.include_router(in_progress_works.router)
 api_router.include_router(reports.router)
+api_router.include_router(schedules.router)
 api_router.include_router(files.router)

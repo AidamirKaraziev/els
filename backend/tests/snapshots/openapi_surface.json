@@ -453,6 +453,10 @@
     "required_body": [],
     "required_params": []
   },
+  "GET /api/v1/schedules/rows": {
+    "required_body": [],
+    "required_params": []
+  },
   "GET /api/v1/static/{filename}": {
     "required_body": [],
     "required_params": [
