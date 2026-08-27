@@ -5,6 +5,7 @@ import '../../../helper/my_drawer/my_drawer.dart';
 import '../bloc/schedules_bloc.dart';
 import '../models/schedule_filters.dart';
 import '../repository/schedules_repository.dart';
+import 'schedule_object_opener.dart';
 import 'schedules_screen.dart';
 
 /// Ширина, с которой оболочка приложения показывает боковое меню сама.
@@ -63,6 +64,7 @@ class ScheduleSection extends StatelessWidget {
     this.repository,
     this.initialFilters,
     this.bloc,
+    this.opener,
     this.drawer = const MyDrawer(),
   }) : super(key: key);
 
@@ -89,6 +91,11 @@ class ScheduleSection extends StatelessWidget {
   /// получает; закрывает его тоже она.
   final SchedulesBloc? bloc;
 
+  /// Чем открывать экран «График» по клику в строку. Даёт оболочка: экран
+  /// подрядчика показывается сменой её номера экрана, и раздел про это не
+  /// знает. Пусто — строка не открывается (так раздел живёт в тестах).
+  final ScheduleObjectOpener? opener;
+
   @override
   Widget build(BuildContext context) {
     final SchedulesBloc? owned = bloc;
@@ -97,7 +104,7 @@ class ScheduleSection extends StatelessWidget {
       // оставить оболочку с мёртвой лентой на следующем заходе.
       return BlocProvider<SchedulesBloc>.value(
         value: owned,
-        child: SchedulesScreen(role: role, drawer: drawer),
+        child: SchedulesScreen(role: role, drawer: drawer, opener: opener),
       );
     }
 
@@ -106,7 +113,7 @@ class ScheduleSection extends StatelessWidget {
         repository: repository,
         filters: initialFilters,
       ),
-      child: SchedulesScreen(role: role, drawer: drawer),
+      child: SchedulesScreen(role: role, drawer: drawer, opener: opener),
     );
   }
 }

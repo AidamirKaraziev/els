@@ -9,6 +9,7 @@ import '../models/schedule_filters.dart';
 import '../models/schedule_row.dart';
 import '../widgets/schedule_filters_bar.dart';
 import '../widgets/schedule_row_tile.dart';
+import 'schedule_object_opener.dart';
 import 'schedule_section.dart';
 import 'schedule_work_card_screen.dart';
 
@@ -19,9 +20,18 @@ class SchedulesScreen extends StatefulWidget {
     Key? key,
     this.role = ScheduleRole.admin,
     this.drawer = const MyDrawer(),
+    this.opener,
   }) : super(key: key);
 
   final ScheduleRole role;
+
+  /// Чем открывать экран «График» по клику в строку.
+  ///
+  /// Приходит снаружи, от оболочки: сам экран живёт на её номерах экранов, и
+  /// лента о них знать не должна. Пусто — клик по строке ничего не делает;
+  /// так лента собирается в тесте и не лезет ни в сеть, ни в глобальные
+  /// переменные подрядчика.
+  final ScheduleObjectOpener? opener;
 
   /// Боковое меню приложения. У прораба лента — корень раздела, и на узкой
   /// ширине это единственный способ уйти из «Графиков» куда-то ещё.
@@ -37,6 +47,12 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
 
   late ScrollController _scrollController;
   late SchedulesBloc _bloc;
+
+  /// Идёт подготовка экрана «График»: четыре запроса подряд.
+  ///
+  /// Пока они идут, лента закрыта индикатором. Иначе человек, не увидев
+  /// отклика, жмёт вторую строку — и уезжает на объект, которого не выбирал.
+  bool _opening = false;
 
   @override
   void initState() {
@@ -95,6 +111,30 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     );
   }
 
+  /// Клик мимо клеток открывает экран «График» этого объекта.
+  ///
+  /// Экран показывает все годы объекта сразу и своего года не выбирает —
+  /// год, выбранный в ленте, ему не передаём.
+  Future<void> _onRowTap(ScheduleRow row) async {
+    final ScheduleObjectOpener? opener = widget.opener;
+    if (opener == null || _opening) return;
+
+    setState(() => _opening = true);
+    try {
+      await opener.open(row);
+    } catch (_) {
+      // Текст ошибки не показываем: за ним стоит ответ ручки, человеку он
+      // ничего не объясняет. Важно другое — он остался в ленте, а не смотрит
+      // на пустой экран графика.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось открыть график: ${row.nameLabel}')),
+      );
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
   /// Любая перемена отбора — фильтр, год или поиск — это один и тот же запрос
   /// с первой страницы.
   void _onFiltersChanged(ScheduleFilters filters) {
@@ -126,7 +166,20 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                 options: state.options,
                 onChanged: _onFiltersChanged,
               ),
-              Expanded(child: _body(state)),
+              Expanded(
+                child: Stack(
+                  children: <Widget>[
+                    _body(state),
+                    // Заслонка поверх ленты, а не вместо неё: список остаётся
+                    // на месте, и после ошибки человек видит то же, что и до
+                    // клика.
+                    if (_opening) ...<Widget>[
+                      const ModalBarrier(dismissible: false, color: Colors.black12),
+                      const Center(child: CircularProgressIndicator()),
+                    ],
+                  ],
+                ),
+              ),
             ],
           );
         },
@@ -192,9 +245,12 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
               itemBuilder: (BuildContext context, int index) {
                 if (index == state.rows.length) return footer!;
 
+                final ScheduleRow row = state.rows[index];
+
                 return ScheduleRowTile(
-                  row: state.rows[index],
+                  row: row,
                   onCellTap: _onCellTap,
+                  onRowTap: widget.opener == null ? null : () => _onRowTap(row),
                 );
               },
             );

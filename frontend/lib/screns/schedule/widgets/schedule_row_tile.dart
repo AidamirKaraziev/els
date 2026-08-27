@@ -18,9 +18,18 @@ class ScheduleRowTile extends StatelessWidget {
     Key? key,
     required this.row,
     required this.onCellTap,
+    this.onRowTap,
   }) : super(key: key);
 
   final ScheduleRow row;
+
+  /// Клик мимо клеток: открыть экран «График» этого объекта.
+  ///
+  /// Клетка своё нажатие забирает себе — у неё свой `InkWell` внутри, и
+  /// карточка работы по-прежнему открывается ею. Пустой месяц нажатия не
+  /// перехватывает, и клик по нему считается кликом в строку: за ним нет
+  /// работы, зато есть объект, которому график только предстоит завести.
+  final VoidCallback? onRowTap;
 
   /// Наверх уходит и строка, и клетка: карточке работы нужно название объекта
   /// для шапки, а по одной клетке его не восстановить.
@@ -44,10 +53,18 @@ class ScheduleRowTile extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints constraints) {
         final bool wide = constraints.maxWidth >= kWideLayout;
 
-        return Container(
+        final Widget content = Container(
           color: ColorApp.myColorWhite,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           child: wide ? _wide(context) : _narrow(context),
+        );
+
+        final VoidCallback? tap = onRowTap;
+        if (tap == null) return content;
+
+        return Material(
+          color: ColorApp.myColorWhite,
+          child: InkWell(onTap: tap, child: content),
         );
       },
     );

@@ -45,6 +45,7 @@ ScheduleRow _row() {
 Future<List<Object?>> _pump(
   WidgetTester tester, {
   required void Function(ScheduleRow, MonthCell) onCellTap,
+  VoidCallback? onRowTap,
   double width = 400,
 }) async {
   tester.view.physicalSize = Size(width, 900.0);
@@ -54,7 +55,11 @@ Future<List<Object?>> _pump(
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
-        body: ScheduleRowTile(row: _row(), onCellTap: onCellTap),
+        body: ScheduleRowTile(
+          row: _row(),
+          onCellTap: onCellTap,
+          onRowTap: onRowTap,
+        ),
       ),
     ),
   );
@@ -92,6 +97,57 @@ void main() {
     await tester.pump();
 
     expect(taps, 0);
+  });
+
+  testWidgets('клик по занятой клетке не считается кликом в строку',
+      (WidgetTester tester) async {
+    int rowTaps = 0;
+
+    await _pump(
+      tester,
+      onCellTap: (ScheduleRow _, MonthCell __) {},
+      onRowTap: () => rowTaps++,
+    );
+
+    await tester.tap(find.byTooltip('Январь · ТО 1 · выполнено'));
+    await tester.pump();
+
+    // Клетка забирает нажатие себе: иначе одним пальцем открывались бы сразу
+    // и карточка работы, и экран графика.
+    expect(rowTaps, 0);
+  });
+
+  testWidgets('клик по пустому месяцу открывает строку',
+      (WidgetTester tester) async {
+    int rowTaps = 0;
+
+    await _pump(
+      tester,
+      onCellTap: (ScheduleRow _, MonthCell __) {},
+      onRowTap: () => rowTaps++,
+    );
+
+    // За пустым месяцем работы нет, и перехватывать нажатие ему нечем. Клик
+    // достаётся строке — объекту, которому график как раз и предстоит завести.
+    await tester.tap(find.byTooltip('Февраль · ТО не назначено'));
+    await tester.pump();
+
+    expect(rowTaps, 1);
+  });
+
+  testWidgets('клик мимо клеток открывает строку', (WidgetTester tester) async {
+    int rowTaps = 0;
+
+    await _pump(
+      tester,
+      onCellTap: (ScheduleRow _, MonthCell __) {},
+      onRowTap: () => rowTaps++,
+    );
+
+    await tester.tap(find.text('ТЦ Карнавал 3 этаж 1'));
+    await tester.pump();
+
+    expect(rowTaps, 1);
   });
 
   testWidgets('в тултипе есть и месяц, и вид работы, и состояние',
