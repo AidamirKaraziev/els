@@ -8,12 +8,49 @@
 .PHONY: help up down logs ps sync dev lint format test test-db-up test-db-down \
         web-build web-logs vault-check release build migrate migrate-status \
         openapi-update prod-deploy prod-ps prod-logs prod-down prod-nginx \
-        cert-staging cert-issue cert-renew cert-renew-dry cert-info
+        cert-staging cert-issue cert-renew cert-renew-dry cert-info \
+        guard-not-prod
 
 # Пути внутри compose-файлов относительны корня, поэтому --project-directory .
 COMPOSE := docker compose --project-directory . -f infra/docker-compose.yml
 COMPOSE_TEST := docker compose --project-directory . --env-file .test.env -f infra/docker-compose.test.yml
 COMPOSE_PROD := docker compose --project-directory . -f infra/docker-compose.prod.yml
+
+# Защита от сборки образов на прод-сервере.
+#
+# Один запуск `make up` на боевой машине 27.08.2026 оставил после себя ~4,5 ГБ:
+# кэш сборки, локальные els-backend/els-frontend и слои <none>. Диск ушёл в
+# 99%. Собирать там нельзя и по существу: фронт требует несколько гигабайт
+# памяти, а на машине один гигабайт — dart2js падает по OOM. Прод берёт
+# готовые образы из ghcr.io через `make prod-deploy`.
+#
+# Признак прод-машины — любой из двух:
+#   * файл-метка /etc/els-prod (создаётся на сервере руками);
+#   * меньше 3 ГиБ оперативной памяти (на такой машине сборка всё равно
+#     не пройдёт). Проверка читает /proc/meminfo, поэтому на macOS молчит.
+#
+# Осознанно собрать всё же можно: ELS_ALLOW_BUILD=1 make build
+guard-not-prod:
+	@if [ "$$ELS_ALLOW_BUILD" = "1" ]; then exit 0; fi; \
+	reason=""; \
+	if [ -f /etc/els-prod ]; then reason="есть метка /etc/els-prod"; \
+	elif [ -r /proc/meminfo ]; then \
+		kb=$$(awk '/^MemTotal:/{print $$2}' /proc/meminfo); \
+		if [ -n "$$kb" ] && [ "$$kb" -lt 3145728 ]; then \
+			reason="памяти всего $$((kb / 1024)) МБ — сборка фронта упадёт по OOM"; \
+		fi; \
+	fi; \
+	if [ -n "$$reason" ]; then \
+		echo; \
+		echo "!!! Похоже на прод-машину: $$reason."; \
+		echo "    Сборка здесь забивает диск (~4,5 ГБ за запуск) и не нужна:"; \
+		echo "    образы собирает CI, прод их только скачивает."; \
+		echo; \
+		echo "    Выкат на проде:   make prod-deploy"; \
+		echo "    Если всё же надо: ELS_ALLOW_BUILD=1 make <цель>"; \
+		echo; \
+		exit 1; \
+	fi
 
 help:
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -28,7 +65,7 @@ help:
 # намеренно: иначе на проде миграции накатывались бы дважды, из Makefile и
 # из контейнера. Роль `release` в другом — дождаться результата и не
 # отрапортовать успех, если бэкенд не поднялся.
-release:  ## собрать фронт и бэк, накатить миграции, дождаться готовности
+release: guard-not-prod  ## собрать фронт и бэк, накатить миграции, дождаться готовности
 	@echo "==> Сборка образов"
 	$(COMPOSE) build backend frontend
 	@echo
@@ -51,7 +88,7 @@ release:  ## собрать фронт и бэк, накатить миграц�
 	@echo "  API:     http://localhost:$${WEB_PORT:-8080}/api/v1"
 	@echo "  Swagger: http://localhost:$${WEB_PORT:-8080}/docs"
 
-build:  ## только пересобрать образы фронта и бэка, не трогая запущенный стек
+build: guard-not-prod  ## только пересобрать образы фронта и бэка, не трогая запущенный стек
 	$(COMPOSE) build backend frontend
 
 ## --- прод (запускать НА СЕРВЕРЕ) ---
@@ -126,6 +163,14 @@ prod-deploy:  ## на сервере: забрать образы этого к�
 	@$(COMPOSE_PROD) exec -T backend alembic current
 	@echo
 	@$(COMPOSE_PROD) images
+	@echo
+	@# Прошлая сборка остаётся на диске под тем же тегом без имени — по ~360 МБ
+	@# за выкат. На 15 ГБ это упирается в потолок за несколько десятков
+	@# деплоев. Убираем только висячие образы: те, что заняты работающими
+	@# контейнерами, `image prune` без -a не трогает, откат по тегу
+	@# IMAGE_TAG=sha-<хеш> при этом просто скачает образ заново.
+	@echo "==> Уборка образов от прошлых выкатов"
+	@docker image prune -f
 
 ## --- сертификат Let's Encrypt (запускать НА СЕРВЕРЕ) ---
 
@@ -194,7 +239,7 @@ migrate-status:  ## какая ревизия alembic сейчас в базе
 
 ## --- стек целиком ---
 
-up:  ## поднять весь стек в docker (веб на http://localhost:8080)
+up: guard-not-prod  ## поднять весь стек в docker (веб на http://localhost:8080)
 	$(COMPOSE) up -d --build
 	@echo
 	@echo "  Веб:     http://localhost:$${WEB_PORT:-8080}"
@@ -212,7 +257,7 @@ logs:  ## логи стека
 
 ## --- фронт ---
 
-web-build:  ## пересобрать веб-сборку фронта (первый раз тянет ~1 ГБ образ Flutter)
+web-build: guard-not-prod  ## пересобрать веб-сборку фронта (первый раз тянет ~1 ГБ образ Flutter)
 	$(COMPOSE) build frontend
 
 web-logs:  ## логи nginx с веб-сборкой

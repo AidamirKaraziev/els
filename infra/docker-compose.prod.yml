@@ -23,6 +23,14 @@ services:
     image: postgres:13
     container_name: postgres
     restart: unless-stopped
+    # Потолок на логи. По умолчанию json-file пишет без предела, и на диске в
+    # 15 ГБ разговорчивый контейнер однажды займёт всё. 10 МБ x 3 файла = 30 МБ
+    # на сервис — на разбор недавнего инцидента хватает.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-${DB_PASS}}
@@ -64,6 +72,11 @@ services:
     image: ${BACKEND_IMAGE:-ghcr.io/aidamirkaraziev/els-backend}:${IMAGE_TAG:-latest}
     container_name: backend
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       # Внутри сети compose база всегда postgres:5432. В .env лежат настройки
       # для запуска с хоста, и если их не перебить, контейнер стучится сам
@@ -108,6 +121,11 @@ services:
     image: ${FRONTEND_IMAGE:-ghcr.io/aidamirkaraziev/els-frontend}:${IMAGE_TAG:-latest}
     container_name: frontend
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       - backend
     ports:
