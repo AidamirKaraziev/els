@@ -420,6 +420,13 @@
       "object_id"
     ]
   },
+  "GET /api/v1/planned-to/preview/": {
+    "required_body": [],
+    "required_params": [
+      "object_id",
+      "year"
+    ]
+  },
   "GET /api/v1/planned-to/schedule-execution-stats/": {
     "required_body": [],
     "required_params": [

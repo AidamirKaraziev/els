@@ -29,6 +29,7 @@ from src.api.api_v1.endpoints import (
     reason_fault,
     reports,
     role,
+    schedule_plan,
     schedules,
     statistics,
     status,
@@ -47,6 +48,10 @@ api_router = APIRouter()
 
 # Первым — чтобы вход было видно в начале схемы, а не между справочниками.
 api_router.include_router(auth.router)
+# Раньше `planned_to`: там живёт `/planned-to/{planned_to_id}/`, и
+# зарегистрированный первым он перехватил бы `/planned-to/preview/`,
+# попытавшись прочитать «preview» как id.
+api_router.include_router(schedule_plan.router)
 api_router.include_router(planned_to.router)
 api_router.include_router(universal_user.router)
 api_router.include_router(admin.router)
