@@ -6,6 +6,7 @@ import '../../../helper/my_drawer/my_drawer.dart';
 import '../bloc/schedules_bloc.dart';
 import '../models/month_cell.dart';
 import '../models/schedule_filters.dart';
+import '../models/schedule_role.dart';
 import '../models/schedule_row.dart';
 import '../widgets/schedule_filters_bar.dart';
 import '../widgets/schedule_row_tile.dart';
@@ -13,7 +14,10 @@ import 'schedule_object_opener.dart';
 import 'schedule_section.dart';
 import 'schedule_work_card_screen.dart';
 
-enum ScheduleRole { admin, foreman }
+// Перечисление переехало в `models/schedule_role.dart`: его берёт и экран
+// объекта. Реэкспорт оставлен, чтобы места встраивания (`home_page.dart`,
+// `home_foreman.dart`) и тесты продолжали видеть его здесь.
+export '../models/schedule_role.dart';
 
 class SchedulesScreen extends StatefulWidget {
   const SchedulesScreen({
