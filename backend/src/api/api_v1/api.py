@@ -20,6 +20,7 @@ from src.api.api_v1.endpoints import (
     foreman,
     in_progress_works,
     location,
+    maintenance_program,
     object,
     order,
     order_photo,
@@ -82,4 +83,5 @@ api_router.include_router(submitted_works.router)
 api_router.include_router(in_progress_works.router)
 api_router.include_router(reports.router)
 api_router.include_router(schedules.router)
+api_router.include_router(maintenance_program.router)
 api_router.include_router(files.router)

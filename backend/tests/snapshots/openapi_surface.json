@@ -297,6 +297,22 @@
       "location_id"
     ]
   },
+  "GET /api/v1/maintenance-program/all/": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/maintenance-program/by-model/{factory_model_id}/": {
+    "required_body": [],
+    "required_params": [
+      "factory_model_id"
+    ]
+  },
+  "GET /api/v1/maintenance-program/by-model/{factory_model_id}/suggestion/": {
+    "required_body": [],
+    "required_params": [
+      "factory_model_id"
+    ]
+  },
   "GET /api/v1/object/by-client/": {
     "required_body": [],
     "required_params": [
@@ -1036,6 +1052,14 @@
     ],
     "required_params": [
       "location_id"
+    ]
+  },
+  "PUT /api/v1/maintenance-program/by-model/{factory_model_id}/": {
+    "required_body": [
+      "items"
+    ],
+    "required_params": [
+      "factory_model_id"
     ]
   },
   "PUT /api/v1/object/{object_id}/": {
