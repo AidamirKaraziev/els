@@ -36,7 +36,7 @@ class ScheduleObjectPreviewApp extends StatelessWidget {
       ],
       supportedLocales: const <Locale>[Locale('ru', '')],
       theme: ThemeData(textTheme: GoogleFonts.ubuntuTextTheme()),
-      home: const ScheduleObjectScreen(
+      home: ScheduleObjectScreen(
         objectId: 1,
         repository: FixtureScheduleObjectRepository(),
         role: ScheduleRole.admin,

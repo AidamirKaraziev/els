@@ -1,0 +1,222 @@
+import 'package:flutter/material.dart';
+
+import '../../../../helper/class_colors.dart';
+import '../../models/month_cell.dart';
+import '../../models/schedule_role.dart';
+import '../../widgets/month_strip.dart';
+import '../../widgets/schedule_year_picker.dart';
+import 'object_block.dart';
+
+/// Блок «Техническое обслуживание»: годовая лента плановых ТО.
+///
+/// Расхождения с кадром `1182:232`, принятые сознательно:
+///
+/// * **Переключателя года в кадре нет** — лента там одна и без года. Год
+///   переключается по решению заказчика от 27 августа (пункт 8), и ставить
+///   его больше некуда: он управляет всей лентой.
+/// * **Подписей на клетках в кадре тоже нет** — ни вида ТО, ни месяца.
+///   Показываем то, что влезает: «ТО 1» внутри клетки на широкой ленте и
+///   «Янв» под ней. Без них месяц приходится отсчитывать пальцем, а вид
+///   работы не виден вовсе.
+/// * **Цвета — насыщенные из палитры проекта**, а не бледные плашки кадра.
+///   Те же пять состояний, что в ленте раздела «Графики» (решение 11): один
+///   и тот же месяц не может быть в двух местах разного цвета.
+/// * **Иконок выгрузки и дефектных актов рядом с заголовком нет** — это S3.
+///   Строка «11 января – 17 января» из кадра относится к списку работ под
+///   лентой, он приходит в S2.3.
+class ObjectScheduleCard extends StatelessWidget {
+  const ObjectScheduleCard({
+    Key? key,
+    required this.year,
+    required this.cells,
+    required this.onYearChanged,
+    required this.onCellTap,
+    this.role = ScheduleRole.admin,
+    this.isLoading = false,
+    this.isGenerating = false,
+    this.error,
+    this.onGenerate,
+  }) : super(key: key);
+
+  final int year;
+  final List<MonthCell> cells;
+  final ValueChanged<int> onYearChanged;
+  final ValueChanged<MonthCell> onCellTap;
+
+  /// Чьими глазами открыт экран. График расставляют админ и прораб
+  /// (`planned_to:write`); остальным кнопки создания не показываем — она
+  /// всё равно вернула бы 403.
+  final ScheduleRole role;
+
+  final bool isLoading;
+  final bool isGenerating;
+
+  /// Что не получилось с лентой. Текст готовый, прямо от ручки.
+  final String? error;
+
+  final VoidCallback? onGenerate;
+
+  /// Ширина, ниже которой подпись «Плановые ТО» встаёт над лентой.
+  ///
+  /// Рядом с лентой она держится только на широком экране: на телефоне
+  /// подпись и двенадцать клеток в одну строку дают клетки по три пикселя.
+  static const double _inlineLabelWidth = 620.0;
+
+  bool get _hasNoSchedule =>
+      cells.every((MonthCell cell) => cell.status == MonthStatus.none);
+
+  bool get _canGenerate =>
+      role == ScheduleRole.admin || role == ScheduleRole.foreman;
+
+  @override
+  Widget build(BuildContext context) {
+    return ObjectBlock(
+      title: 'Техническое обслуживание',
+      titleTrailing: ScheduleYearPicker(year: year, onChanged: onYearChanged),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16.0),
+        decoration: objectCardDecoration(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _strip(context),
+            if (error != null) ...<Widget>[
+              const SizedBox(height: 12.0),
+              _Message(text: error!, color: ColorApp.myColorRed),
+            ],
+            if (_hasNoSchedule && !isLoading && error == null) ...<Widget>[
+              const SizedBox(height: 16.0),
+              _Message(
+                text: 'График на $year год не заводили',
+                color: ColorApp.myColorGray,
+              ),
+              if (_canGenerate && onGenerate != null) ...<Widget>[
+                const SizedBox(height: 12.0),
+                _GenerateButton(
+                  year: year,
+                  isGenerating: isGenerating,
+                  onPressed: onGenerate!,
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _strip(BuildContext context) {
+    final Widget label = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        const Flexible(
+          child: Text(
+            'Плановые ТО',
+            style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w500),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (isLoading) ...<Widget>[
+          const SizedBox(width: 8.0),
+          const SizedBox(
+            width: 12.0,
+            height: 12.0,
+            child: CircularProgressIndicator(strokeWidth: 2.0),
+          ),
+        ],
+      ],
+    );
+
+    final Widget strip = MonthStrip(
+      cells: cells,
+      onCellTap: onCellTap,
+      showMonthLabels: true,
+    );
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        if (constraints.maxWidth < _inlineLabelWidth) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              label,
+              const SizedBox(height: 12.0),
+              strip,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            // Подпись фиксированной ширины: иначе лента разъезжается по
+            // ширине от того, крутится ли рядом кружок загрузки.
+            SizedBox(width: 160.0, child: label),
+            const SizedBox(width: 16.0),
+            Expanded(child: strip),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Строка пояснения под лентой: пустой год или неудача.
+class _Message extends StatelessWidget {
+  const _Message({Key? key, required this.text, required this.color})
+      : super(key: key);
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(fontSize: 13.0, color: color),
+    );
+  }
+}
+
+/// «Создать график на 2027».
+class _GenerateButton extends StatelessWidget {
+  const _GenerateButton({
+    Key? key,
+    required this.year,
+    required this.isGenerating,
+    required this.onPressed,
+  }) : super(key: key);
+
+  final int year;
+  final bool isGenerating;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      // Пока идёт создание, кнопка выключена: ручка от повтора не портится,
+      // но два запроса из одного нажатия — не то, что человек имел в виду.
+      onPressed: isGenerating ? null : onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: ColorApp.myColorGreenAuth,
+        foregroundColor: ColorApp.myColorWhite,
+        elevation: 0.0,
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8.0),
+        ),
+      ),
+      child: isGenerating
+          ? const SizedBox(
+              width: 16.0,
+              height: 16.0,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.0,
+                color: ColorApp.myColorWhite,
+              ),
+            )
+          : Text('Создать график на $year'),
+    );
+  }
+}

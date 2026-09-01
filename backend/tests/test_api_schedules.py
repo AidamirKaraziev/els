@@ -186,6 +186,36 @@ class TestFiltersAndSearch:
         assert [row["object_id"] for row in data] == [wanted.id]
 
     @pytest.mark.integration
+    def test_object_id_leaves_one_row(
+        self, client_with_db, as_role, make_object, plan_to
+    ):
+        # Лента в окне графика объекта: одна строка с посчитанными клетками,
+        # а не вся выдача, из которой фронт выбирал бы нужную строку сам.
+        wanted = make_object()
+        plan_to(wanted, months={today().month: datetime.datetime.now()})
+        make_object()
+        as_role(ADMIN)
+
+        data = _data(client_with_db.get(URL, params={"object_id": wanted.id}))
+
+        assert [row["object_id"] for row in data] == [wanted.id]
+        assert len(data[0]["cells"]) == 12
+
+    @pytest.mark.integration
+    def test_object_id_outside_the_scope_gives_nothing(
+        self, client_with_db, as_role, make_object
+    ):
+        # Механик видит только закреплённые за ним объекты, и `object_id`
+        # эту границу не двигает: он выбор внутри видимого, а не способ
+        # спросить чужой лифт.
+        alien = make_object()
+        as_role(MECHANIC)
+
+        data = _data(client_with_db.get(URL, params={"object_id": alien.id}))
+
+        assert data == []
+
+    @pytest.mark.integration
     def test_schedule_state_filter(
         self, client_with_db, as_role, make_object, plan_to
     ):

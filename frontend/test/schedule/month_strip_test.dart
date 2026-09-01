@@ -54,8 +54,9 @@ Future<void> _pumpCells(
   WidgetTester tester,
   double width,
   List<MonthCell> cells,
-  ValueChanged<MonthCell> onCellTap,
-) async {
+  ValueChanged<MonthCell> onCellTap, {
+  bool showMonthLabels = false,
+}) async {
   tester.view.physicalSize = const Size(1600.0, 400.0);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -66,7 +67,11 @@ Future<void> _pumpCells(
         body: Center(
           child: SizedBox(
             width: width,
-            child: MonthStrip(cells: cells, onCellTap: onCellTap),
+            child: MonthStrip(
+              cells: cells,
+              onCellTap: onCellTap,
+              showMonthLabels: showMonthLabels,
+            ),
           ),
         ),
       ),
@@ -160,6 +165,36 @@ void main() {
       }.length,
       4,
     );
+  });
+
+  testWidgets('в ленте объектов месяцы не подписаны', (WidgetTester tester) async {
+    // Раздел «Графики» флага не ставит, и подписи там появиться не должны:
+    // двенадцать одинаковых колонок подписаны один раз шапкой списка.
+    await _pumpCells(tester, 700, _mixedCells(), (MonthCell _) {});
+
+    expect(find.text('Янв'), findsNothing);
+    expect(find.text('Дек'), findsNothing);
+  });
+
+  testWidgets('с подписями месяц назван один раз, а не дважды',
+      (WidgetTester tester) async {
+    await _pumpCells(tester, 400, _mixedCells(), (MonthCell _) {},
+        showMonthLabels: true);
+
+    expect(find.text('Янв'), findsOneWidget);
+    expect(find.text('Дек'), findsOneWidget);
+    // На этой ширине клетка показывала бы номер месяца — с подписью снизу он
+    // повторял бы её же.
+    expect(find.text('1'), findsNothing);
+  });
+
+  testWidgets('на макетной ширине подписи не появляются даже по флагу',
+      (WidgetTester tester) async {
+    // Клетка в 15 px подпись не вмещает, и растягивать ленту ради неё нельзя.
+    await _pumpCells(tester, 213, _mixedCells(), (MonthCell _) {},
+        showMonthLabels: true);
+
+    expect(find.text('Янв'), findsNothing);
   });
 
   testWidgets('клик по клетке отдаёт её работу', (WidgetTester tester) async {

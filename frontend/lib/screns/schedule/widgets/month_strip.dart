@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../helper/calendar/month_picker.dart' show kMonthsNominative;
+import '../../../helper/calendar/month_picker.dart'
+    show kMonthsNominative, kMonthsShort;
+import '../../../helper/class_colors.dart';
 import '../models/month_cell.dart';
 
 /// Годовая лента: двенадцать клеток месяцев в ряд.
@@ -15,10 +17,20 @@ class MonthStrip extends StatelessWidget {
     Key? key,
     required this.cells,
     required this.onCellTap,
+    this.showMonthLabels = false,
   }) : super(key: key);
 
   final List<MonthCell> cells;
   final ValueChanged<MonthCell> onCellTap;
+
+  /// Подписывать ли месяцы под клетками.
+  ///
+  /// В ленте объектов — нет: там двенадцать одинаковых колонок у всех строк
+  /// сразу, и подпись, повторённая у каждого объекта, только шумит. На экране
+  /// одного объекта лента единственная, и без подписи месяц приходится
+  /// пересчитывать пальцем. По умолчанию выключено — раздел «Графики»
+  /// остаётся таким, каким был.
+  final bool showMonthLabels;
 
   /// Зазор между клетками — как в макете (кадр `83:312`: шаг 18 при клетке 15).
   static const double _gap = 3;
@@ -59,11 +71,21 @@ class MonthStrip extends StatelessWidget {
             width: width,
             height: height,
             onTap: onCellTap,
+            // Подпись «Янв» кеглем 9 требует места: на макетной клетке в
+            // 15 px она превратилась бы в обрезок буквы. Клетка при этом не
+            // растягивается — лучше лента без подписей, чем лента, которая
+            // из-за подписей поехала.
+            monthLabel: showMonthLabels && width >= 24
+                ? kMonthsShort[cells[i].month - 1]
+                : null,
           ));
         }
 
         return Row(
           mainAxisSize: MainAxisSize.min,
+          // Клетки равняются по верху: с подписями месяцев столбики разной
+          // высоты, и по центру лента поехала бы вверх-вниз.
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: children,
         );
       },
@@ -78,12 +100,16 @@ class _MonthPill extends StatelessWidget {
     required this.width,
     required this.height,
     required this.onTap,
+    this.monthLabel,
   }) : super(key: key);
 
   final MonthCell cell;
   final double width;
   final double height;
   final ValueChanged<MonthCell> onTap;
+
+  /// «Янв» под клеткой. `null` — подписи нет.
+  final String? monthLabel;
 
   /// Подпись выбирается по тому, что реально влезло.
   ///
@@ -94,7 +120,9 @@ class _MonthPill extends StatelessWidget {
   /// ничего — на макетной. Всё остальное всегда есть в тултипе.
   String get _label {
     if (width >= 30) return cell.label;
-    if (width >= 16) return cell.shortLabel;
+    // Номер месяца в клетке нужен, только пока месяц не подписан снизу: с
+    // подписью «Янв» цифра 1 над ней — то же самое, сказанное дважды.
+    if (width >= 16 && monthLabel == null) return cell.shortLabel;
     return '';
   }
 
@@ -137,7 +165,7 @@ class _MonthPill extends StatelessWidget {
             ),
     );
 
-    return Tooltip(
+    final Widget pill = Tooltip(
       message: _tooltip,
       // Пустой месяц открывать нечего — он и не кликается. `InkWell` поверх
       // него дал бы отклик на нажатие, за которым ничего не происходит.
@@ -151,6 +179,31 @@ class _MonthPill extends StatelessWidget {
               ),
             )
           : content,
+    );
+
+    final String? month = monthLabel;
+    if (month == null) {
+      return pill;
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        pill,
+        const SizedBox(height: 4),
+        SizedBox(
+          width: width,
+          child: Text(
+            month,
+            style: const TextStyle(
+              fontSize: 9,
+              color: ColorApp.myColorGrayText,
+            ),
+            maxLines: 1,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
     );
   }
 }

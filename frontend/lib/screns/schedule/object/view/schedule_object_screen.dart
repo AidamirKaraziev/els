@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../helper/class_colors.dart';
+import '../../models/month_cell.dart';
 import '../../models/schedule_role.dart';
 import '../bloc/schedule_object_bloc.dart';
 import '../models/schedule_object_card.dart';
@@ -9,13 +10,15 @@ import '../repository/schedule_object_repository.dart';
 import '../widgets/object_info_card.dart';
 import '../widgets/object_map_card.dart';
 import '../widgets/object_responsibles_card.dart';
+import '../widgets/object_schedule_card.dart';
 
 /// Экран «График объекта».
 ///
-/// Каркас: три верхних блока кадра `1182:232` — «Информация об объекте»
-/// слева, «Местоположение» и «Ответственные» справа. Лента месяцев и список
-/// работ под ней — `S2.2` и `S2.3`; места под них здесь ещё нет намеренно,
-/// чтобы пустые заглушки не выглядели сломанным экраном.
+/// Три верхних блока кадра `1182:232` — «Информация об объекте» слева,
+/// «Местоположение» и «Ответственные» справа — и блок «Техническое
+/// обслуживание» с годовой лентой под ними. Список работ под лентой — `S2.3`;
+/// места под него здесь ещё нет намеренно, чтобы пустая заглушка не выглядела
+/// сломанным экраном.
 ///
 /// Экран заводится **рядом** со старым `SchedulePage` подрядчика, а не вместо
 /// него: тот в проде, на нём висят все действия с ТО, и переключать на новый
@@ -27,22 +30,25 @@ class ScheduleObjectScreen extends StatelessWidget {
     required this.repository,
     this.role = ScheduleRole.admin,
     this.objectName,
+    this.initialYear,
   }) : super(key: key);
 
   final int objectId;
 
-  /// Откуда берётся карточка. Обязателен: в `S2.1` под ним фикстура, в `S2.2`
-  /// — сеть, и умолчания у него быть не должно.
+  /// Откуда берутся карточка и лента. Обязателен: под ним стоит либо
+  /// фикстура, либо сеть, и умолчания у него быть не должно.
   final ScheduleObjectRepository repository;
 
-  /// Чьими глазами открыт экран. Три блока кадра у ролей одинаковые, и здесь
-  /// роль пока ничего не меняет: она нужна ленте месяцев в `S2.2`, где у
-  /// прораба нет создания графика.
+  /// Чьими глазами открыт экран. Три верхних блока у ролей одинаковые; роль
+  /// решает, показывать ли кнопку создания графика.
   final ScheduleRole role;
 
   /// Название объекта для шапки, если место вызова его знает. Лента знает —
   /// и тогда человек видит, чей график открыл, ещё до загрузки карточки.
   final String? objectName;
+
+  /// Год, с которого открывается лента. По умолчанию текущий — решение 8.
+  final int? initialYear;
 
   @override
   Widget build(BuildContext context) {
@@ -50,14 +56,19 @@ class ScheduleObjectScreen extends StatelessWidget {
       create: (_) => ScheduleObjectBloc(
         repository: repository,
         objectId: objectId,
+        initialYear: initialYear,
       )..add(const ScheduleObjectRequested()),
-      child: _ScheduleObjectView(objectName: objectName),
+      child: _ScheduleObjectView(objectName: objectName, role: role),
     );
   }
 }
 
 class _ScheduleObjectView extends StatelessWidget {
-  const _ScheduleObjectView({Key? key, this.objectName}) : super(key: key);
+  const _ScheduleObjectView({
+    Key? key,
+    this.objectName,
+    required this.role,
+  }) : super(key: key);
 
   /// Ширина, ниже которой две колонки кадра встают одна под другой.
   ///
@@ -66,6 +77,7 @@ class _ScheduleObjectView extends StatelessWidget {
   static const double _twoColumnsWidth = 1000.0;
 
   final String? objectName;
+  final ScheduleRole role;
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +102,11 @@ class _ScheduleObjectView extends StatelessWidget {
             return _Failure(message: state.message);
           }
           if (state is ScheduleObjectLoaded) {
-            return _Content(card: state.card, twoColumnsWidth: _twoColumnsWidth);
+            return _Content(
+              state: state,
+              role: role,
+              twoColumnsWidth: _twoColumnsWidth,
+            );
           }
           return const Center(child: CircularProgressIndicator());
         },
@@ -102,15 +118,18 @@ class _ScheduleObjectView extends StatelessWidget {
 class _Content extends StatelessWidget {
   const _Content({
     Key? key,
-    required this.card,
+    required this.state,
+    required this.role,
     required this.twoColumnsWidth,
   }) : super(key: key);
 
-  final ScheduleObjectCard card;
+  final ScheduleObjectLoaded state;
+  final ScheduleRole role;
   final double twoColumnsWidth;
 
   @override
   Widget build(BuildContext context) {
+    final ScheduleObjectCard card = state.card;
     final bool wide = MediaQuery.of(context).size.width >= twoColumnsWidth;
     final Widget info = ObjectInfoCard(card: card);
     final Widget right = Column(
@@ -119,6 +138,25 @@ class _Content extends StatelessWidget {
         ObjectMapCard(geo: card.geo),
         const SizedBox(height: 24.0),
         ObjectResponsiblesCard(card: card),
+        const SizedBox(height: 24.0),
+        ObjectScheduleCard(
+          year: state.year,
+          cells: state.cells,
+          role: role,
+          isLoading: state.isYearLoading,
+          isGenerating: state.isGenerating,
+          error: state.yearError,
+          onYearChanged: (int year) => context
+              .read<ScheduleObjectBloc>()
+              .add(ScheduleObjectYearRequested(year)),
+          onGenerate: () => context
+              .read<ScheduleObjectBloc>()
+              .add(const ScheduleObjectGenerateRequested()),
+          // Клик по клетке открывает карточку работы — это `S2.3`. Пока
+          // клетка молчит: заглушка, которая «нажимается» и ничего не
+          // делает, хуже клетки, которая честно не нажимается.
+          onCellTap: (MonthCell cell) {},
+        ),
       ],
     );
 
@@ -129,7 +167,7 @@ class _Content extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 // Пропорция колонок с кадра: узкая карточка полей и широкая
-                // правая часть, куда в `S2.2` ляжет лента месяцев.
+                // правая часть с картой, ответственными и лентой месяцев.
                 Expanded(flex: 4, child: info),
                 const SizedBox(width: 24.0),
                 Expanded(flex: 7, child: right),

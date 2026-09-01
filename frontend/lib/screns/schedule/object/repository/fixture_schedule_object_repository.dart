@@ -1,27 +1,39 @@
+import '../../models/month_cell.dart';
 import '../models/schedule_object_card.dart';
 import '../models/schedule_responsible.dart';
 import 'schedule_object_repository.dart';
 
-/// Карточка объекта из кадра макета, без сети.
+/// Карточка объекта и его лента из кадра макета, без сети.
 ///
-/// Нужна, пока внешний вид не утверждён: сеть подключается в `S2.2`, и до тех
-/// пор экран должен открываться где угодно — в браузере с отдельной точки
-/// входа, в виджет-тесте — не требуя ни входа в систему, ни живой базы.
+/// Нужна, пока внешний вид не утверждён: экран должен открываться где угодно
+/// — в браузере с отдельной точки входа, в виджет-тесте — не требуя ни входа
+/// в систему, ни живой базы.
 ///
 /// Значения взяты с кадра `1182:232` дословно, включая опечатки в кавычках:
 /// сверять вёрстку удобнее с тем же текстом, что на картинке.
 class FixtureScheduleObjectRepository implements ScheduleObjectRepository {
-  const FixtureScheduleObjectRepository({this.delay = Duration.zero});
+  FixtureScheduleObjectRepository({this.delay = Duration.zero, int? filledYear})
+      : _filledYear = filledYear ?? DateTime.now().year;
 
   /// Задержка ответа. По умолчанию мгновенно; ненулевая нужна, только чтобы
   /// посмотреть глазами состояние загрузки.
   final Duration delay;
 
+  /// Год, на котором лента заполнена. Остальные годы пустые — так на фикстуре
+  /// видно оба случая сразу: текущий год с работой и соседний без графика.
+  final int _filledYear;
+
+  /// Годы, расставленные кнопкой «Создать график». Живут только в памяти:
+  /// фикстуре достаточно показать, что после создания лента перерисовалась.
+  final Map<int, List<MonthCell>> _generated = <int, List<MonthCell>>{};
+
+  /// Программа обслуживания модели: двенадцать позиций по кругу. Та же, что
+  /// в примере плана — `ТО1, ТО1, ТО3, ТО1, ТО1, ТО6, …`.
+  static const List<int> _program = <int>[1, 1, 3, 1, 1, 6, 1, 1, 3, 1, 1, 12];
+
   @override
   Future<ScheduleObjectCard> fetchCard(int objectId) async {
-    if (delay > Duration.zero) {
-      await Future<void>.delayed(delay);
-    }
+    await _wait();
     return ScheduleObjectCard(
       id: objectId,
       organization: 'ООО «КПЭК»',
@@ -46,5 +58,77 @@ class FixtureScheduleObjectRepository implements ScheduleObjectRepository {
         fullName: 'Л.А. Терешков',
       ),
     );
+  }
+
+  @override
+  Future<List<MonthCell>> fetchYear(int objectId, int year) async {
+    await _wait();
+    final List<MonthCell>? generated = _generated[year];
+    if (generated != null) {
+      return generated;
+    }
+    if (year != _filledYear) {
+      return <MonthCell>[for (int month = 1; month <= 12; month++) MonthCell.empty(month)];
+    }
+    return _filled();
+  }
+
+  @override
+  Future<void> generateYear(int objectId, int year) async {
+    await _wait();
+    // Как на сервере: акты созданы, но ни один не закрыт. Значит прошедшие
+    // месяцы сразу просрочены, а будущие ждут своего срока.
+    final int nowMonth = DateTime.now().month;
+    final bool isCurrentYear = year == DateTime.now().year;
+    _generated[year] = <MonthCell>[
+      for (int month = 1; month <= 12; month++)
+        MonthCell(
+          month: month,
+          status: isCurrentYear && month < nowMonth
+              ? MonthStatus.overdue
+              : MonthStatus.pending,
+          toName: 'ТО ${_program[month - 1]}',
+          actId: 1000 + month,
+        ),
+    ];
+  }
+
+  /// Заполненный год: все пять состояний разом, иначе цвета ленты глазами не
+  /// проверить. Одиннадцатый месяц оставлен пустым — так бывает и в базе,
+  /// когда акт удалили.
+  List<MonthCell> _filled() {
+    const List<MonthStatus> statuses = <MonthStatus>[
+      MonthStatus.done,
+      MonthStatus.done,
+      MonthStatus.late,
+      MonthStatus.done,
+      MonthStatus.overdue,
+      MonthStatus.done,
+      MonthStatus.done,
+      MonthStatus.late,
+      MonthStatus.pending,
+      MonthStatus.pending,
+      MonthStatus.none,
+      MonthStatus.pending,
+    ];
+
+    return <MonthCell>[
+      for (int month = 1; month <= 12; month++)
+        if (statuses[month - 1] == MonthStatus.none)
+          MonthCell.empty(month)
+        else
+          MonthCell(
+            month: month,
+            status: statuses[month - 1],
+            toName: 'ТО ${_program[month - 1]}',
+            actId: 100 + month,
+          ),
+    ];
+  }
+
+  Future<void> _wait() async {
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
   }
 }

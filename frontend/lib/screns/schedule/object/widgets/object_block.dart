@@ -7,21 +7,39 @@ import '../../../../helper/class_colors.dart';
 /// Общий на три блока кадра: у «Информации», «Местоположения» и
 /// «Ответственных» одинаковый заголовок 16/w600 и один отступ до карточки.
 class ObjectBlock extends StatelessWidget {
-  const ObjectBlock({Key? key, required this.title, required this.child})
-      : super(key: key);
+  const ObjectBlock({
+    Key? key,
+    required this.title,
+    required this.child,
+    this.titleTrailing,
+  }) : super(key: key);
 
   final String title;
   final Widget child;
 
+  /// Управление, которое стоит в одной строке с заголовком, — переключатель
+  /// года у блока «Техническое обслуживание». У трёх блоков кадра его нет.
+  final Widget? titleTrailing;
+
   @override
   Widget build(BuildContext context) {
+    final Widget titleText = Text(
+      title,
+      style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w600),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
-          title,
-          style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w600),
-        ),
+        if (titleTrailing == null)
+          titleText
+        else
+          Row(
+            children: <Widget>[
+              Expanded(child: titleText),
+              titleTrailing!,
+            ],
+          ),
         const SizedBox(height: 16.0),
         child,
       ],
