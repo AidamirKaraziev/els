@@ -102,6 +102,22 @@ def test_foreman_manages_his_people():
         assert not has_permission(Role.DISPATCHER, permission), permission
 
 
+def test_maintenance_program_is_readable_wherever_the_schedule_is():
+    # Программа обслуживания видна там же, где годовой план: механик открывает
+    # график объекта и должен понимать, какое ТО у него в этом месяце.
+    for role in Role:
+        assert has_permission(
+            role, Permission.MAINTENANCE_PROGRAM_READ
+        ) == has_permission(role, Permission.PLANNED_TO_READ), role
+
+
+def test_maintenance_program_is_written_by_admin_and_foreman_only():
+    for role in (Role.ADMIN, Role.FOREMAN):
+        assert has_permission(role, Permission.MAINTENANCE_PROGRAM_WRITE), role
+    for role in (Role.MECHANIC, Role.ENGINEER, Role.DISPATCHER, Role.CLIENT):
+        assert not has_permission(role, Permission.MAINTENANCE_PROGRAM_WRITE), role
+
+
 # --- область видимости ----------------------------------------------------
 
 

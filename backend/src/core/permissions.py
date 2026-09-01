@@ -69,6 +69,13 @@ class Permission(str, Enum):
     PLANNED_TO_WRITE = "planned_to:write"
     PLANNED_TO_ARCHIVE = "planned_to:archive"
 
+    # Программа обслуживания модели оборудования: какие ТО и в каком месяце.
+    # Отдельно от `PLANNED_TO_*`: план — это факт по конкретному объекту за
+    # год, а программа — шаблон на модель, один на весь парк. Менять её может
+    # тот, кто отвечает за парк, а не тот, кто ведёт график одного дома.
+    MAINTENANCE_PROGRAM_READ = "maintenance_program:read"
+    MAINTENANCE_PROGRAM_WRITE = "maintenance_program:write"
+
     # Контрагенты: компании-клиенты, наши юрлица, договоры, контактные лица
     COUNTERPARTY_READ = "counterparty:read"
     COUNTERPARTY_WRITE = "counterparty:write"
@@ -113,6 +120,7 @@ _EMPLOYEE_READ: FrozenSet[Permission] = _BASE | {
     Permission.ORDER_READ,
     Permission.ACT_READ,
     Permission.PLANNED_TO_READ,
+    Permission.MAINTENANCE_PROGRAM_READ,
     Permission.COUNTERPARTY_READ,
     Permission.DIVISION_READ,
 }
@@ -135,6 +143,7 @@ ROLE_PERMISSIONS: Dict[Role, FrozenSet[Permission]] = {
         Permission.OBJECT_UPDATE,
         Permission.ORDER_CREATE,
         Permission.PLANNED_TO_WRITE,
+        Permission.MAINTENANCE_PROGRAM_WRITE,
         Permission.COUNTERPARTY_WRITE,
         # Прораб ведёт своих людей: заводит механиков на свои участки и
         # архивирует уволившихся. Удалять не может — удаление пользователя

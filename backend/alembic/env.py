@@ -42,6 +42,7 @@ from src.models.working_specialty import WorkingSpecialty
 from src.models.area_of_responsibility import AreaOfResponsibility
 from src.models.defective_acts import DefectiveAct
 from src.models.defective_act_photo import DefectiveActPhoto
+from src.models.maintenance_program import MaintenanceProgram, MaintenanceProgramItem
 
 
 target_metadata = Base.metadata
