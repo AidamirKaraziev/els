@@ -135,7 +135,10 @@ void main() {
               },
               'contract_id': <String, dynamic>{'title': 'Договор №2123'},
               'geo': '45.03,38.97',
-              'foreman_id': <String, dynamic>{'name': 'Н.В. Гоголевский'},
+              'foreman_id': <String, dynamic>{
+                'id': 12,
+                'name': 'Н.В. Гоголевский',
+              },
               'mechanic_id': <String, dynamic>{'name': 'Л.А. Терешков'},
             },
           }),
@@ -154,6 +157,11 @@ void main() {
       expect(card.geo?.latitude, closeTo(45.03, 0.001));
       expect(card.foreman?.fullName, 'Н.В. Гоголевский');
       expect(card.mechanic?.title, 'Механик');
+      // Id ответственного — по нему открывается карточка сотрудника.
+      expect(card.foreman?.id, 12);
+      // Механик приехал без id: старые записи отдают одно имя. Плашка тогда
+      // просто не нажимается, но человек в ней виден.
+      expect(card.mechanic?.id, isNull);
       // Два запроса: объект и название организации.
       expect(seen, hasLength(2));
     });

@@ -52,10 +52,12 @@ class FixtureScheduleObjectRepository implements ScheduleObjectRepository {
       foreman: const ScheduleResponsible(
         title: 'Прораб',
         fullName: 'Н.В. Гоголевский',
+        id: 12,
       ),
       mechanic: const ScheduleResponsible(
         title: 'Механик',
         fullName: 'Л.А. Терешков',
+        id: 34,
       ),
     );
   }

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../helper/class_colors.dart';
+import '../../../in_progress_works/view/employee_card.dart';
 import '../../models/month_cell.dart';
 import '../../models/schedule_role.dart';
+import '../../view/schedule_work_card_screen.dart';
 import '../bloc/schedule_object_bloc.dart';
 import '../models/schedule_object_card.dart';
+import '../models/schedule_responsible.dart';
 import '../repository/schedule_object_repository.dart';
 import '../widgets/object_info_card.dart';
 import '../widgets/object_map_card.dart';
@@ -16,9 +19,12 @@ import '../widgets/object_schedule_card.dart';
 ///
 /// Три верхних блока кадра `1182:232` — «Информация об объекте» слева,
 /// «Местоположение» и «Ответственные» справа — и блок «Техническое
-/// обслуживание» с годовой лентой под ними. Список работ под лентой — `S2.3`;
-/// места под него здесь ещё нет намеренно, чтобы пустая заглушка не выглядела
-/// сломанным экраном.
+/// обслуживание» с годовой лентой под ними.
+///
+/// Из ленты уходят два перехода: клетка ведёт в карточку работы, плашка
+/// ответственного — в карточку сотрудника. Оба открываются **маршрутом**
+/// поверх экрана, поэтому «назад» возвращает в тот же год ленты: год живёт в
+/// блоке, а блок под маршрутом не пересоздаётся.
 ///
 /// Экран заводится **рядом** со старым `SchedulePage` подрядчика, а не вместо
 /// него: тот в проде, на нём висят все действия с ТО, и переключать на новый
@@ -105,6 +111,7 @@ class _ScheduleObjectView extends StatelessWidget {
             return _Content(
               state: state,
               role: role,
+              objectName: objectName,
               twoColumnsWidth: _twoColumnsWidth,
             );
           }
@@ -121,11 +128,39 @@ class _Content extends StatelessWidget {
     required this.state,
     required this.role,
     required this.twoColumnsWidth,
+    this.objectName,
   }) : super(key: key);
 
   final ScheduleObjectLoaded state;
   final ScheduleRole role;
   final double twoColumnsWidth;
+
+  /// Название объекта для шапки карточки работы — то же, что в шапке экрана.
+  final String? objectName;
+
+  /// Клик по клетке открывает карточку работы за ней.
+  ///
+  /// Тем же приёмом, что лента «Графики»: `standalone`, потому что клетка
+  /// ведёт в работу любого состояния — назначенную, идущую и закрытую.
+  ///
+  /// Расхождение с кадром `1182:232`: там работа раскрывается аккордеоном на
+  /// месте, под лентой. Здесь — отдельным экраном: карточка работы уже
+  /// написана и обкатана, а аккордеон пришлось бы верстать заново ради того
+  /// же содержимого. Решено 2 сентября, к кадру вернёмся отдельной задачей.
+  void _openWork(BuildContext context, MonthCell cell) {
+    if (!cell.isTappable) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => ScheduleWorkCardScreen(
+          workId: cell.actId!,
+          // Своего названия у карточки объекта нет — в ответе `/object/{id}/`
+          // его попросту не отдают. Берём то же, что стоит в шапке экрана;
+          // пусто — карточка работы напишет «Работа».
+          objectName: objectName ?? '',
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +172,11 @@ class _Content extends StatelessWidget {
       children: <Widget>[
         ObjectMapCard(geo: card.geo),
         const SizedBox(height: 24.0),
-        ObjectResponsiblesCard(card: card),
+        ObjectResponsiblesCard(
+          card: card,
+          onOpen: (ScheduleResponsible person) =>
+              openEmployeeCard(context, person.id!),
+        ),
         const SizedBox(height: 24.0),
         ObjectScheduleCard(
           year: state.year,
@@ -152,10 +191,7 @@ class _Content extends StatelessWidget {
           onGenerate: () => context
               .read<ScheduleObjectBloc>()
               .add(const ScheduleObjectGenerateRequested()),
-          // Клик по клетке открывает карточку работы — это `S2.3`. Пока
-          // клетка молчит: заглушка, которая «нажимается» и ничего не
-          // делает, хуже клетки, которая честно не нажимается.
-          onCellTap: (MonthCell cell) {},
+          onCellTap: (MonthCell cell) => _openWork(context, cell),
         ),
       ],
     );

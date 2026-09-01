@@ -6,11 +6,17 @@ class ScheduleResponsible {
   const ScheduleResponsible({
     required this.title,
     required this.fullName,
+    this.id,
     this.photo,
   });
 
   /// Подпись слева в плашке: «Прораб», «Механик».
   final String title;
+
+  /// Id сотрудника — по нему открывается его карточка. Может не приехать:
+  /// объект отдаёт человека вложенным объектом, и старые записи приходят
+  /// одним именем. Без id плашка просто не нажимается.
+  final int? id;
 
   /// Как показано на кадре — инициалы и фамилия: «Н.В. Гоголевский».
   final String fullName;

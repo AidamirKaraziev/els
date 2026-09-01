@@ -152,6 +152,8 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
     return ScheduleResponsible(
       title: title,
       fullName: name,
+      // Id нужен переходу в карточку сотрудника; имени для него мало.
+      id: _asInt(_nested(value, 'id')),
       photo: _asString(_nested(value, 'photo')),
     );
   }

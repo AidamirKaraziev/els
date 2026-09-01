@@ -15,8 +15,11 @@ import 'object_block.dart';
 /// «Прораб заморожен» синим. На кадре их нет, и в каркасе мы их не повторяем:
 /// объект без назначенного человека просто не показывает свою плашку.
 class ObjectResponsiblesCard extends StatelessWidget {
-  const ObjectResponsiblesCard({Key? key, required this.card})
-      : super(key: key);
+  const ObjectResponsiblesCard({
+    Key? key,
+    required this.card,
+    this.onOpen,
+  }) : super(key: key);
 
   /// Ширина, ниже которой две плашки перестают помещаться в ряд.
   ///
@@ -25,6 +28,10 @@ class ObjectResponsiblesCard extends StatelessWidget {
   static const double _rowWidth = 620.0;
 
   final ScheduleObjectCard card;
+
+  /// Открыть карточку этого человека. Не задан — плашки не нажимаются:
+  /// экран графика сам решает, есть ли куда вести.
+  final void Function(ScheduleResponsible person)? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +58,12 @@ class ObjectResponsiblesCard extends StatelessWidget {
                   children: <Widget>[
                     for (int i = 0; i < people.length; i++) ...<Widget>[
                       if (i > 0) const SizedBox(width: 20.0),
-                      Expanded(child: _ResponsibleTile(person: people[i])),
+                      Expanded(
+                        child: _ResponsibleTile(
+                          person: people[i],
+                          onOpen: onOpen,
+                        ),
+                      ),
                     ],
                   ],
                 )
@@ -59,7 +71,7 @@ class ObjectResponsiblesCard extends StatelessWidget {
                   children: <Widget>[
                     for (int i = 0; i < people.length; i++) ...<Widget>[
                       if (i > 0) const SizedBox(height: 16.0),
-                      _ResponsibleTile(person: people[i]),
+                      _ResponsibleTile(person: people[i], onOpen: onOpen),
                     ],
                   ],
                 ),
@@ -68,18 +80,42 @@ class ObjectResponsiblesCard extends StatelessWidget {
 }
 
 /// Зелёная плашка: подпись роли слева, белая пилюля с фото и фамилией справа.
+///
+/// Нажимается только когда у человека есть id и есть куда вести: плашка,
+/// которая «нажимается» и ничего не делает, хуже неподвижной.
 class _ResponsibleTile extends StatelessWidget {
-  const _ResponsibleTile({Key? key, required this.person}) : super(key: key);
+  const _ResponsibleTile({Key? key, required this.person, this.onOpen})
+      : super(key: key);
 
   final ScheduleResponsible person;
+  final void Function(ScheduleResponsible person)? onOpen;
 
   @override
   Widget build(BuildContext context) {
+    final Widget tile = _tile();
+    if (onOpen == null || person.id == null) return tile;
+    return Material(
+      // Именно прозрачный: `myColorTransparent` в палитре — светло-серый
+      // фон экрана, и он бы закрасил зелёную плашку по углам.
+      color: Colors.transparent,
+      borderRadius: _radius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: _radius,
+        onTap: () => onOpen!(person),
+        child: tile,
+      ),
+    );
+  }
+
+  static final BorderRadius _radius = BorderRadius.circular(10.0);
+
+  Widget _tile() {
     return Container(
       height: 84.0,
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
+        borderRadius: _radius,
         color: ColorApp.myColorGreen,
       ),
       child: Row(
