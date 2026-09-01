@@ -1,14 +1,18 @@
-"""Предпросмотр годового графика: раскладка по программе, якорь, права.
+"""Годовой график по программе: предпросмотр и создание.
 
-Ручка ничего не пишет в базу — это заготовка, которую человек ещё
+Предпросмотр ничего не пишет в базу — это заготовка, которую человек ещё
 утверждает. Поэтому здесь же проверяется, что после запроса не появилось ни
 строки `planned_to`, ни акта.
+
+Создание пишет по тем же клеткам: акт заводится только в свободный месяц,
+занятый не трогается вовсе — на этом держится идемпотентность.
 
 Данные заводятся годами, а не относительно сегодняшнего дня: предпросмотру
 всё равно, какое сегодня число, — он про план, а не про исполнение.
 """
 
 import itertools
+import json
 import uuid
 
 import pytest
@@ -25,6 +29,7 @@ from src.models import (
     Object,
     PlannedTO,
 )
+from src.services.checklist import parse_checklist
 
 URL = f"{settings.API_V1_STR}/planned-to/preview/"
 
@@ -43,8 +48,7 @@ YEAR = 2026
 def cycle_month(position_type_acts, anchor_month):
     """Разложить цикл на календарные месяцы при заданном якоре."""
     return {
-        month: position_type_acts[(month - anchor_month) % 12]
-        for month in range(1, 13)
+        month: position_type_acts[(month - anchor_month) % 12] for month in range(1, 13)
     }
 
 
@@ -291,9 +295,7 @@ class TestAnchor:
 
         assert data["anchor_month"] == 3
         # Раскладка нового года повторяет прошлогоднюю: цикл не разорвался.
-        assert {
-            month: cell["type_act_id"] for month, cell in cells.items()
-        } == previous
+        assert {month: cell["type_act_id"] for month, cell in cells.items()} == previous
 
     @pytest.mark.integration
     def test_half_planned_previous_year_is_enough(
@@ -376,9 +378,7 @@ class TestMissingProgram:
         assert response.status_code == 404, response.text
 
     @pytest.mark.integration
-    def test_object_without_model_is_404(
-        self, client_with_db, as_role, make_object
-    ):
+    def test_object_without_model_is_404(self, client_with_db, as_role, make_object):
         obj = make_object()
         as_role(ADMIN)
 
@@ -405,3 +405,332 @@ class TestWritesNothing:
             db_session.query(PlannedTO).count(),
             db_session.query(ActFact).count(),
         ) == before
+
+
+GENERATE_URL = f"{settings.API_V1_STR}/planned-to/generate/"
+
+
+def _payload(obj, *, year=YEAR, anchor_month=1):
+    body = {"object_id": obj.id, "year": year}
+    if anchor_month is not None:
+        body["anchor_month"] = anchor_month
+    return body
+
+
+def _acts_of(db_session, obj):
+    return db_session.query(ActFact).filter(ActFact.object_id == obj.id).all()
+
+
+def _months_of(planned):
+    """Месяц → id акта по колонкам графика."""
+    return {
+        month: getattr(planned, column.key)
+        for month, column in _PLANNED_MONTH_COLUMN.items()
+        if getattr(planned, column.key) is not None
+    }
+
+
+class TestGenerateAccess:
+    """Право на запись графика: админ и прораб, остальным закрыто."""
+
+    @pytest.mark.integration
+    def test_admin_is_allowed(self, client_with_db, as_role, make_model, make_object):
+        obj = make_object(factory_model_id=make_model().id)
+        as_role(ADMIN)
+
+        response = client_with_db.post(GENERATE_URL, json=_payload(obj))
+
+        assert response.status_code == 200, response.text
+
+    @pytest.mark.integration
+    @pytest.mark.parametrize(
+        "role",
+        [DISPATCHER, MECHANIC, CLIENT_ID],
+        ids=["диспетчер", "механик", "клиент"],
+    )
+    def test_roles_without_write_are_denied(
+        self, client_with_db, as_role, make_model, make_object, role
+    ):
+        # Читать график диспетчер может, расставлять его — нет.
+        obj = make_object(factory_model_id=make_model().id)
+        as_role(role)
+
+        assert client_with_db.post(GENERATE_URL, json=_payload(obj)).status_code == 403
+
+    @pytest.mark.integration
+    def test_anonymous_is_denied(self, client_with_db, make_model, make_object):
+        obj = make_object(factory_model_id=make_model().id)
+
+        assert client_with_db.post(GENERATE_URL, json=_payload(obj)).status_code == 401
+
+    @pytest.mark.integration
+    def test_foreign_object_is_403_not_404(
+        self, client_with_db, as_role, make_model, make_object
+    ):
+        # У прораба область на запись — свои участки, чужой лифт даёт 403.
+        as_role(FOREMAN)
+        obj = make_object(factory_model_id=make_model().id)
+
+        assert client_with_db.post(GENERATE_URL, json=_payload(obj)).status_code == 403
+
+    @pytest.mark.integration
+    def test_missing_object_is_404(self, client_with_db, as_role):
+        as_role(ADMIN)
+
+        response = client_with_db.post(
+            GENERATE_URL, json={"object_id": 99999999, "year": YEAR, "anchor_month": 1}
+        )
+
+        assert response.status_code == 404
+
+
+class TestGenerateWrites:
+    """Что легло в базу: двенадцать актов и заполненный график года."""
+
+    @pytest.mark.integration
+    def test_year_is_created_by_program(
+        self, client_with_db, as_role, db_session, make_model, make_object
+    ):
+        obj = make_object(factory_model_id=make_model().id)
+        as_role(ADMIN)
+
+        data = _data(
+            client_with_db.post(GENERATE_URL, json=_payload(obj, anchor_month=3))
+        )
+
+        assert data["anchor_month"] == 3
+        assert data["skipped"] == []
+        assert [cell["month"] for cell in data["created"]] == list(range(1, 13))
+
+        planned = (
+            db_session.query(PlannedTO)
+            .filter(PlannedTO.id == data["planned_to_id"])
+            .one()
+        )
+        assert planned.object_id == obj.id
+        assert planned.year == str(YEAR)
+        assert sorted(_months_of(planned)) == list(range(1, 13))
+        assert len(_acts_of(db_session, obj)) == 12
+
+    @pytest.mark.integration
+    def test_cells_match_preview(
+        self, client_with_db, as_role, make_model, make_object
+    ):
+        # Раскладка одна на две ручки: создание не считает год заново.
+        obj = make_object(factory_model_id=make_model().id)
+        as_role(ADMIN)
+
+        preview = _cells(client_with_db.get(_url(obj, anchor_month=5)))
+        created = _data(
+            client_with_db.post(GENERATE_URL, json=_payload(obj, anchor_month=5))
+        )
+
+        for cell in created["created"]:
+            assert cell["position"] == preview[cell["month"]]["position"]
+            assert cell["type_act_id"] == preview[cell["month"]]["type_act_id"]
+            assert cell["type_act_name"] == preview[cell["month"]]["type_act_name"]
+
+    @pytest.mark.integration
+    def test_created_act_is_filled(
+        self, client_with_db, as_role, db_session, make_model, make_object
+    ):
+        model = make_model()
+        obj = make_object(factory_model_id=model.id)
+        as_role(ADMIN)
+
+        data = _data(client_with_db.post(GENERATE_URL, json=_payload(obj)))
+        january = next(cell for cell in data["created"] if cell["month"] == 1)
+        act = (
+            db_session.query(ActFact).filter(ActFact.id == january["act_fact_id"]).one()
+        )
+
+        assert act.object_id == obj.id
+        assert act.status_id == 1
+        assert act.act_base.factory_model_id == model.id
+        assert act.act_base.type_act_id == january["type_act_id"]
+
+    @pytest.mark.integration
+    def test_checklist_is_canonical(
+        self, client_with_db, as_role, db_session, make_model, make_object
+    ):
+        # Шаблон лежит в форме `steplist_tamplate.json`; в акт он должен
+        # попасть уже канонической формой, с названием вида ТО.
+        model = make_model()
+        act_base = (
+            db_session.query(ActBase)
+            .filter(ActBase.factory_model_id == model.id, ActBase.type_act_id == TO_1)
+            .one()
+        )
+        act_base.step_list = json.dumps(
+            [{"step_name": "Осмотреть кабину", "substeps": []}], ensure_ascii=False
+        )
+        db_session.flush()
+        obj = make_object(factory_model_id=model.id)
+        as_role(ADMIN)
+
+        data = _data(client_with_db.post(GENERATE_URL, json=_payload(obj)))
+        january = next(cell for cell in data["created"] if cell["month"] == 1)
+        act = (
+            db_session.query(ActFact).filter(ActFact.id == january["act_fact_id"]).one()
+        )
+        checklist = parse_checklist(act.step_list_fact)
+
+        assert json.loads(act.step_list_fact)["steps"][0]["title"] == "Осмотреть кабину"
+        assert checklist.title == "ТО 1"
+        assert [step.id for step in checklist.steps] == [1]
+
+
+class TestGenerateSkipsOccupied:
+    """Занятый месяц не трогается — ни акт, ни ячейка."""
+
+    @pytest.mark.integration
+    def test_occupied_months_are_skipped(
+        self, client_with_db, as_role, db_session, make_model, make_object, plan_year
+    ):
+        obj = make_object(factory_model_id=make_model().id)
+        planned = plan_year(obj, year=YEAR, months={2: TO_1, 7: TO_1})
+        before = _months_of(planned)
+        as_role(ADMIN)
+
+        data = _data(client_with_db.post(GENERATE_URL, json=_payload(obj)))
+
+        assert data["skipped"] == [2, 7]
+        assert [cell["month"] for cell in data["created"]] == [
+            1,
+            3,
+            4,
+            5,
+            6,
+            8,
+            9,
+            10,
+            11,
+            12,
+        ]
+        assert data["planned_to_id"] == planned.id
+        after = _months_of(planned)
+        assert after[2] == before[2] and after[7] == before[7]
+        # Два акта были, десять добавилось.
+        assert len(_acts_of(db_session, obj)) == 12
+
+    @pytest.mark.integration
+    def test_second_call_adds_nothing(
+        self, client_with_db, as_role, db_session, make_model, make_object
+    ):
+        obj = make_object(factory_model_id=make_model().id)
+        as_role(ADMIN)
+
+        first = _data(client_with_db.post(GENERATE_URL, json=_payload(obj)))
+        acts_after_first = {act.id for act in _acts_of(db_session, obj)}
+
+        second = _data(client_with_db.post(GENERATE_URL, json=_payload(obj)))
+
+        assert second["created"] == []
+        assert second["skipped"] == list(range(1, 13))
+        assert second["planned_to_id"] == first["planned_to_id"]
+        assert {act.id for act in _acts_of(db_session, obj)} == acts_after_first
+
+
+class TestGenerateResponsibles:
+    """Прораб и механик берутся из карточки объекта и могут быть пустыми."""
+
+    @pytest.mark.integration
+    def test_taken_from_object(
+        self, client_with_db, as_role, db_session, make_model, make_object
+    ):
+        mechanic = as_role(MECHANIC)
+        foreman = as_role(FOREMAN)
+        obj = make_object(
+            factory_model_id=make_model().id,
+            foreman_id=foreman.id,
+            mechanic_id=mechanic.id,
+        )
+        as_role(ADMIN)
+
+        data = _data(client_with_db.post(GENERATE_URL, json=_payload(obj)))
+        act = (
+            db_session.query(ActFact)
+            .filter(ActFact.id == data["created"][0]["act_fact_id"])
+            .one()
+        )
+
+        assert act.foreman_id == foreman.id
+        assert act.main_mechanic_id == mechanic.id
+
+    @pytest.mark.integration
+    def test_empty_object_gives_empty_act(
+        self, client_with_db, as_role, db_session, make_model, make_object
+    ):
+        # Незаполненная карточка объекта графику не помеха: проставить
+        # ответственных можно и потом.
+        obj = make_object(factory_model_id=make_model().id)
+        as_role(ADMIN)
+
+        data = _data(client_with_db.post(GENERATE_URL, json=_payload(obj)))
+        act = (
+            db_session.query(ActFact)
+            .filter(ActFact.id == data["created"][0]["act_fact_id"])
+            .one()
+        )
+
+        assert act.foreman_id is None
+        assert act.main_mechanic_id is None
+
+
+class TestGenerateRefuses:
+    """Отказы: нет шаблона, нет программы, не восстановился якорь."""
+
+    @pytest.mark.integration
+    def test_missing_template_is_422_and_writes_nothing(
+        self, client_with_db, as_role, db_session, make_model, make_object
+    ):
+        # Шаблоны только на ТО1 и ТО12, а программа просит ещё ТО3 и ТО6.
+        obj = make_object(factory_model_id=make_model(act_bases=(TO_1, TO_12)).id)
+        as_role(ADMIN)
+
+        response = client_with_db.post(GENERATE_URL, json=_payload(obj))
+
+        assert response.status_code == 422, response.text
+        assert _acts_of(db_session, obj) == []
+        assert (
+            db_session.query(PlannedTO).filter(PlannedTO.object_id == obj.id).count()
+            == 0
+        )
+
+    @pytest.mark.integration
+    def test_missing_program_is_404(
+        self, client_with_db, as_role, make_model, make_object
+    ):
+        obj = make_object(factory_model_id=make_model(program=None).id)
+        as_role(ADMIN)
+
+        assert client_with_db.post(GENERATE_URL, json=_payload(obj)).status_code == 404
+
+    @pytest.mark.integration
+    def test_anchor_is_taken_from_previous_year(
+        self, client_with_db, as_role, make_model, make_object, plan_year
+    ):
+        obj = make_object(factory_model_id=make_model().id)
+        # Прошлый год расставлен с якорём 4 — цикл продолжается без разрыва.
+        plan_year(obj, year=YEAR - 1, months=cycle_month(FULL_CYCLE, 4))
+        as_role(ADMIN)
+
+        data = _data(
+            client_with_db.post(GENERATE_URL, json=_payload(obj, anchor_month=None))
+        )
+
+        assert data["anchor_month"] == 4
+
+    @pytest.mark.integration
+    def test_without_anchor_and_without_previous_year_is_422(
+        self, client_with_db, as_role, db_session, make_model, make_object
+    ):
+        obj = make_object(factory_model_id=make_model().id)
+        as_role(ADMIN)
+
+        response = client_with_db.post(
+            GENERATE_URL, json=_payload(obj, anchor_month=None)
+        )
+
+        assert response.status_code == 422, response.text
+        assert _acts_of(db_session, obj) == []

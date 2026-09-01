@@ -816,6 +816,13 @@
     ],
     "required_params": []
   },
+  "POST /api/v1/planned-to/generate/": {
+    "required_body": [
+      "object_id",
+      "year"
+    ],
+    "required_params": []
+  },
   "POST /api/v1/planned-to/{planned_to_id}/archive/": {
     "required_body": [],
     "required_params": [

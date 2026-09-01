@@ -72,3 +72,64 @@ class SchedulePreview(BaseModel):
         title="Двенадцать клеток, январь..декабрь",
         description="Приходит полной всегда, по одной клетке на месяц года.",
     )
+
+
+class ScheduleGenerate(BaseModel):
+    """Запрос на создание годового графика по программе модели."""
+
+    object_id: int = Field(..., title="ID объекта")
+    year: int = Field(..., ge=2000, le=2100, title="Год графика")
+    anchor_month: Optional[int] = Field(
+        None,
+        ge=1,
+        le=12,
+        title="Месяц, с которого начинается цикл программы",
+        description=(
+            "Без параметра берётся из графика за прошлый год — тем же "
+            "подбором, что и в предпросмотре. Переданный параметр прошлый "
+            "год не смотрит вовсе."
+        ),
+    )
+
+
+class ScheduleGeneratedCell(BaseModel):
+    """Месяц, в котором график завёл акт."""
+
+    month: int = Field(..., ge=1, le=12, title="Месяц календаря, 1..12")
+    position: int = Field(..., ge=1, le=12, title="Позиция программы, 1..12")
+    type_act_id: int = Field(..., title="Вид ТО из программы")
+    type_act_name: Optional[str] = Field(None, title="Название вида ТО")
+    act_fact_id: int = Field(..., title="Созданный акт")
+
+
+class ScheduleGenerateResult(BaseModel):
+    """Что легло в базу после создания графика."""
+
+    object_id: int = Field(..., title="ID объекта")
+    year: int = Field(..., title="Год графика")
+    anchor_month: int = Field(
+        ...,
+        ge=1,
+        le=12,
+        title="Месяц, на который пришлась первая позиция программы",
+    )
+    factory_model_id: int = Field(..., title="Модель оборудования")
+    program_id: int = Field(..., title="Программа обслуживания модели")
+    planned_to_id: int = Field(
+        ...,
+        title="Годовой график объекта",
+        description="Существовавший за этот год либо заведённый этим вызовом.",
+    )
+    created: List[ScheduleGeneratedCell] = Field(
+        ...,
+        title="Месяцы, в которых акт создан",
+        description="Пустой список — все месяцы года были заняты.",
+    )
+    skipped: List[int] = Field(
+        ...,
+        title="Месяцы, которые не тронули",
+        description=(
+            "Месяц уже занят актом: график его не перезаписывает. Повторный "
+            "вызов возвращает здесь все двенадцать."
+        ),
+    )
