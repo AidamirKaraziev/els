@@ -12,6 +12,7 @@ class FixtureScheduleWizardRepository implements ScheduleWizardRepository {
   const FixtureScheduleWizardRepository({
     this.fixture = WizardFixture.ok,
     this.withKnownAnchor = false,
+    this.withProgram = true,
     this.delay = const Duration(milliseconds: 200),
   });
 
@@ -20,6 +21,10 @@ class FixtureScheduleWizardRepository implements ScheduleWizardRepository {
   /// Есть ли у объекта график за прошлый год: есть — шаг «Точка отсчёта»
   /// пропускается, нет — первый же запрос требует месяц.
   final bool withKnownAnchor;
+
+  /// Заведена ли у модели программа. Нет — предпросмотр не строится вовсе,
+  /// ровно как отвечает сервер: 404 и предложение завести программу.
+  final bool withProgram;
 
   /// Задержка ответа. Без неё загрузку не видно вовсе, и проверить, что экран
   /// её показывает, можно было бы только на живом сервере.
@@ -32,6 +37,12 @@ class FixtureScheduleWizardRepository implements ScheduleWizardRepository {
     int? anchorMonth,
   }) async {
     if (delay > Duration.zero) await Future<void>.delayed(delay);
+
+    if (!withProgram) {
+      throw const ScheduleProgramMissingException(
+        'У модели этого объекта нет программы обслуживания!',
+      );
+    }
 
     // Прошлого года нет и месяц не назвали — ровно тот случай, ради которого
     // существует шаг «Точка отсчёта». Фикстура повторяет ответ сервера, иначе

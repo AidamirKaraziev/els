@@ -24,7 +24,6 @@ class ScheduleObjectBloc extends Bloc<ScheduleObjectEvent, ScheduleObjectState> 
         super(const ScheduleObjectInitial()) {
     on<ScheduleObjectRequested>(_onRequested);
     on<ScheduleObjectYearRequested>(_onYearRequested);
-    on<ScheduleObjectCellMoved>(_onCellMoved);
     // ignore: deprecated_member_use_from_same_package
     on<ScheduleObjectGenerateRequested>(_onGenerateRequested);
   }
@@ -76,87 +75,6 @@ class ScheduleObjectBloc extends Bloc<ScheduleObjectEvent, ScheduleObjectState> 
       isYearLoading: true,
     ));
     await _loadYear(emit, event.year);
-  }
-
-  Future<void> _onCellMoved(
-    ScheduleObjectCellMoved event,
-    Emitter<ScheduleObjectState> emit,
-  ) async {
-    final ScheduleObjectState current = state;
-    if (current is! ScheduleObjectLoaded) return;
-
-    final int? actId = event.cell.actId;
-    final int fromMonth = event.cell.month;
-    final int toMonth = event.toMonth;
-    if (actId == null || fromMonth == toMonth) return;
-    // Занятый месяц не принимает: лента такую цель и не подсвечивает, но
-    // событие может прийти и не от неё.
-    if (current.cells[toMonth - 1].status != MonthStatus.none) return;
-
-    final int year = current.year;
-
-    // Клетка переезжает сразу, до ответа сервера: перетаскивание, после
-    // которого полсекунды ничего не двигается, читается как несработавшее, и
-    // человек тащит второй раз. Неудача вернёт ленту на место — её всё равно
-    // перечитываем с сервера.
-    emit(current.copyWith(cells: _moved(current.cells, event.cell, toMonth)));
-
-    try {
-      await _repository.moveCell(
-        objectId,
-        year,
-        actId: actId,
-        fromMonth: fromMonth,
-        toMonth: toMonth,
-      );
-    } on SchedulesException catch (error) {
-      await _reloadAfterFailedMove(emit, year, error.message);
-      return;
-    } catch (_) {
-      await _reloadAfterFailedMove(emit, year, 'Не удалось перенести ТО');
-      return;
-    }
-
-    // Состояние перенесённой клетки — «назначено» или «просрочено» — считает
-    // сервер по новому месяцу, и спрашиваем его, а не пересчитываем сами.
-    await _loadYear(emit, year);
-  }
-
-  /// Перенос не удался: сказать об этом и показать то, что в базе.
-  Future<void> _reloadAfterFailedMove(
-    Emitter<ScheduleObjectState> emit,
-    int year,
-    String message,
-  ) async {
-    final ScheduleObjectState current = state;
-    if (current is ScheduleObjectLoaded && current.year == year) {
-      emit(current.copyWith(yearError: message, isYearLoading: true));
-    }
-    await _loadYear(emit, year);
-    final ScheduleObjectState after = state;
-    // `_loadYear` затирает ошибку своим `copyWith` — возвращаем её на место:
-    // лента снова верна, но сказать, что перенос не прошёл, всё равно надо.
-    if (after is ScheduleObjectLoaded && after.year == year) {
-      emit(after.copyWith(yearError: message));
-    }
-  }
-
-  /// Лента с ТО, переехавшим на другой месяц.
-  List<MonthCell> _moved(List<MonthCell> cells, MonthCell cell, int toMonth) {
-    return <MonthCell>[
-      for (final MonthCell item in cells)
-        if (item.month == toMonth)
-          MonthCell(
-            month: toMonth,
-            status: cell.status,
-            toName: cell.toName,
-            actId: cell.actId,
-          )
-        else if (item.month == cell.month)
-          MonthCell.empty(item.month)
-        else
-          item,
-    ];
   }
 
   Future<void> _onGenerateRequested(

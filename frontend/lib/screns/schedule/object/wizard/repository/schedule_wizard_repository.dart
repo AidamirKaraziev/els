@@ -44,6 +44,15 @@ class ScheduleAnchorRequiredException extends SchedulesException {
   const ScheduleAnchorRequiredException(String message) : super(message);
 }
 
+/// У модели объекта нет программы обслуживания.
+///
+/// Отдельным типом по той же причине, что и [ScheduleAnchorRequiredException]:
+/// для мастера это не поломка, а развилка работы — он открывается со строкой
+/// «программа не заведена» и предлагает её завести.
+class ScheduleProgramMissingException extends SchedulesException {
+  const ScheduleProgramMissingException(String message) : super(message);
+}
+
 /// Как экран объекта заводит репозиторий мастера.
 ///
 /// Функцией, а не готовым объектом: сетевому репозиторию нужна модель

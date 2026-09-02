@@ -236,9 +236,6 @@ class _Content extends StatelessWidget {
               .add(ScheduleObjectYearRequested(year)),
           onGenerate: () => _openWizard(context, state.year),
           onCellTap: (MonthCell cell) => _openWork(context, cell),
-          onCellMoved: (MonthCell cell, int toMonth) => context
-              .read<ScheduleObjectBloc>()
-              .add(ScheduleObjectCellMoved(cell: cell, toMonth: toMonth)),
         ),
       ],
     );

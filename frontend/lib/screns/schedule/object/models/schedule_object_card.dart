@@ -48,6 +48,7 @@ class ScheduleObjectCard {
     this.address,
     this.type,
     this.model,
+    this.modelId,
     this.registrationNumber,
     this.factoryNumber,
     this.company,
@@ -74,6 +75,14 @@ class ScheduleObjectCard {
 
   /// `factory_model_id.model`.
   final String? model;
+
+  /// `factory_model_id.id` — чья программа обслуживания.
+  ///
+  /// Нужен мастеру расстановки: программа принадлежит модели, и правится она
+  /// по этому id. Из предпросмотра его брать нельзя во всех случаях — у
+  /// модели без программы предпросмотр отвечает 404, а окно правки открывать
+  /// как раз тогда и надо.
+  final int? modelId;
 
   final String? registrationNumber;
   final String? factoryNumber;

@@ -13,7 +13,7 @@ class ScheduleWizardLoading extends ScheduleWizardState {
   const ScheduleWizardLoading();
 }
 
-/// Заготовка построена: три шага мастера есть чем наполнить.
+/// Заготовка построена: шаги мастера есть чем наполнить.
 class ScheduleWizardLoaded extends ScheduleWizardState {
   const ScheduleWizardLoaded({
     required this.data,
@@ -23,7 +23,10 @@ class ScheduleWizardLoaded extends ScheduleWizardState {
     this.error,
   });
 
-  final ScheduleWizardData data;
+  /// Двенадцать клеток года. `null` — у модели нет программы обслуживания:
+  /// раскладывать нечего, и мастер показывает только строку программы с
+  /// предложением её завести.
+  final ScheduleWizardData? data;
 
   /// Месяц, на который приходится первая позиция программы: восстановленный
   /// сервером по прошлому году или названный человеком.
@@ -42,8 +45,17 @@ class ScheduleWizardLoaded extends ScheduleWizardState {
   /// месяца незачем.
   final String? error;
 
-  /// Шаг «Точка отсчёта» отпадает, когда цикл продолжается с прошлого года.
-  bool get hasAnchorStep => !data.hasKnownAnchor;
+  /// Шаг «Точка отсчёта» отпадает, когда цикл продолжается с прошлого года,
+  /// и когда раскладывать нечего: без программы выбирать месяц не для чего.
+  bool get hasAnchorStep => data != null && !data!.hasKnownAnchor;
+
+  /// Есть ли что утверждать: программа заведена, шаблоны на месте, и год не
+  /// расставлен целиком.
+  bool get canApprove {
+    final ScheduleWizardData? preview = data;
+    if (preview == null) return false;
+    return !preview.hasMissingTemplate && !preview.hasNothingToAdd;
+  }
 
   /// [error] задаётся только явно: `null` в аргументе означает «убрать прошлую
   /// ошибку», а не «оставить как было». Иначе текст неудачи висел бы на экране

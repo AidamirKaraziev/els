@@ -24,6 +24,16 @@ class WizardAnchorChanged extends ScheduleWizardEvent {
   final int month;
 }
 
+/// Человек сохранил программу модели в окне правки.
+///
+/// Программа приходит целиком: ручка заменяет все двенадцать позиций разом, и
+/// частичной правки у неё нет по смыслу.
+class WizardProgramSaved extends ScheduleWizardEvent {
+  const WizardProgramSaved(this.program);
+
+  final MaintenanceProgram program;
+}
+
 /// Человек нажал «Утвердить»: расставить год в базе.
 ///
 /// Месяца в событии нет намеренно — блок берёт тот, что сейчас показан в

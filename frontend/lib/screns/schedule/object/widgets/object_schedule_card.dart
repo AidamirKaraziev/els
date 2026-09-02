@@ -41,7 +41,6 @@ class ObjectScheduleCard extends StatelessWidget {
     this.isGenerating = false,
     this.error,
     this.onGenerate,
-    this.onCellMoved,
   }) : super(key: key);
 
   final int year;
@@ -61,13 +60,6 @@ class ObjectScheduleCard extends StatelessWidget {
   final String? error;
 
   final VoidCallback? onGenerate;
-
-  /// Перенести незакрытое ТО на свободный месяц перетаскиванием.
-  ///
-  /// Не задан — лента неподвижна. График правят те же, кто его расставляет
-  /// (`planned_to:write`), поэтому у прочих ролей перетаскивания нет: оно
-  /// вернуло бы 403 уже после того, как клетка на глазах переехала.
-  final void Function(MonthCell cell, int toMonth)? onCellMoved;
 
   /// Ширина, ниже которой подпись «Плановые ТО» встаёт над лентой.
   ///
@@ -166,8 +158,6 @@ class ObjectScheduleCard extends StatelessWidget {
       cells: cells,
       onCellTap: onCellTap,
       showMonthLabels: true,
-      // Двигать график может тот же, кто его расставляет.
-      onCellMoved: _canGenerate ? onCellMoved : null,
     );
 
     final MonthCell? due = _nextDue;

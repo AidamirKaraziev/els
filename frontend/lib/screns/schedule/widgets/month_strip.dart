@@ -18,31 +18,10 @@ class MonthStrip extends StatelessWidget {
     required this.cells,
     required this.onCellTap,
     this.showMonthLabels = false,
-    this.onCellMoved,
   }) : super(key: key);
 
   final List<MonthCell> cells;
   final ValueChanged<MonthCell> onCellTap;
-
-  /// Перенести ТО на другой месяц: `(что тащили, куда положили)`.
-  ///
-  /// Не задан — лента не перетаскивается вовсе, и раздел «Графики» остаётся
-  /// таким, каким был: там строк много, и случайное перетаскивание в чужой
-  /// строке — худшее, что может случиться с плановым графиком.
-  ///
-  /// Тащить можно только **незакрытое** ТО: назначенное и просроченное.
-  /// Выполненную работу перенести нельзя — она сделана в свой месяц, и
-  /// подпись под ней перестала бы соответствовать акту. Класть можно только
-  /// на **пустой** месяц: на занятый значило бы затереть чужой акт молча.
-  final void Function(MonthCell cell, int toMonth)? onCellMoved;
-
-  /// Можно ли утащить эту клетку.
-  static bool canDrag(MonthCell cell) =>
-      cell.actId != null &&
-      (cell.status == MonthStatus.pending || cell.status == MonthStatus.overdue);
-
-  /// Можно ли положить сюда.
-  static bool canDrop(MonthCell cell) => cell.status == MonthStatus.none;
 
   /// Подписывать ли месяцы под клетками.
   ///
@@ -92,7 +71,6 @@ class MonthStrip extends StatelessWidget {
             width: width,
             height: height,
             onTap: onCellTap,
-            onMoved: onCellMoved,
             // Подпись «Янв» кеглем 9 требует места: на макетной клетке в
             // 15 px она превратилась бы в обрезок буквы. Клетка при этом не
             // растягивается — лучше лента без подписей, чем лента, которая
@@ -123,16 +101,12 @@ class _MonthPill extends StatelessWidget {
     required this.height,
     required this.onTap,
     this.monthLabel,
-    this.onMoved,
   }) : super(key: key);
 
   final MonthCell cell;
   final double width;
   final double height;
   final ValueChanged<MonthCell> onTap;
-
-  /// Перенос ТО на другой месяц. `null` — лента неподвижна.
-  final void Function(MonthCell cell, int toMonth)? onMoved;
 
   /// «Янв» под клеткой. `null` — подписи нет.
   final String? monthLabel;
@@ -162,82 +136,6 @@ class _MonthPill extends StatelessWidget {
       if (kind.isNotEmpty) kind,
       cell.status.title,
     ].join(' · ');
-  }
-
-  /// Обернуть клетку в перетаскивание, если лента это позволяет.
-  ///
-  /// Клетка бывает и источником, и целью — но никогда одновременно: тащат
-  /// занятую, кладут в пустую.
-  ///
-  /// [interactive] — клетка со своим нажатием, [plain] — она же без него: в
-  /// «летящей» копии и в следе на месте источника нажатие лишнее.
-  Widget _movable(Widget interactive, Widget plain) {
-    final void Function(MonthCell cell, int toMonth)? moved = onMoved;
-    if (moved == null) return interactive;
-
-    if (MonthStrip.canDrag(cell)) {
-      return MouseRegion(
-        // Курсор-рука: иначе по клетке не видно, что её можно взять, и
-        // человек либо не пробует вовсе, либо тянет ту, которая не двигается.
-        cursor: SystemMouseCursors.grab,
-        child: Draggable<MonthCell>(
-          data: cell,
-          // Лента лежит в вертикальной прокрутке экрана. Без этого мышиный
-          // жест достаётся прокрутке — клетка «не берётся» вовсе. Горизонталь
-          // отдаём переносу, вертикаль оставляем прокрутке: лента узкая, и
-          // тащить месяц вверх-вниз всё равно некуда.
-          affinity: Axis.horizontal,
-          // Курсор держит клетку за середину: иначе она уезжает из-под пальца
-          // и целиться в соседний месяц приходится на глаз.
-          dragAnchorStrategy: pointerDragAnchorStrategy,
-          feedback: Transform.translate(
-            offset: Offset(-width / 2, -height / 2),
-            child: Material(
-              color: Colors.transparent,
-              elevation: 6.0,
-              child: Opacity(opacity: 0.9, child: plain),
-            ),
-          ),
-          // На месте, откуда тащат, остаётся контур: так видно, что месяц
-          // освободится, и куда вернуть, если передумали.
-          childWhenDragging: Container(
-            width: width,
-            height: height,
-            decoration: BoxDecoration(
-              border: Border.all(color: ColorApp.myColorGrayBorder, width: 1),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          child: interactive,
-        ),
-      );
-    }
-
-    if (!MonthStrip.canDrop(cell)) return interactive;
-
-    return DragTarget<MonthCell>(
-      // Сам себе не цель: месяц, из которого тащат, занят — но проверить
-      // стоит и здесь, чтобы «перенос» на то же место не слал запрос.
-      onWillAcceptWithDetails: (DragTargetDetails<MonthCell> details) =>
-          details.data.month != cell.month,
-      onAcceptWithDetails: (DragTargetDetails<MonthCell> details) =>
-          moved(details.data, cell.month),
-      builder:
-          (BuildContext context, List<MonthCell?> candidates, List<dynamic> rejected) {
-            if (candidates.isEmpty) return interactive;
-            // Под курсором цель зеленеет: пустая клетка иначе почти не отличима
-            // от соседних, и попадание не подтверждается ничем.
-            return Container(
-              width: width,
-              height: height,
-              decoration: BoxDecoration(
-                color: ColorApp.myColorGreen.withValues(alpha: 0.35),
-                border: Border.all(color: ColorApp.myColorGreen, width: 1),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            );
-          },
-    );
   }
 
   @override
@@ -271,19 +169,16 @@ class _MonthPill extends StatelessWidget {
       message: _tooltip,
       // Пустой месяц открывать нечего — он и не кликается. `InkWell` поверх
       // него дал бы отклик на нажатие, за которым ничего не происходит.
-      child: _movable(
-        cell.isTappable
-            ? Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => onTap(cell),
-                  borderRadius: BorderRadius.circular(2),
-                  child: content,
-                ),
-              )
-            : content,
-        content,
-      ),
+      child: cell.isTappable
+          ? Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => onTap(cell),
+                borderRadius: BorderRadius.circular(2),
+                child: content,
+              ),
+            )
+          : content,
     );
 
     final String? month = monthLabel;

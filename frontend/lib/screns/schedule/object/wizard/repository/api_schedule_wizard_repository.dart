@@ -58,6 +58,9 @@ class ApiScheduleWizardRepository implements ScheduleWizardRepository {
   /// Номер ошибки «якорь не восстановился» (`backend/.../schedule_plan.py`).
   static const int _anchorRequiredCode = 144;
 
+  /// Номер ошибки «у модели нет программы обслуживания» — там же.
+  static const int _programMissingCode = 143;
+
   @override
   Future<ScheduleWizardData> preview(
     int objectId,
@@ -86,6 +89,10 @@ class ApiScheduleWizardRepository implements ScheduleWizardRepository {
       if (response.statusCode == 422 &&
           errorCode(response) == _anchorRequiredCode) {
         throw ScheduleAnchorRequiredException(text);
+      }
+      if (response.statusCode == 404 &&
+          errorCode(response) == _programMissingCode) {
+        throw ScheduleProgramMissingException(text);
       }
       throw SchedulesException(text);
     }

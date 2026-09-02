@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../repository/schedules_repository.dart';
+import '../models/maintenance_program.dart';
 import '../models/schedule_wizard_data.dart';
+import '../repository/maintenance_program_repository.dart';
 import '../repository/schedule_wizard_repository.dart';
 
 part 'schedule_wizard_event.dart';
@@ -19,16 +21,24 @@ part 'schedule_wizard_state.dart';
 class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> {
   ScheduleWizardBloc({
     required ScheduleWizardRepository repository,
+    required MaintenanceProgramRepository programRepository,
     required this.objectId,
     required this.year,
   })  : _repository = repository,
+        _programs = programRepository,
         super(const ScheduleWizardInitial()) {
     on<WizardOpened>(_onOpened);
     on<WizardAnchorChanged>(_onAnchorChanged);
+    on<WizardProgramSaved>(_onProgramSaved);
     on<WizardApproved>(_onApproved);
   }
 
   final ScheduleWizardRepository _repository;
+
+  /// Куда уходит правка программы модели. Сама заготовка года после неё
+  /// перезапрашивается: раскладку считает сервер, и держать рядом с ним свою
+  /// правленую копию значило бы показывать не то, что ляжет в базу.
+  final MaintenanceProgramRepository _programs;
   final int objectId;
   final int year;
 
@@ -42,6 +52,12 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
     Emitter<ScheduleWizardState> emit,
   ) async {
     emit(const ScheduleWizardLoading());
+    await _openPreview(emit);
+  }
+
+  /// Заготовка с нуля: то, с чего начинается и открытие мастера, и возврат
+  /// после правки программы.
+  Future<void> _openPreview(Emitter<ScheduleWizardState> emit) async {
     try {
       // Сначала без якоря: у объекта с прошлогодним графиком цикл продолжается
       // сам, и спрашивать человека не о чем — шаг «Точка отсчёта» отпадает.
@@ -54,6 +70,11 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
       // Якорь не восстановился. Это не ошибка экрана: заготовку всё равно
       // показываем — с января, — а месяц человек выбирает на шаге 2.
       await _load(emit, _defaultAnchor);
+    } on ScheduleProgramMissingException {
+      // Программы у модели нет — раскладывать нечего, но мастер всё равно
+      // открыт: правка программы живёт в нём же, и отправлять человека с
+      // плашкой «ошибка» некуда.
+      emit(const ScheduleWizardLoaded(data: null, anchorMonth: _defaultAnchor));
     } on SchedulesException catch (error) {
       emit(ScheduleWizardFailure(error.message));
     } catch (_) {
@@ -74,6 +95,31 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
     // месте читался бы как «мастер сбросился».
     emit(current.copyWith(anchorMonth: event.month, isReloading: true));
     await _load(emit, event.month, previous: current);
+  }
+
+  /// Человек сохранил программу в окне правки.
+  ///
+  /// Сначала `PUT`, потом заготовка заново: год раскладывает сервер, и после
+  /// правки цикла показывать прежние клетки значило бы врать.
+  Future<void> _onProgramSaved(
+    WizardProgramSaved event,
+    Emitter<ScheduleWizardState> emit,
+  ) async {
+    final ScheduleWizardState current = state;
+    if (current is! ScheduleWizardLoaded) return;
+
+    emit(current.copyWith(isReloading: true));
+    try {
+      await _programs.save(event.program);
+    } on SchedulesException catch (error) {
+      emit(current.copyWith(error: error.message));
+      return;
+    } catch (_) {
+      emit(current.copyWith(error: 'Не удалось сохранить программу'));
+      return;
+    }
+
+    await _openPreview(emit);
   }
 
   Future<void> _onApproved(

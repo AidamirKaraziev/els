@@ -45,6 +45,7 @@ class FixtureScheduleObjectRepository implements ScheduleObjectRepository {
       address: 'г. Краснодар, ул. Северная, 356',
       type: 'Лифт',
       model: 'LIFT A388509',
+      modelId: 1,
       registrationNumber: '23834939003928282',
       factoryNumber: '23834939003928282',
       company: 'ООО "Гармония"',
@@ -70,28 +71,6 @@ class FixtureScheduleObjectRepository implements ScheduleObjectRepository {
   Future<List<MonthCell>> fetchYear(int objectId, int year) async {
     await _wait();
     return _year(year);
-  }
-
-  @override
-  Future<void> moveCell(
-    int objectId,
-    int year, {
-    required int actId,
-    required int fromMonth,
-    required int toMonth,
-  }) async {
-    await _wait();
-    final List<MonthCell> cells = _year(year);
-    final MonthCell from = cells[fromMonth - 1];
-    // Как на сервере: план меняется, сама работа — нет. Вид ТО и акт едут за
-    // клеткой, состояние пересчитывается по новому месяцу.
-    cells[toMonth - 1] = MonthCell(
-      month: toMonth,
-      status: _statusFor(year, toMonth),
-      toName: from.toName,
-      actId: from.actId,
-    );
-    cells[fromMonth - 1] = MonthCell.empty(fromMonth);
   }
 
   /// Лента года, одна и та же от вызова к вызову.

@@ -6,10 +6,9 @@ import '../bloc/schedule_wizard_bloc.dart';
 import '../repository/schedule_wizard_repository.dart';
 import '../widgets/wizard_anchor_step.dart';
 import '../widgets/wizard_preview_step.dart';
-import '../widgets/wizard_program_step.dart';
 import '../widgets/wizard_steps_header.dart';
 
-/// Мастер расстановки годового графика — три шага вместо кнопки, которая
+/// Мастер расстановки годового графика — два шага вместо кнопки, которая
 /// раскладывала весь год одним нажатием.
 ///
 /// Заготовку строит сервер: `GET /planned-to/preview/` отдаёт двенадцать
@@ -78,7 +77,6 @@ class _WizardViewState extends State<_WizardView> {
   int _step = 0;
 
   List<String> _titles(bool hasAnchorStep) => <String>[
-        'Программа модели',
         if (hasAnchorStep) 'Точка отсчёта',
         'Предпросмотр',
       ];
@@ -108,9 +106,6 @@ class _WizardViewState extends State<_WizardView> {
 
   Widget _body(ScheduleWizardLoaded state) {
     final String title = _titles(state.hasAnchorStep)[_step];
-    if (title == 'Программа модели') {
-      return WizardProgramStep(data: state.data);
-    }
     if (title == 'Точка отсчёта') {
       return WizardAnchorStep(
         data: state.data,
@@ -180,8 +175,8 @@ class _WizardViewState extends State<_WizardView> {
           }
 
           final List<String> titles = _titles(state.hasAnchorStep);
-          // Шаг мог остаться за концом списка: с прошлогодним графиком шагов
-          // три, без него — четыре, и после перезапроса список короче.
+          // Шаг мог остаться за концом списка: с прошлогодним графиком шаг
+          // один, без него — два, и после перезапроса список короче.
           final int step = _step >= titles.length ? titles.length - 1 : _step;
           final bool isLast = step == titles.length - 1;
 
