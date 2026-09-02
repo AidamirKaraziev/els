@@ -7,9 +7,9 @@
 
 # Передача: макет утверждён человеком, в бой он ещё не переехал
 
-**Ничего не закоммичено.** Поверх `649f762`: новые `frontend/lib/dev/draft/`
-(три файла) и `frontend/lib/dev/schedule_program_draft.dart`, изменён
-`.claude/launch.json` — точка `schedule-program-draft`, порт 5603.
+**Всё закоммичено**, рабочая копия чиста. Набросок — в `6f24485`:
+`frontend/lib/dev/draft/` (три файла), `frontend/lib/dev/schedule_program_draft.dart`
+и точка `schedule-program-draft` в `.claude/launch.json`, порт 5603.
 
 ## Сделано и проверено
 

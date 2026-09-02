@@ -69,6 +69,12 @@ class _DraftProgramDialogState extends State<_DraftProgramDialog> {
   late final TextEditingController _note =
       TextEditingController(text: _draft.note);
 
+  /// Справочник видов ТО в этом окне. Своя копия нужна потому, что заводят
+  /// вид не закрывая окна: страница за спиной пересобирает свой список, но
+  /// открытое окно об этом не узнаёт — и новый вид не появился бы в выборе
+  /// позиции до перезакрытия.
+  late List<String> _typeActs = List<String>.of(widget.typeActs);
+
   @override
   void dispose() {
     _note.dispose();
@@ -85,11 +91,12 @@ class _DraftProgramDialogState extends State<_DraftProgramDialog> {
   Future<void> _addTypeAct() async {
     final String? name = await showDialog<String>(
       context: context,
-      builder: (BuildContext context) => const _NewTypeActStub(),
+      builder: (BuildContext context) =>
+          _NewTypeActDialog(typeActs: _typeActs),
     );
     if (name == null || name.isEmpty) return;
     widget.onTypeActAdded(name);
-    setState(() {});
+    setState(() => _typeActs = <String>[..._typeActs, name]);
   }
 
   void _save() {
@@ -172,7 +179,7 @@ class _DraftProgramDialogState extends State<_DraftProgramDialog> {
                     key: ValueKey<int>(index),
                     index: index,
                     value: _draft.positions[index],
-                    typeActs: widget.typeActs,
+                    typeActs: _typeActs,
                     onChanged: (String value) =>
                         setState(() => _draft.positions[index] = value),
                   );
@@ -501,25 +508,54 @@ class _Bottom extends StatelessWidget {
   }
 }
 
-/// Заглушка вместо окна «Новый вид ТО».
+/// Окно «Новый вид ТО» — набросок на утверждение.
 ///
-/// Полное окно — название, перечень работ чек-листа и копия чужого шаблона —
-/// рисуется отдельной сессией. Здесь только имя, чтобы в наброске было видно,
-/// как новый вид появляется в выборе позиции.
-class _NewTypeActStub extends StatefulWidget {
-  const _NewTypeActStub({Key? key}) : super(key: key);
+/// Маленькое окно поверх окна программы: одно поле — название. Перечень
+/// работ чек-листа и копия шаблона другого вида сюда не встают: вид ТО
+/// заводят посреди правки программы, и длинная форма здесь сбивает с того,
+/// зачем окно открыли. Чек-лист — отдельным экраном справочника.
+///
+/// Логики нет: окно возвращает название вызвавшему, а тот дописывает его в
+/// справочник, живущий в памяти страницы.
+class _NewTypeActDialog extends StatefulWidget {
+  const _NewTypeActDialog({Key? key, required this.typeActs}) : super(key: key);
+
+  /// Уже заведённые виды ТО — нужны, чтобы окно само сказало про дубль.
+  /// Молча проглоченное повторное имя выглядит как сломанная кнопка.
+  final List<String> typeActs;
 
   @override
-  State<_NewTypeActStub> createState() => _NewTypeActStubState();
+  State<_NewTypeActDialog> createState() => _NewTypeActDialogState();
 }
 
-class _NewTypeActStubState extends State<_NewTypeActStub> {
+class _NewTypeActDialogState extends State<_NewTypeActDialog> {
   final TextEditingController _name = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _name.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
     _name.dispose();
     super.dispose();
+  }
+
+  String get _value => _name.text.trim();
+
+  /// Регистр и крайние пробелы не различаем: «то 4» и «ТО 4» — один вид,
+  /// и справочник с обоими сразу читается как ошибка ввода.
+  bool get _isDuplicate => widget.typeActs.any(
+        (String name) => name.toLowerCase() == _value.toLowerCase(),
+      );
+
+  bool get _canAdd => _value.isNotEmpty && !_isDuplicate;
+
+  void _add() {
+    if (!_canAdd) return;
+    Navigator.of(context).pop(_value);
   }
 
   @override
@@ -531,39 +567,70 @@ class _NewTypeActStubState extends State<_NewTypeActStub> {
         'Новый вид ТО',
         style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.w700),
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'Здесь будет полное окно: название, перечень работ чек-листа и '
-            'копия шаблона другого вида ТО. Пока — только название, чтобы '
-            'проверить, как вид появляется в выборе позиции.',
-            style: TextStyle(fontSize: 13.0, color: ColorApp.myColorGray),
-          ),
-          const SizedBox(height: 16.0),
-          TextField(
-            controller: _name,
-            autofocus: true,
-            style: const TextStyle(fontSize: 14.0),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: 'Например, ТО 4',
-              hintStyle: const TextStyle(
-                fontSize: 14.0,
-                color: ColorApp.myColorGrayText,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12.0,
-                vertical: 12.0,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
+      content: SizedBox(
+        // Окно узкое: поле одно, и растягивать его на ширину окна программы
+        // значило бы обещать глазу форму, которой здесь нет.
+        width: 380.0,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const _FieldLabel('Название'),
+            const SizedBox(height: 6.0),
+            TextField(
+              controller: _name,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _add(),
+              style: const TextStyle(fontSize: 14.0),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'Например, ТО 4',
+                hintStyle: const TextStyle(
+                  fontSize: 14.0,
+                  color: ColorApp.myColorGrayText,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 12.0,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                  borderSide: BorderSide(
+                    color: _isDuplicate
+                        ? ColorApp.myColorRed
+                        : ColorApp.myColorGrayBorder,
+                  ),
+                ),
+                // Дубль набирают, не выходя из поля, поэтому красной должна
+                // быть и рамка в фокусе — иначе подсветки не видно вовсе.
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                  borderSide: BorderSide(
+                    color: _isDuplicate
+                        ? ColorApp.myColorRed
+                        : ColorApp.myColorGreenAuth,
+                    width: 2.0,
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+            if (_isDuplicate) ...<Widget>[
+              const SizedBox(height: 6.0),
+              const Text(
+                'Такой вид ТО уже есть — выберите его в позиции цикла.',
+                style: TextStyle(fontSize: 12.0, color: ColorApp.myColorRed),
+              ),
+            ],
+            const SizedBox(height: 16.0),
+            const _SharedBookNote(),
+          ],
+        ),
       ),
+      actionsPadding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 12.0),
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
@@ -571,11 +638,15 @@ class _NewTypeActStubState extends State<_NewTypeActStub> {
           child: const Text('Отмена'),
         ),
         ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(_name.text.trim()),
+          onPressed: _canAdd ? _add : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: ColorApp.myColorGreenAuth,
             foregroundColor: ColorApp.myColorWhite,
             elevation: 0.0,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 14.0,
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8.0),
             ),
@@ -583,6 +654,32 @@ class _NewTypeActStubState extends State<_NewTypeActStub> {
           child: const Text('Добавить'),
         ),
       ],
+    );
+  }
+}
+
+/// Вид ТО живёт в общем справочнике, а не внутри этой программы. Сказать это
+/// надо здесь же: окно открыто из правки одной программы, и без подписи
+/// человек ждёт, что новый вид дальше этой программы не уйдёт.
+class _SharedBookNote extends StatelessWidget {
+  const _SharedBookNote({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: ColorApp.myColorYellowLight,
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: ColorApp.myColorYellow),
+      ),
+      child: const Text(
+        'Вид ТО заводится в общий справочник: он станет доступен всем '
+        'программам, а не только этой. В позицию цикла его нужно выбрать '
+        'отдельно.',
+        style: TextStyle(fontSize: 13.0, color: ColorApp.myColorBlack),
+      ),
     );
   }
 }
