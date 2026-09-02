@@ -9,7 +9,10 @@ import 'dart:async';
 
 import 'package:els/screns/schedule/object/wizard/bloc/schedule_wizard_bloc.dart';
 import 'package:els/screns/schedule/object/wizard/fixture_schedule_wizard_data.dart';
+import 'package:els/screns/schedule/object/wizard/models/maintenance_program.dart';
 import 'package:els/screns/schedule/object/wizard/models/schedule_wizard_data.dart';
+import 'package:els/screns/schedule/object/wizard/repository/fixture_maintenance_program_repository.dart';
+import 'package:els/screns/schedule/object/wizard/repository/maintenance_program_repository.dart';
 import 'package:els/screns/schedule/object/wizard/repository/schedule_wizard_repository.dart';
 import 'package:els/screns/schedule/repository/schedules_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -83,10 +86,32 @@ class _Recorder implements ScheduleWizardRepository {
   }
 }
 
-ScheduleWizardBloc _bloc(_Recorder repository) => ScheduleWizardBloc(
+/// Программа модели здесь не проверяется: у блока за неё отвечает
+/// `WizardProgramSaved`, а эти ветки — про якорь и создание графика.
+ScheduleWizardBloc _bloc(
+  _Recorder repository, {
+  MaintenanceProgramRepository? programs,
+}) =>
+    ScheduleWizardBloc(
       repository: repository,
+      programRepository: programs ??
+          FixtureMaintenanceProgramRepository(delay: Duration.zero),
       objectId: 7,
       year: 2027,
+    );
+
+/// Программа на двенадцать позиций одного вида ТО — телу события всё равно,
+/// что в нём: проверяем не содержимое, а порядок «сохранили → перезапросили».
+MaintenanceProgram _program() => MaintenanceProgram(
+      modelId: 1,
+      items: <MaintenanceProgramItem>[
+        for (int position = 1; position <= kProgramLength; position++)
+          MaintenanceProgramItem(
+            position: position,
+            typeActId: 1,
+            typeActName: 'ТО 1',
+          ),
+      ],
     );
 
 void main() {
@@ -141,7 +166,7 @@ void main() {
     expect(repository.asked, <int?>[null, 1, 5]);
     expect(loaded.anchorMonth, 5);
     // Май — якорь, значит первая позиция цикла пришлась на пятый месяц.
-    expect(loaded.data.cells[4].position, 1);
+    expect(loaded.data!.cells[4].position, 1);
   });
 
   test('тот же месяц второй раз сервер не дёргает', () async {
@@ -298,4 +323,100 @@ void main() {
     );
     expect(repository.generated, <int>[3]);
   });
+
+  // ------------------------------------------------- правка программы
+
+  test('сохранённая программа уходит в ручку, за ней — заготовка заново',
+      () async {
+    final _Recorder repository = _Recorder(knownAnchor: 3);
+    final FixtureMaintenanceProgramRepository programs =
+        FixtureMaintenanceProgramRepository(delay: Duration.zero);
+    final ScheduleWizardBloc bloc = _bloc(repository, programs: programs)
+      ..add(const WizardOpened());
+    addTearDown(bloc.close);
+
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardLoaded,
+    );
+
+    bloc.add(WizardProgramSaved(_program()));
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) =>
+          state is ScheduleWizardLoaded && !state.isReloading,
+    );
+
+    // Год раскладывает сервер: после правки цикла прежние клетки уже врут.
+    expect(programs.saved, isNotNull);
+    expect(repository.asked, <int?>[null, null]);
+  });
+
+  test('правка программы не сбивает выбранный человеком месяц', () async {
+    final _Recorder repository = _Recorder();
+    final ScheduleWizardBloc bloc = _bloc(repository)..add(const WizardOpened());
+    addTearDown(bloc.close);
+
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardLoaded,
+    );
+
+    bloc.add(const WizardAnchorChanged(5));
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) =>
+          state is ScheduleWizardLoaded && !state.isReloading,
+    );
+
+    bloc.add(WizardProgramSaved(_program()));
+    final ScheduleWizardLoaded loaded = await bloc.stream.firstWhere(
+      (ScheduleWizardState state) =>
+          state is ScheduleWizardLoaded && !state.isReloading,
+    ) as ScheduleWizardLoaded;
+
+    // Сервер якорь не восстанавливает и предложил бы январь — то есть молча
+    // сдвинул бы весь год, о котором человека никто не спрашивал.
+    expect(loaded.anchorMonth, 5);
+    expect(repository.asked, <int?>[null, 1, 5, null, 5]);
+  });
+
+  test('неудача сохранения оставляет заготовку и показывает причину', () async {
+    final _Recorder repository = _Recorder(knownAnchor: 3);
+    final ScheduleWizardBloc bloc = _bloc(
+      repository,
+      programs: const _FailingProgramRepository(),
+    )..add(const WizardOpened());
+    addTearDown(bloc.close);
+
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardLoaded,
+    );
+
+    bloc.add(WizardProgramSaved(_program()));
+    final ScheduleWizardLoaded loaded = await bloc.stream.firstWhere(
+      (ScheduleWizardState state) =>
+          state is ScheduleWizardLoaded && state.error != null,
+    ) as ScheduleWizardLoaded;
+
+    // Заготовку не теряем: программа в базе прежняя, и год под ней тот же.
+    expect(loaded.error, 'Позиция 3: вид ТО не выбран');
+    expect(loaded.isReloading, isFalse);
+    expect(repository.asked, <int?>[null]);
+  });
+}
+
+/// Программа, которую ручка не принимает: 422 со списком непрошедших позиций.
+class _FailingProgramRepository implements MaintenanceProgramRepository {
+  const _FailingProgramRepository();
+
+  @override
+  Future<MaintenanceProgram?> program(int modelId) async => null;
+
+  @override
+  Future<MaintenanceProgram> suggestion(int modelId) async => _program();
+
+  @override
+  Future<List<TypeAct>> typeActs() async => const <TypeAct>[];
+
+  @override
+  Future<void> save(MaintenanceProgram program) async {
+    throw const MaintenanceProgramException('Позиция 3: вид ТО не выбран');
+  }
 }

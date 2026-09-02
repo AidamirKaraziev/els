@@ -3,9 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../helper/class_colors.dart';
 import '../bloc/schedule_wizard_bloc.dart';
+import '../models/maintenance_program.dart';
+import '../models/schedule_wizard_data.dart';
+import '../repository/maintenance_program_repository.dart';
 import '../repository/schedule_wizard_repository.dart';
 import '../widgets/wizard_anchor_step.dart';
 import '../widgets/wizard_preview_step.dart';
+import '../widgets/wizard_program_dialog.dart';
 import '../widgets/wizard_steps_header.dart';
 
 /// Мастер расстановки годового графика — два шага вместо кнопки, которая
@@ -26,8 +30,11 @@ class ScheduleWizardScreen extends StatelessWidget {
   const ScheduleWizardScreen({
     Key? key,
     required this.repository,
+    required this.programRepository,
     required this.objectId,
     required this.year,
+    this.modelId,
+    this.modelName,
     this.objectName,
   }) : super(key: key);
 
@@ -35,10 +42,22 @@ class ScheduleWizardScreen extends StatelessWidget {
   /// сеть, и умолчания у него быть не должно.
   final ScheduleWizardRepository repository;
 
+  /// Откуда берётся программа модели и куда уходит её правка. Отдельно от
+  /// [repository] по той же границе, что и в самих репозиториях: заготовка —
+  /// про год объекта, программа — про модель.
+  final MaintenanceProgramRepository programRepository;
+
   final int objectId;
 
   /// Год, на который расставляется график.
   final int year;
+
+  /// Модель оборудования объекта. `null` — в карточке её нет: правка
+  /// программы тогда недоступна, и строка программы об этом говорит.
+  final int? modelId;
+
+  /// Марка с моделью словами — начало названия программы в окне правки.
+  final String? modelName;
 
   /// Название объекта для шапки — то же, что в шапке экрана графика.
   final String? objectName;
@@ -48,10 +67,17 @@ class ScheduleWizardScreen extends StatelessWidget {
     return BlocProvider<ScheduleWizardBloc>(
       create: (_) => ScheduleWizardBloc(
         repository: repository,
+        programRepository: programRepository,
         objectId: objectId,
         year: year,
       )..add(const WizardOpened()),
-      child: _WizardView(year: year, objectName: objectName),
+      child: _WizardView(
+        year: year,
+        objectName: objectName,
+        programRepository: programRepository,
+        modelId: modelId,
+        modelName: modelName,
+      ),
     );
   }
 }
@@ -62,10 +88,19 @@ class ScheduleWizardScreen extends StatelessWidget {
 /// без запросов и без ошибок. Якорь, наоборот, в блоке — от него зависит
 /// запрос к серверу.
 class _WizardView extends StatefulWidget {
-  const _WizardView({Key? key, required this.year, this.objectName})
-      : super(key: key);
+  const _WizardView({
+    Key? key,
+    required this.year,
+    required this.programRepository,
+    this.modelId,
+    this.modelName,
+    this.objectName,
+  }) : super(key: key);
 
   final int year;
+  final MaintenanceProgramRepository programRepository;
+  final int? modelId;
+  final String? modelName;
   final String? objectName;
 
   @override
@@ -104,18 +139,67 @@ class _WizardViewState extends State<_WizardView> {
     context.read<ScheduleWizardBloc>().add(const WizardApproved());
   }
 
+  /// Открыть окно правки программы и, если человек сохранил, отдать её блоку.
+  ///
+  /// Сохраняет не окно, а блок: за `PUT` идёт перезапрос заготовки года, и
+  /// окну, которое к этому моменту уже закрыто, показывать неудачу негде.
+  Future<void> _editProgram(ScheduleWizardLoaded state) async {
+    final ScheduleWizardBloc bloc = context.read<ScheduleWizardBloc>();
+    final MaintenanceProgram? saved = await showWizardProgramDialog(
+      context,
+      repository: widget.programRepository,
+      modelId: widget.modelId!,
+      // Марка с моделью: из карточки объекта, а без неё — из заготовки. У
+      // модели без программы заготовки нет вовсе, потому карточка первая.
+      modelName: widget.modelName ?? state.data?.modelName ?? '',
+    );
+    if (saved == null) return;
+    bloc.add(WizardProgramSaved(saved));
+  }
+
   Widget _body(ScheduleWizardLoaded state) {
     final String title = _titles(state.hasAnchorStep)[_step];
     if (title == 'Точка отсчёта') {
+      // Шаг есть только при живой заготовке: `hasAnchorStep` без неё ложен.
       return WizardAnchorStep(
-        data: state.data,
+        data: state.data!,
         anchorMonth: state.anchorMonth,
         onChanged: (int month) => context
             .read<ScheduleWizardBloc>()
             .add(WizardAnchorChanged(month)),
       );
     }
-    return WizardPreviewStep(data: state.data, anchorMonth: state.anchorMonth);
+    return WizardPreviewStep(
+      data: state.data,
+      anchorMonth: state.anchorMonth,
+      // Модели нет — править нечего: строка программы гасит кнопку и говорит
+      // почему. Идти в окно с выдуманным `modelId` было бы хуже.
+      onEditProgram: widget.modelId == null ? null : () => _editProgram(state),
+      // Перетаскивание — тот же выбор точки отсчёта, только по любой клетке.
+      // На время перезапроса лента замирает: две правки подряд разошлись бы
+      // с тем, что считает сервер.
+      onAnchorMoved: state.data == null || state.isReloading
+          ? null
+          : (int month) => context
+              .read<ScheduleWizardBloc>()
+              .add(WizardAnchorChanged(month)),
+    );
+  }
+
+  /// Почему «Утвердить» не нажимается. `null` — кнопка выключена не по вине
+  /// заготовки, а на время перезапроса: объяснять мгновенную паузу нечем.
+  String? _disabledReason(ScheduleWizardLoaded state) {
+    final ScheduleWizardData? data = state.data;
+    if (data == null) {
+      return 'Сначала создайте программу модели — по ней раскладывается год';
+    }
+    if (data.hasMissingTemplate) {
+      return 'Сначала заведите шаблон чек-листа на отмеченные виды ТО';
+    }
+    if (data.hasNothingToAdd) {
+      return 'Все месяцы этого года уже расставлены — добавлять нечего';
+    }
+    return null;
   }
 
   @override
@@ -202,17 +286,12 @@ class _WizardViewState extends State<_WizardView> {
               _Bottom(
                 isLast: isLast,
                 isFirst: step == 0,
-                // «Утвердить» гаснет, пока в предпросмотре есть клетка «нет
-                // шаблона», когда добавлять нечего, и на время перезапроса:
-                // утверждать заготовку, которая сейчас сменится, нечего.
-                canApprove: !state.data.hasMissingTemplate &&
-                    !state.data.hasNothingToAdd &&
-                    !state.isReloading,
-                disabledReason: state.data.hasMissingTemplate
-                    ? 'Сначала заведите шаблон чек-листа на отмеченные виды ТО'
-                    : (state.data.hasNothingToAdd
-                        ? 'Все месяцы этого года уже расставлены — добавлять нечего'
-                        : null),
+                // «Утвердить» гаснет, пока у модели нет программы, пока в
+                // предпросмотре есть клетка «нет шаблона», когда добавлять
+                // нечего, и на время перезапроса: утверждать заготовку,
+                // которая сейчас сменится, нечего.
+                canApprove: state.canApprove && !state.isReloading,
+                disabledReason: _disabledReason(state),
                 isApproving: state.isApproving,
                 onBack: _back,
                 onNext: () => _next(titles.length - 1),

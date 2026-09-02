@@ -2,7 +2,7 @@
 ///
 /// Заготовку и расстановку мастер берёт у репозитория — здесь фикстурного.
 /// Проверяем: что кнопка ведёт в мастер, а не раскладывает год сразу; что
-/// шаги листаются туда и обратно; что «Утвердить» гаснет на исходе «нет
+/// шаг листается туда и обратно; что «Утвердить» гаснет на исходе «нет
 /// шаблона», а на чистом годе создаёт график и закрывает мастер — ровно один
 /// раз, без второй расстановки с экрана объекта; что неудача создания
 /// оставляет мастер на месте; что шаг «Точка отсчёта» отпадает, когда цикл
@@ -18,12 +18,12 @@ import 'package:els/screns/schedule/object/repository/schedule_object_repository
 import 'package:els/screns/schedule/object/view/schedule_object_screen.dart';
 import 'package:els/screns/schedule/object/wizard/fixture_schedule_wizard_data.dart';
 import 'package:els/screns/schedule/object/wizard/models/schedule_wizard_data.dart';
+import 'package:els/screns/schedule/object/wizard/repository/fixture_maintenance_program_repository.dart';
 import 'package:els/screns/schedule/object/wizard/repository/fixture_schedule_wizard_repository.dart';
 import 'package:els/screns/schedule/object/wizard/repository/schedule_wizard_repository.dart';
 import 'package:els/screns/schedule/object/wizard/view/schedule_wizard_screen.dart';
 import 'package:els/screns/schedule/object/wizard/widgets/wizard_anchor_step.dart';
 import 'package:els/screns/schedule/object/wizard/widgets/wizard_preview_step.dart';
-import 'package:els/screns/schedule/object/wizard/widgets/wizard_program_step.dart';
 import 'package:els/screns/schedule/repository/schedules_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,22 +46,6 @@ class _CountingObjectRepository implements ScheduleObjectRepository {
   @override
   Future<List<MonthCell>> fetchYear(int objectId, int year) =>
       _inner.fetchYear(objectId, year);
-
-  @override
-  Future<void> moveCell(
-    int objectId,
-    int year, {
-    required int actId,
-    required int fromMonth,
-    required int toMonth,
-  }) =>
-      _inner.moveCell(
-        objectId,
-        year,
-        actId: actId,
-        fromMonth: fromMonth,
-        toMonth: toMonth,
-      );
 
   @override
   Future<void> generateYear(int objectId, int year) async {
@@ -108,6 +92,7 @@ Future<void> _pumpWizard(
   WidgetTester tester, {
   WizardFixture fixture = WizardFixture.ok,
   bool withKnownAnchor = false,
+  bool withProgram = true,
 }) async {
   tester.view.physicalSize = const Size(1600.0, 1400.0);
   tester.view.devicePixelRatio = 1.0;
@@ -119,10 +104,16 @@ Future<void> _pumpWizard(
         repository: FixtureScheduleWizardRepository(
           fixture: fixture,
           withKnownAnchor: withKnownAnchor,
+          withProgram: withProgram,
+          delay: Duration.zero,
+        ),
+        programRepository: FixtureMaintenanceProgramRepository(
           delay: Duration.zero,
         ),
         objectId: 1,
         year: _emptyYear,
+        modelId: 1,
+        modelName: 'LIFT A388509',
         objectName: 'ТЦ Карнавал 3 этаж 1',
       ),
     ),
@@ -157,6 +148,9 @@ void main() {
           repository: FixtureScheduleObjectRepository(filledYear: _filledYear),
           wizardRepository: (String modelName) =>
               const FixtureScheduleWizardRepository(delay: Duration.zero),
+          programRepository: FixtureMaintenanceProgramRepository(
+            delay: Duration.zero,
+          ),
           role: ScheduleRole.admin,
           initialYear: _emptyYear,
           objectName: 'ТЦ Карнавал 3 этаж 1',
@@ -168,16 +162,13 @@ void main() {
     await _tap(tester, 'Создать график на $_emptyYear');
 
     expect(find.byType(ScheduleWizardScreen), findsOneWidget);
-    expect(find.byType(WizardProgramStep), findsOneWidget);
+    expect(find.byType(WizardAnchorStep), findsOneWidget);
   });
 
-  testWidgets('три шага листаются вперёд и назад',
+  testWidgets('два шага листаются вперёд и назад',
       (WidgetTester tester) async {
     await _pumpWizard(tester);
 
-    expect(find.byType(WizardProgramStep), findsOneWidget);
-
-    await _tap(tester, 'Далее');
     expect(find.byType(WizardAnchorStep), findsOneWidget);
 
     await _tap(tester, 'Далее');
@@ -198,17 +189,17 @@ void main() {
     await tester.pumpAndSettle();
 
     // Мастер был единственным маршрутом — после закрытия экрана нет.
-    expect(find.byType(WizardProgramStep), findsNothing);
+    expect(find.byType(WizardAnchorStep), findsNothing);
   });
 
-  testWidgets('прошлогодний график убирает шаг «Точка отсчёта»',
+  testWidgets('прошлогодний график оставляет один шаг — предпросмотр',
       (WidgetTester tester) async {
     await _pumpWizard(tester, withKnownAnchor: true);
 
-    await _tap(tester, 'Далее');
-
     expect(find.byType(WizardAnchorStep), findsNothing);
     expect(find.byType(WizardPreviewStep), findsOneWidget);
+    // Листать нечего: единственный шаг он же и последний.
+    expect(find.widgetWithText(ElevatedButton, 'Далее'), findsNothing);
   });
 
   testWidgets('предпросмотр называет месяц начала цикла',
@@ -216,8 +207,6 @@ void main() {
     // Фикстура ведёт цикл с марта. Месяц в родительном падеже: «с марта», а
     // не «с март» — на такой строке спотыкается глаз, а не только редактор.
     await _pumpWizard(tester, withKnownAnchor: true);
-
-    await _tap(tester, 'Далее');
 
     expect(find.text('Цикл начинается с марта.'), findsOneWidget);
   });
@@ -230,8 +219,6 @@ void main() {
       withKnownAnchor: true,
     );
 
-    await _tap(tester, 'Далее');
-
     expect(_enabled(tester, 'Утвердить'), isFalse);
     expect(find.textContaining('нет шаблона чек-листа'), findsOneWidget);
   });
@@ -239,8 +226,6 @@ void main() {
   testWidgets('чистый год — «Утвердить» доступна и закрывает мастер по ответу',
       (WidgetTester tester) async {
     await _pumpWizard(tester, withKnownAnchor: true);
-
-    await _tap(tester, 'Далее');
 
     expect(_enabled(tester, 'Утвердить'), isTrue);
 
@@ -268,6 +253,9 @@ void main() {
             withKnownAnchor: true,
             delay: Duration.zero,
           ),
+          programRepository: FixtureMaintenanceProgramRepository(
+            delay: Duration.zero,
+          ),
           role: ScheduleRole.admin,
           initialYear: _emptyYear,
           objectName: 'ТЦ Карнавал 3 этаж 1',
@@ -277,7 +265,6 @@ void main() {
     await tester.pumpAndSettle();
 
     await _tap(tester, 'Создать график на $_emptyYear');
-    await _tap(tester, 'Далее');
     await _tap(tester, 'Утвердить');
 
     // Мастер закрылся, вернулись на экран объекта.
@@ -296,18 +283,22 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
         home: ScheduleWizardScreen(
-          repository: _FailingWizardRepository(),
+          repository: const _FailingWizardRepository(),
+          programRepository: FixtureMaintenanceProgramRepository(
+            delay: Duration.zero,
+          ),
           objectId: 1,
           year: _emptyYear,
+          modelId: 1,
+          modelName: 'LIFT A388509',
           objectName: 'ТЦ Карнавал 3 этаж 1',
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await _tap(tester, 'Далее');
     await _tap(tester, 'Утвердить');
 
     // Закрыть мастер по неудаче было бы негде показать причину.
@@ -326,8 +317,6 @@ void main() {
       withKnownAnchor: true,
     );
 
-    await _tap(tester, 'Далее');
-
     expect(_enabled(tester, 'Утвердить'), isFalse);
     expect(find.textContaining('уже расставлены'), findsOneWidget);
   });
@@ -340,10 +329,51 @@ void main() {
       withKnownAnchor: true,
     );
 
-    await _tap(tester, 'Далее');
-
     expect(_enabled(tester, 'Утвердить'), isTrue);
     expect(find.textContaining('уже занято'), findsWidgets);
+  });
+
+  // ------------------------------------------------ строка программы и перенос
+
+  testWidgets('программы у модели нет — строка красная, утверждать нечего',
+      (WidgetTester tester) async {
+    // Ровно то, ради чего строка программы и заменила собой отдельный шаг:
+    // раньше человек упирался в пустой предпросмотр без единой подсказки.
+    await _pumpWizard(tester, withProgram: false);
+
+    expect(find.text('не заведена — год расставить нельзя'), findsOneWidget);
+    expect(find.text('Создать программу'), findsOneWidget);
+    expect(find.textContaining('а её у этой модели нет'), findsOneWidget);
+    expect(_enabled(tester, 'Утвердить'), isFalse);
+    // Шаг «Точка отсчёта» без программы не нужен: выбирать месяц не для чего.
+    expect(find.byType(WizardAnchorStep), findsNothing);
+  });
+
+  testWidgets('программа есть — строка называет модель и правится',
+      (WidgetTester tester) async {
+    await _pumpWizard(tester, withKnownAnchor: true);
+
+    expect(find.text('LIFT A388509'), findsOneWidget);
+    expect(find.text('Изменить программу'), findsOneWidget);
+  });
+
+  testWidgets('перетаскивание ТО сдвигает цикл целиком',
+      (WidgetTester tester) async {
+    // Фикстура ведёт цикл с марта. Тащим стартовое ТО на май — цикл целиком
+    // едет за ним, а не меняется местами с майским.
+    await _pumpWizard(tester, withKnownAnchor: true);
+    expect(find.text('Цикл начинается с марта.'), findsOneWidget);
+
+    final Finder march = find.byTooltip(_tooltipOf(tester, 'Март'));
+    final Finder may = find.byTooltip(_tooltipOf(tester, 'Май'));
+    await tester.timedDrag(
+      march,
+      tester.getCenter(may) - tester.getCenter(march),
+      const Duration(milliseconds: 300),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Цикл начинается с мая.'), findsOneWidget);
   });
 
   // ------------------------------------------------ вид клетки старта цикла

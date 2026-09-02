@@ -57,7 +57,15 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
 
   /// Заготовка с нуля: то, с чего начинается и открытие мастера, и возврат
   /// после правки программы.
-  Future<void> _openPreview(Emitter<ScheduleWizardState> emit) async {
+  ///
+  /// [preferredAnchor] — месяц, который человек уже выбрал руками: после
+  /// правки программы он остаётся в силе. Сервер о нём не знает и, не сумев
+  /// восстановить якорь по базе, предложил бы январь — то есть молча сдвинул
+  /// бы год, которого человека никто не спрашивал.
+  Future<void> _openPreview(
+    Emitter<ScheduleWizardState> emit, {
+    int? preferredAnchor,
+  }) async {
     try {
       // Сначала без якоря: у объекта с прошлогодним графиком цикл продолжается
       // сам, и спрашивать человека не о чем — шаг «Точка отсчёта» отпадает.
@@ -68,13 +76,17 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
       ));
     } on ScheduleAnchorRequiredException {
       // Якорь не восстановился. Это не ошибка экрана: заготовку всё равно
-      // показываем — с января, — а месяц человек выбирает на шаге 2.
-      await _load(emit, _defaultAnchor);
+      // показываем — с выбранного раньше месяца или с января, — а месяц
+      // человек меняет на шаге «Точка отсчёта» или перетаскиванием клетки.
+      await _load(emit, preferredAnchor ?? _defaultAnchor);
     } on ScheduleProgramMissingException {
       // Программы у модели нет — раскладывать нечего, но мастер всё равно
       // открыт: правка программы живёт в нём же, и отправлять человека с
       // плашкой «ошибка» некуда.
-      emit(const ScheduleWizardLoaded(data: null, anchorMonth: _defaultAnchor));
+      emit(ScheduleWizardLoaded(
+        data: null,
+        anchorMonth: preferredAnchor ?? _defaultAnchor,
+      ));
     } on SchedulesException catch (error) {
       emit(ScheduleWizardFailure(error.message));
     } catch (_) {
@@ -119,7 +131,7 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
       return;
     }
 
-    await _openPreview(emit);
+    await _openPreview(emit, preferredAnchor: current.anchorMonth);
   }
 
   Future<void> _onApproved(

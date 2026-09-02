@@ -8,6 +8,7 @@ import 'package:els/screns/schedule/models/schedule_role.dart';
 import 'package:els/screns/schedule/object/repository/fixture_schedule_object_repository.dart';
 import 'package:els/screns/schedule/object/view/schedule_object_screen.dart';
 import 'package:els/screns/schedule/object/widgets/object_schedule_card.dart';
+import 'package:els/screns/schedule/object/wizard/repository/fixture_maintenance_program_repository.dart';
 import 'package:els/screns/schedule/object/wizard/repository/fixture_schedule_wizard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +33,9 @@ Future<void> _pump(
         repository: FixtureScheduleObjectRepository(filledYear: _filledYear),
         wizardRepository: (String modelName) =>
             const FixtureScheduleWizardRepository(delay: Duration.zero),
+        programRepository: FixtureMaintenanceProgramRepository(
+          delay: Duration.zero,
+        ),
         role: role,
         initialYear: initialYear,
         objectName: 'График',

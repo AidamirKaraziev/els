@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../helper/api_client.dart';
 import '../helper/class_colors.dart';
+import '../screns/schedule/object/wizard/repository/api_maintenance_program_repository.dart';
 import '../screns/schedule/object/wizard/repository/api_schedule_wizard_repository.dart';
 import '../screns/schedule/object/wizard/view/schedule_wizard_screen.dart';
 
@@ -67,6 +68,10 @@ class _LiveFormState extends State<_LiveForm> {
   /// шаге «Программа модели» она только подписью.
   final TextEditingController _model = TextEditingController(text: 'LIFT');
 
+  /// Та же модель числом: по нему уходят запросы программы. В приложении он
+  /// приходит из карточки объекта — здесь его печатают руками.
+  final TextEditingController _modelId = TextEditingController(text: '1');
+
   bool _busy = false;
   String? _error;
 
@@ -91,6 +96,7 @@ class _LiveFormState extends State<_LiveForm> {
     _objectId.dispose();
     _year.dispose();
     _model.dispose();
+    _modelId.dispose();
     super.dispose();
   }
 
@@ -130,8 +136,11 @@ class _LiveFormState extends State<_LiveForm> {
         builder: (BuildContext context) => ScheduleWizardScreen(
           repository:
               ApiScheduleWizardRepository(modelName: _model.text.trim()),
+          programRepository: ApiMaintenanceProgramRepository(),
           objectId: objectId,
           year: year,
+          modelId: int.tryParse(_modelId.text.trim()),
+          modelName: _model.text.trim(),
           objectName: 'Объект $objectId',
         ),
       ),
@@ -170,6 +179,7 @@ class _LiveFormState extends State<_LiveForm> {
                   _field(_objectId, 'ID объекта'),
                   _field(_year, 'Год графика'),
                   _field(_model, 'Модель оборудования (подпись)'),
+                  _field(_modelId, 'ID модели оборудования'),
                   const SizedBox(height: 8.0),
                   ElevatedButton(
                     onPressed: _openWizard,

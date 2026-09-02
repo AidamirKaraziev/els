@@ -9,6 +9,7 @@ import '../helper/session.dart';
 import '../screns/schedule/models/schedule_role.dart';
 import '../screns/schedule/object/repository/api_schedule_object_repository.dart';
 import '../screns/schedule/object/view/schedule_object_screen.dart';
+import '../screns/schedule/object/wizard/repository/api_maintenance_program_repository.dart';
 import '../screns/schedule/object/wizard/repository/api_schedule_wizard_repository.dart';
 
 /// Отдельная точка входа: экран графика объекта на **живом** бэкенде.
@@ -140,6 +141,7 @@ class _LiveFormState extends State<_LiveForm> {
           repository: ApiScheduleObjectRepository(),
           wizardRepository: (String modelName) =>
               ApiScheduleWizardRepository(modelName: modelName),
+          programRepository: ApiMaintenanceProgramRepository(),
           role: _role,
           initialYear: year,
           objectName: 'Объект $objectId',

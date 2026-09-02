@@ -14,6 +14,7 @@ import '../widgets/object_info_card.dart';
 import '../widgets/object_map_card.dart';
 import '../widgets/object_responsibles_card.dart';
 import '../widgets/object_schedule_card.dart';
+import '../wizard/repository/maintenance_program_repository.dart';
 import '../wizard/repository/schedule_wizard_repository.dart';
 import '../wizard/view/schedule_wizard_screen.dart';
 
@@ -37,6 +38,7 @@ class ScheduleObjectScreen extends StatelessWidget {
     required this.objectId,
     required this.repository,
     required this.wizardRepository,
+    required this.programRepository,
     this.role = ScheduleRole.admin,
     this.objectName,
     this.initialYear,
@@ -52,6 +54,11 @@ class ScheduleObjectScreen extends StatelessWidget {
   /// причине, что у [repository]: молчаливый поход в сеть с фикстурного
   /// экрана выглядел бы как пустой мастер без единой ошибки.
   final ScheduleWizardRepositoryBuilder wizardRepository;
+
+  /// Откуда мастер берёт программу модели и куда её сохраняет. Готовым
+  /// объектом, а не функцией, в отличие от [wizardRepository]: модель его
+  /// методы принимают аргументом, и ждать карточки объекта ему незачем.
+  final MaintenanceProgramRepository programRepository;
 
   /// Чьими глазами открыт экран. Три верхних блока у ролей одинаковые; роль
   /// решает, показывать ли кнопку создания графика.
@@ -76,6 +83,7 @@ class ScheduleObjectScreen extends StatelessWidget {
         objectName: objectName,
         role: role,
         wizardRepository: wizardRepository,
+        programRepository: programRepository,
       ),
     );
   }
@@ -87,6 +95,7 @@ class _ScheduleObjectView extends StatelessWidget {
     this.objectName,
     required this.role,
     required this.wizardRepository,
+    required this.programRepository,
   }) : super(key: key);
 
   /// Ширина, ниже которой две колонки кадра встают одна под другой.
@@ -98,6 +107,7 @@ class _ScheduleObjectView extends StatelessWidget {
   final String? objectName;
   final ScheduleRole role;
   final ScheduleWizardRepositoryBuilder wizardRepository;
+  final MaintenanceProgramRepository programRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +138,7 @@ class _ScheduleObjectView extends StatelessWidget {
               objectName: objectName,
               twoColumnsWidth: _twoColumnsWidth,
               wizardRepository: wizardRepository,
+              programRepository: programRepository,
             );
           }
           return const Center(child: CircularProgressIndicator());
@@ -144,6 +155,7 @@ class _Content extends StatelessWidget {
     required this.role,
     required this.twoColumnsWidth,
     required this.wizardRepository,
+    required this.programRepository,
     this.objectName,
   }) : super(key: key);
 
@@ -151,6 +163,7 @@ class _Content extends StatelessWidget {
   final ScheduleRole role;
   final double twoColumnsWidth;
   final ScheduleWizardRepositoryBuilder wizardRepository;
+  final MaintenanceProgramRepository programRepository;
 
   /// Название объекта для шапки карточки работы — то же, что в шапке экрана.
   final String? objectName;
@@ -198,8 +211,11 @@ class _Content extends StatelessWidget {
       MaterialPageRoute<bool>(
         builder: (BuildContext context) => ScheduleWizardScreen(
           repository: wizardRepository(state.card.model ?? ''),
+          programRepository: programRepository,
           objectId: bloc.objectId,
           year: year,
+          modelId: state.card.modelId,
+          modelName: state.card.model,
           objectName: objectName,
         ),
       ),
