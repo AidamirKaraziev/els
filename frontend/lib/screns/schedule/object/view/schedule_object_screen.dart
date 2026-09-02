@@ -14,6 +14,8 @@ import '../widgets/object_info_card.dart';
 import '../widgets/object_map_card.dart';
 import '../widgets/object_responsibles_card.dart';
 import '../widgets/object_schedule_card.dart';
+import '../wizard/fixture_schedule_wizard_data.dart';
+import '../wizard/view/schedule_wizard_screen.dart';
 
 /// Экран «График объекта».
 ///
@@ -162,6 +164,31 @@ class _Content extends StatelessWidget {
     );
   }
 
+  /// «Создать график на N» открывает мастер расстановки.
+  ///
+  /// Раньше кнопка слала `ScheduleObjectGenerateRequested` сразу и
+  /// раскладывала год одним нажатием. Теперь между нажатием и записью стоят
+  /// три шага мастера: программа модели, точка отсчёта, предпросмотр.
+  ///
+  /// Мастер пока **набросок** и в базу ничего не пишет: он показывает
+  /// заготовку на фикстуре и возвращает `true`, если человек её утвердил.
+  /// Расстановку по-прежнему делает то же событие — так вид меняется, а
+  /// работающее поведение не ломается. Следующей работой мастер сам возьмёт
+  /// `preview` и `generate`, и событие уйдёт вместе с фикстурой.
+  Future<void> _openWizard(BuildContext context, int year) async {
+    final ScheduleObjectBloc bloc = context.read<ScheduleObjectBloc>();
+    final bool? approved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (BuildContext context) => ScheduleWizardScreen(
+          data: buildWizardFixture(WizardFixture.ok, year: year),
+          objectName: objectName,
+        ),
+      ),
+    );
+    if (approved != true) return;
+    bloc.add(const ScheduleObjectGenerateRequested());
+  }
+
   @override
   Widget build(BuildContext context) {
     final ScheduleObjectCard card = state.card;
@@ -188,9 +215,7 @@ class _Content extends StatelessWidget {
           onYearChanged: (int year) => context
               .read<ScheduleObjectBloc>()
               .add(ScheduleObjectYearRequested(year)),
-          onGenerate: () => context
-              .read<ScheduleObjectBloc>()
-              .add(const ScheduleObjectGenerateRequested()),
+          onGenerate: () => _openWizard(context, state.year),
           onCellTap: (MonthCell cell) => _openWork(context, cell),
         ),
       ],
