@@ -23,6 +23,19 @@ class ScheduleObjectYearRequested extends ScheduleObjectEvent {
   final int year;
 }
 
+/// Перенести ТО на другой месяц показанного года.
+///
+/// Года в событии нет по той же причине, что и у расстановки: двигаем ровно
+/// в той ленте, на которую человек смотрит.
+class ScheduleObjectCellMoved extends ScheduleObjectEvent {
+  const ScheduleObjectCellMoved({required this.cell, required this.toMonth});
+
+  /// Клетка, которую тащили: из неё берём акт и месяц-источник.
+  final MonthCell cell;
+
+  final int toMonth;
+}
+
 /// Расставить график на показанный год по программе модели.
 ///
 /// Года в событии нет намеренно: создаём ровно то, на что человек смотрит, и

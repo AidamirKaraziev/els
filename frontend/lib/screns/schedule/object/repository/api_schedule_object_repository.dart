@@ -27,8 +27,10 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
     this.timeout = const Duration(seconds: 20),
     Future<http.Response> Function(Uri uri)? send,
     Future<http.Response> Function(Uri uri, String body)? sendPost,
+    Future<http.Response> Function(Uri uri, String body)? sendPut,
   })  : _send = send ?? _getViaApi,
-        _sendPost = sendPost ?? _postViaApi;
+        _sendPost = sendPost ?? _postViaApi,
+        _sendPut = sendPut ?? _putViaApi;
 
   final Duration timeout;
 
@@ -37,6 +39,7 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
   /// ответ, нельзя.
   final Future<http.Response> Function(Uri uri) _send;
   final Future<http.Response> Function(Uri uri, String body) _sendPost;
+  final Future<http.Response> Function(Uri uri, String body) _sendPut;
 
   static Future<http.Response> _getViaApi(Uri uri) =>
       Api.get(uri, headers: <String, String>{'Accept': 'application/json'});
@@ -49,6 +52,36 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
         },
         body: body,
       );
+
+  static Future<http.Response> _putViaApi(Uri uri, String body) => Api.put(
+        uri,
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: body,
+      );
+
+  /// Названия колонок годового плана: `planned_to.january_to_id` и далее.
+  ///
+  /// Список, а не вычисление из английской локали `intl`: тот же довод, что
+  /// у названий месяцев в `helper/calendar/month_picker.dart` — локаль здесь
+  /// явно не инициализируется, а имена полей ручки меняться не должны от
+  /// того, в каком порядке загрузились данные локалей.
+  static const List<String> _monthFields = <String>[
+    'january_to_id',
+    'february_to_id',
+    'march_to_id',
+    'april_to_id',
+    'may_to_id',
+    'june_to_id',
+    'july_to_id',
+    'august_to_id',
+    'september_to_id',
+    'october_to_id',
+    'november_to_id',
+    'december_to_id',
+  ];
 
   @override
   Future<ScheduleObjectCard> fetchCard(int objectId) async {
@@ -107,6 +140,67 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
       throw const SchedulesException('Сервер вернул неожиданный ответ');
     }
     return _cells(first.cast<String, dynamic>()['cells']);
+  }
+
+  @override
+  Future<void> moveCell(
+    int objectId,
+    int year, {
+    required int actId,
+    required int fromMonth,
+    required int toMonth,
+  }) async {
+    if (fromMonth == toMonth) return;
+
+    final int planId = await _plannedToId(objectId, year);
+
+    // Шлём ровно две колонки: ручка обновляет только пришедшие поля
+    // (`exclude_unset` в `crud/base.py`), и остальные одиннадцать месяцев
+    // остаются как были. Прислать весь год значило бы переписать чужие
+    // клетки теми значениями, что были у нас на экране минуту назад.
+    final String body = jsonEncode(<String, dynamic>{
+      _monthFields[fromMonth - 1]: null,
+      _monthFields[toMonth - 1]: actId,
+    });
+
+    final Uri uri = Uri.parse('${ApiConfig.base}/planned-to/$planId/');
+
+    http.Response response;
+    try {
+      response = await _sendPut(uri, body).timeout(timeout);
+    } catch (_) {
+      throw const SchedulesException('Не удалось связаться с сервером');
+    }
+
+    if (response.statusCode == 200 || response.statusCode == 201) return;
+    throw SchedulesException(errorText(response));
+  }
+
+  /// Годовой план объекта: его `id` нужен, чтобы двигать месяцы.
+  ///
+  /// В ленте его нет — `/schedules/rows` отдаёт клетки, а не план. Поэтому
+  /// спрашиваем список планов объекта и выбираем нужный год. Год там строкой
+  /// (`planned_to.year` — `String`), сравниваем как строку.
+  Future<int> _plannedToId(int objectId, int year) async {
+    final Map<String, dynamic> body = await _request(
+      '/planned-to/by-object/$objectId/',
+      const <String, String>{},
+    );
+
+    final dynamic data = body['data'];
+    if (data is! List) {
+      throw const SchedulesException('Сервер вернул неожиданный ответ');
+    }
+
+    for (final dynamic item in data) {
+      if (item is! Map) continue;
+      final Map<String, dynamic> plan = item.cast<String, dynamic>();
+      if (asString(plan['year']) != '$year') continue;
+      final int? id = asInt(plan['id']);
+      if (id != null) return id;
+    }
+
+    throw SchedulesException('График на $year год не найден');
   }
 
   @override

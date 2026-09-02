@@ -27,6 +27,10 @@ class FixtureScheduleObjectRepository implements ScheduleObjectRepository {
   /// фикстуре достаточно показать, что после создания лента перерисовалась.
   final Map<int, List<MonthCell>> _generated = <int, List<MonthCell>>{};
 
+  /// Ленты годов, которые уже показывали. Живут в памяти: сюда ложится
+  /// перенос ТО, чтобы он пережил перечитывание ленты.
+  final Map<int, List<MonthCell>> _years = <int, List<MonthCell>>{};
+
   /// Программа обслуживания модели: двенадцать позиций по кругу. Та же, что
   /// в примере плана — `ТО1, ТО1, ТО3, ТО1, ТО1, ТО6, …`.
   static const List<int> _program = <int>[1, 1, 3, 1, 1, 6, 1, 1, 3, 1, 1, 12];
@@ -65,14 +69,55 @@ class FixtureScheduleObjectRepository implements ScheduleObjectRepository {
   @override
   Future<List<MonthCell>> fetchYear(int objectId, int year) async {
     await _wait();
-    final List<MonthCell>? generated = _generated[year];
-    if (generated != null) {
-      return generated;
-    }
-    if (year != _filledYear) {
-      return <MonthCell>[for (int month = 1; month <= 12; month++) MonthCell.empty(month)];
-    }
-    return _filled();
+    return _year(year);
+  }
+
+  @override
+  Future<void> moveCell(
+    int objectId,
+    int year, {
+    required int actId,
+    required int fromMonth,
+    required int toMonth,
+  }) async {
+    await _wait();
+    final List<MonthCell> cells = _year(year);
+    final MonthCell from = cells[fromMonth - 1];
+    // Как на сервере: план меняется, сама работа — нет. Вид ТО и акт едут за
+    // клеткой, состояние пересчитывается по новому месяцу.
+    cells[toMonth - 1] = MonthCell(
+      month: toMonth,
+      status: _statusFor(year, toMonth),
+      toName: from.toName,
+      actId: from.actId,
+    );
+    cells[fromMonth - 1] = MonthCell.empty(fromMonth);
+  }
+
+  /// Лента года, одна и та же от вызова к вызову.
+  ///
+  /// Держим её списком в памяти, а не собираем заново: перенос ТО должен
+  /// оставаться на месте после перечитывания ленты, иначе на фикстуре
+  /// перетаскивание отыгрывалось бы назад само.
+  List<MonthCell> _year(int year) {
+    return _years.putIfAbsent(year, () {
+      final List<MonthCell>? generated = _generated[year];
+      if (generated != null) return List<MonthCell>.of(generated);
+      if (year != _filledYear) {
+        return <MonthCell>[
+          for (int month = 1; month <= 12; month++) MonthCell.empty(month)
+        ];
+      }
+      return _filled();
+    });
+  }
+
+  /// Назначено или просрочено — по тому, кончился ли месяц. Ровно так же
+  /// считает сервер, и перенесённое ТО обязано слушаться того же правила.
+  MonthStatus _statusFor(int year, int month) {
+    final DateTime now = DateTime.now();
+    final bool past = year < now.year || (year == now.year && month < now.month);
+    return past ? MonthStatus.overdue : MonthStatus.pending;
   }
 
   @override
@@ -97,6 +142,9 @@ class FixtureScheduleObjectRepository implements ScheduleObjectRepository {
           actId: 1000 + month,
         ),
     ];
+    // Расстановка отменяет то, что лежало в памяти за этот год: иначе лента
+    // осталась бы прежней, пустой.
+    _years.remove(year);
   }
 
   /// Заполненный год: все пять состояний разом, иначе цвета ленты глазами не

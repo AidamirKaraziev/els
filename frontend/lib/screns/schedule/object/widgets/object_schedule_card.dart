@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../helper/calendar/month_picker.dart' show kMonthsGenitive;
 import '../../../../helper/class_colors.dart';
 import '../../models/month_cell.dart';
 import '../../models/schedule_role.dart';
@@ -22,8 +23,12 @@ import 'object_block.dart';
 ///   Те же пять состояний, что в ленте раздела «Графики» (решение 11): один
 ///   и тот же месяц не может быть в двух местах разного цвета.
 /// * **Иконок выгрузки и дефектных актов рядом с заголовком нет** — это S3.
-///   Строка «11 января – 17 января» из кадра относится к списку работ под
-///   лентой, он приходит в S2.3.
+/// * **Срок справа от ленты считаем сами.** В кадре там «11 января –
+///   17 января» — точный плановый интервал работы. Такого интервала в данных
+///   нет вовсе: у работы есть только фактические `started_at` и
+///   `finished_at`, а плановый срок ТО — целый календарный месяц, по концу
+///   которого бэкенд и считает просрочку. Поэтому показываем то, что правда:
+///   срок **ближайшего незакрытого** ТО года, месяцем целиком.
 class ObjectScheduleCard extends StatelessWidget {
   const ObjectScheduleCard({
     Key? key,
@@ -36,6 +41,7 @@ class ObjectScheduleCard extends StatelessWidget {
     this.isGenerating = false,
     this.error,
     this.onGenerate,
+    this.onCellMoved,
   }) : super(key: key);
 
   final int year;
@@ -56,6 +62,13 @@ class ObjectScheduleCard extends StatelessWidget {
 
   final VoidCallback? onGenerate;
 
+  /// Перенести незакрытое ТО на свободный месяц перетаскиванием.
+  ///
+  /// Не задан — лента неподвижна. График правят те же, кто его расставляет
+  /// (`planned_to:write`), поэтому у прочих ролей перетаскивания нет: оно
+  /// вернуло бы 403 уже после того, как клетка на глазах переехала.
+  final void Function(MonthCell cell, int toMonth)? onCellMoved;
+
   /// Ширина, ниже которой подпись «Плановые ТО» встаёт над лентой.
   ///
   /// Рядом с лентой она держится только на широком экране: на телефоне
@@ -64,6 +77,26 @@ class ObjectScheduleCard extends StatelessWidget {
 
   bool get _hasNoSchedule =>
       cells.every((MonthCell cell) => cell.status == MonthStatus.none);
+
+  /// Ближайшее незакрытое ТО года — то, к чему прорабу готовиться.
+  ///
+  /// Сначала самое раннее **просроченное** (`overdue`): срок по нему уже
+  /// вышел, и делать его надо раньше, чем то, что только назначено. Долгов
+  /// нет — берём ближайшее назначенное (`pending`). Всё закрыто или год пуст
+  /// — `null`, и строки не будет: «Ближайшее ТО: нет» занимает место и ничего
+  /// не сообщает.
+  MonthCell? get _nextDue {
+    MonthCell? pending;
+    MonthCell? overdue;
+    for (final MonthCell cell in cells) {
+      if (cell.status == MonthStatus.pending) {
+        if (pending == null || cell.month < pending.month) pending = cell;
+      } else if (cell.status == MonthStatus.overdue) {
+        if (overdue == null || cell.month < overdue.month) overdue = cell;
+      }
+    }
+    return overdue ?? pending;
+  }
 
   bool get _canGenerate =>
       role == ScheduleRole.admin || role == ScheduleRole.foreman;
@@ -133,7 +166,13 @@ class ObjectScheduleCard extends StatelessWidget {
       cells: cells,
       onCellTap: onCellTap,
       showMonthLabels: true,
+      // Двигать график может тот же, кто его расставляет.
+      onCellMoved: _canGenerate ? onCellMoved : null,
     );
+
+    final MonthCell? due = _nextDue;
+    final Widget? dueLine =
+        due == null ? null : _DueLine(year: year, cell: due);
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -144,6 +183,10 @@ class ObjectScheduleCard extends StatelessWidget {
               label,
               const SizedBox(height: 12.0),
               strip,
+              if (dueLine != null) ...<Widget>[
+                const SizedBox(height: 12.0),
+                dueLine,
+              ],
             ],
           );
         }
@@ -155,9 +198,64 @@ class ObjectScheduleCard extends StatelessWidget {
             SizedBox(width: 160.0, child: label),
             const SizedBox(width: 16.0),
             Expanded(child: strip),
+            if (dueLine != null) ...<Widget>[
+              const SizedBox(width: 16.0),
+              dueLine,
+            ],
           ],
         );
       },
+    );
+  }
+}
+
+/// Срок ближайшего незакрытого ТО: «ТО 1 · 1 – 31 марта» и значок календаря.
+///
+/// Место в кадре занимал точный интервал работы; здесь стоит плановый месяц
+/// целиком — см. пояснение у [ObjectScheduleCard]. Вид работы приписан
+/// спереди: без него строка говорит, *когда*, но не *что*.
+class _DueLine extends StatelessWidget {
+  const _DueLine({Key? key, required this.year, required this.cell})
+      : super(key: key);
+
+  final int year;
+  final MonthCell cell;
+
+  /// Последний день месяца — через нулевой день следующего, чтобы не держать
+  /// в коде свою таблицу длин месяцев и правило високосного года.
+  int get _lastDay => DateTime(year, cell.month + 1, 0).day;
+
+  String get _text {
+    final String month = kMonthsGenitive[cell.month - 1];
+    final String dates = '1 – $_lastDay $month';
+    final String name = cell.toName ?? '';
+    return name.isEmpty ? dates : '$name · $dates';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Просроченное ТО тем же красным, что и его клетка: строка и лента не
+    // должны расходиться в том, тревожный это срок или обычный.
+    final bool isOverdue = cell.status == MonthStatus.overdue;
+    final Color color =
+        isOverdue ? ColorApp.myColorRed : ColorApp.myColorGrayText;
+    return Tooltip(
+      message: isOverdue
+          ? 'Ближайшее незакрытое ТО, срок вышел'
+          : 'Ближайшее назначенное ТО',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            _text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 13.0, color: color),
+          ),
+          const SizedBox(width: 6.0),
+          Icon(Icons.calendar_today_outlined, size: 14.0, color: color),
+        ],
+      ),
     );
   }
 }

@@ -48,6 +48,22 @@ class _CountingObjectRepository implements ScheduleObjectRepository {
       _inner.fetchYear(objectId, year);
 
   @override
+  Future<void> moveCell(
+    int objectId,
+    int year, {
+    required int actId,
+    required int fromMonth,
+    required int toMonth,
+  }) =>
+      _inner.moveCell(
+        objectId,
+        year,
+        actId: actId,
+        fromMonth: fromMonth,
+        toMonth: toMonth,
+      );
+
+  @override
   Future<void> generateYear(int objectId, int year) async {
     generateCalls++;
     // ignore: deprecated_member_use_from_same_package
