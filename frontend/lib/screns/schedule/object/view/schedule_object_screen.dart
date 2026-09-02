@@ -14,7 +14,7 @@ import '../widgets/object_info_card.dart';
 import '../widgets/object_map_card.dart';
 import '../widgets/object_responsibles_card.dart';
 import '../widgets/object_schedule_card.dart';
-import '../wizard/fixture_schedule_wizard_data.dart';
+import '../wizard/repository/schedule_wizard_repository.dart';
 import '../wizard/view/schedule_wizard_screen.dart';
 
 /// Экран «График объекта».
@@ -36,6 +36,7 @@ class ScheduleObjectScreen extends StatelessWidget {
     Key? key,
     required this.objectId,
     required this.repository,
+    required this.wizardRepository,
     this.role = ScheduleRole.admin,
     this.objectName,
     this.initialYear,
@@ -46,6 +47,11 @@ class ScheduleObjectScreen extends StatelessWidget {
   /// Откуда берутся карточка и лента. Обязателен: под ним стоит либо
   /// фикстура, либо сеть, и умолчания у него быть не должно.
   final ScheduleObjectRepository repository;
+
+  /// Откуда мастер расстановки берёт заготовку года. Умолчания нет по той же
+  /// причине, что у [repository]: молчаливый поход в сеть с фикстурного
+  /// экрана выглядел бы как пустой мастер без единой ошибки.
+  final ScheduleWizardRepositoryBuilder wizardRepository;
 
   /// Чьими глазами открыт экран. Три верхних блока у ролей одинаковые; роль
   /// решает, показывать ли кнопку создания графика.
@@ -66,7 +72,11 @@ class ScheduleObjectScreen extends StatelessWidget {
         objectId: objectId,
         initialYear: initialYear,
       )..add(const ScheduleObjectRequested()),
-      child: _ScheduleObjectView(objectName: objectName, role: role),
+      child: _ScheduleObjectView(
+        objectName: objectName,
+        role: role,
+        wizardRepository: wizardRepository,
+      ),
     );
   }
 }
@@ -76,6 +86,7 @@ class _ScheduleObjectView extends StatelessWidget {
     Key? key,
     this.objectName,
     required this.role,
+    required this.wizardRepository,
   }) : super(key: key);
 
   /// Ширина, ниже которой две колонки кадра встают одна под другой.
@@ -86,6 +97,7 @@ class _ScheduleObjectView extends StatelessWidget {
 
   final String? objectName;
   final ScheduleRole role;
+  final ScheduleWizardRepositoryBuilder wizardRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +127,7 @@ class _ScheduleObjectView extends StatelessWidget {
               role: role,
               objectName: objectName,
               twoColumnsWidth: _twoColumnsWidth,
+              wizardRepository: wizardRepository,
             );
           }
           return const Center(child: CircularProgressIndicator());
@@ -130,12 +143,14 @@ class _Content extends StatelessWidget {
     required this.state,
     required this.role,
     required this.twoColumnsWidth,
+    required this.wizardRepository,
     this.objectName,
   }) : super(key: key);
 
   final ScheduleObjectLoaded state;
   final ScheduleRole role;
   final double twoColumnsWidth;
+  final ScheduleWizardRepositoryBuilder wizardRepository;
 
   /// Название объекта для шапки карточки работы — то же, что в шапке экрана.
   final String? objectName;
@@ -170,17 +185,22 @@ class _Content extends StatelessWidget {
   /// раскладывала год одним нажатием. Теперь между нажатием и записью стоят
   /// три шага мастера: программа модели, точка отсчёта, предпросмотр.
   ///
-  /// Мастер пока **набросок** и в базу ничего не пишет: он показывает
-  /// заготовку на фикстуре и возвращает `true`, если человек её утвердил.
-  /// Расстановку по-прежнему делает то же событие — так вид меняется, а
-  /// работающее поведение не ломается. Следующей работой мастер сам возьмёт
-  /// `preview` и `generate`, и событие уйдёт вместе с фикстурой.
+  /// Заготовку мастер берёт у `GET /planned-to/preview/` сам. А вот
+  /// расстановку по-прежнему делает то же событие, что и раньше: `generate`
+  /// подключается следующей работой, и до тех пор `true` из мастера означает
+  /// «человек заготовку утвердил», а не «график создан».
+  ///
+  /// Модель оборудования мастеру нужна для шага «Программа модели», а в
+  /// ответе предпросмотра её нет — берём из уже загруженной карточки, лишнего
+  /// запроса не делаем.
   Future<void> _openWizard(BuildContext context, int year) async {
     final ScheduleObjectBloc bloc = context.read<ScheduleObjectBloc>();
     final bool? approved = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (BuildContext context) => ScheduleWizardScreen(
-          data: buildWizardFixture(WizardFixture.ok, year: year),
+          repository: wizardRepository(state.card.model ?? ''),
+          objectId: bloc.objectId,
+          year: year,
           objectName: objectName,
         ),
       ),

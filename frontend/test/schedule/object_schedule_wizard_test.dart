@@ -1,16 +1,20 @@
-/// Мастер расстановки графика — набросок: проверяем вид, а не расстановку.
+/// Мастер расстановки графика: проверяем вид и шаги, а не расстановку.
 ///
-/// Логики в мастере пока нет: данные приходят фикстурой, в базу он ничего не
-/// пишет. Поэтому и проверяем только то, что уже есть, — что кнопка ведёт в
-/// мастер, а не раскладывает год сразу; что шаги листаются туда и обратно;
-/// что «Утвердить» гаснет на исходе «нет шаблона» и что шаг «Точка отсчёта»
-/// отпадает, когда цикл продолжается с прошлого года.
+/// Заготовку мастер берёт у репозитория — здесь фикстурного, — а в базу
+/// по-прежнему ничего не пишет: `generate` подключается следующей работой.
+/// Поэтому и проверяем то, что уже есть, — что кнопка ведёт в мастер, а не
+/// раскладывает год сразу; что шаги листаются туда и обратно; что «Утвердить»
+/// гаснет на исходе «нет шаблона»; что шаг «Точка отсчёта» отпадает, когда
+/// цикл продолжается с прошлого года, — и как выделена клетка старта цикла.
 library;
 
+import 'package:els/helper/class_colors.dart';
 import 'package:els/screns/schedule/models/schedule_role.dart';
 import 'package:els/screns/schedule/object/repository/fixture_schedule_object_repository.dart';
 import 'package:els/screns/schedule/object/view/schedule_object_screen.dart';
 import 'package:els/screns/schedule/object/wizard/fixture_schedule_wizard_data.dart';
+import 'package:els/screns/schedule/object/wizard/models/schedule_wizard_data.dart';
+import 'package:els/screns/schedule/object/wizard/repository/fixture_schedule_wizard_repository.dart';
 import 'package:els/screns/schedule/object/wizard/view/schedule_wizard_screen.dart';
 import 'package:els/screns/schedule/object/wizard/widgets/wizard_anchor_step.dart';
 import 'package:els/screns/schedule/object/wizard/widgets/wizard_preview_step.dart';
@@ -35,11 +39,13 @@ Future<void> _pumpWizard(
   await tester.pumpWidget(
     MaterialApp(
       home: ScheduleWizardScreen(
-        data: buildWizardFixture(
-          fixture,
+        repository: FixtureScheduleWizardRepository(
+          fixture: fixture,
           withPreviousYear: withPreviousYear,
-          year: _emptyYear,
+          delay: Duration.zero,
         ),
+        objectId: 1,
+        year: _emptyYear,
         objectName: 'ТЦ Карнавал 3 этаж 1',
       ),
     ),
@@ -72,6 +78,8 @@ void main() {
         home: ScheduleObjectScreen(
           objectId: 1,
           repository: FixtureScheduleObjectRepository(filledYear: _filledYear),
+          wizardRepository: (String modelName) =>
+              const FixtureScheduleWizardRepository(delay: Duration.zero),
           role: ScheduleRole.admin,
           initialYear: _emptyYear,
           objectName: 'ТЦ Карнавал 3 этаж 1',
@@ -176,4 +184,105 @@ void main() {
     expect(_enabled(tester, 'Утвердить'), isTrue);
     expect(find.textContaining('уже занято'), findsWidgets);
   });
+
+  // ------------------------------------------------ вид клетки старта цикла
+  //
+  // Отдельно от раскладов фикстуры: она ведёт цикл с марта и первую позицию
+  // никуда не двигает, а столкновение «старт + нет шаблона» на ней вообще не
+  // воспроизводится — позиция 1 всегда ТО 1, у которого шаблон есть. Поэтому
+  // клетки здесь собраны руками.
+
+  testWidgets('первая позиция цикла помечена тегом «СТАРТ»',
+      (WidgetTester tester) async {
+    await _pumpPreview(tester, _handmade());
+
+    expect(find.text('СТАРТ'), findsOneWidget);
+
+    // Тег стоит на клетке позиции 1, а она пришлась на март — не на январь:
+    // иначе тест прошёл бы и на ленте, которая просто метит первый месяц.
+    final BoxDecoration march = _cellDecoration(tester, 'Март');
+    expect(march.color, ColorApp.myColorBlack);
+    expect(_cellDecoration(tester, 'Январь').color, isNot(ColorApp.myColorBlack));
+  });
+
+  testWidgets('старт на клетке «нет шаблона» остаётся янтарным',
+      (WidgetTester tester) async {
+    // Предупреждение важнее старта: из-за него график не утверждается, и
+    // тёмная заливка его бы съела. Старт помечается рамкой и тегом.
+    await _pumpPreview(tester, _handmade(missingAtStart: true));
+
+    final BoxDecoration march = _cellDecoration(tester, 'Март');
+    expect(march.color, ColorApp.myColorYellowLight);
+
+    final BorderSide side = (march.border! as Border).top;
+    expect(side.color, ColorApp.myColorBlack);
+    expect(side.width, 2.0);
+
+    expect(find.text('СТАРТ'), findsOneWidget);
+  });
+}
+
+/// Заготовка с циклом, начинающимся в марте, — собранная руками.
+///
+/// [missingAtStart] помечает первую позицию цикла как «нет шаблона»: ровно то
+/// столкновение двух акцентов, ради которого в клетке заведена тёмная рамка.
+ScheduleWizardData _handmade({bool missingAtStart = false}) {
+  const int anchor = 3;
+  return ScheduleWizardData(
+    year: _emptyYear,
+    modelName: 'LIFT A388509',
+    program: const <WizardProgramItem>[
+      WizardProgramItem(position: 1, typeActName: 'ТО 1'),
+    ],
+    cells: <WizardPreviewCell>[
+      for (int month = 1; month <= 12; month++)
+        WizardPreviewCell(
+          month: month,
+          position: (month - anchor + 12) % 12 + 1,
+          typeActName: 'ТО 1',
+          templateMissing: missingAtStart && month == anchor,
+        ),
+    ],
+  );
+}
+
+Future<void> _pumpPreview(WidgetTester tester, ScheduleWizardData data) async {
+  tester.view.physicalSize = const Size(1600.0, 1400.0);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: WizardPreviewStep(data: data, anchorMonth: 3),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// Оформление клетки месяца.
+///
+/// Ищем по тултипу: он единственный, что называет месяц целиком, — в самой
+/// клетке стоит сокращение, и «Мар» нашлось бы и в соседнем тексте.
+BoxDecoration _cellDecoration(WidgetTester tester, String month) {
+  final Finder cell = find.descendant(
+    of: find.byTooltip(_tooltipOf(tester, month)),
+    matching: find.byType(Container),
+  );
+  final Container box = tester.widget<Container>(cell.first);
+  return box.decoration! as BoxDecoration;
+}
+
+/// Полный текст тултипа клетки: месяц, вид ТО, пометка и, у старта, «старт
+/// цикла». Собирать его в тесте руками значило бы повторять формат виджета.
+String _tooltipOf(WidgetTester tester, String month) {
+  final Iterable<Tooltip> tooltips = tester.widgetList<Tooltip>(
+    find.byType(Tooltip),
+  );
+  return tooltips
+      .map((Tooltip tooltip) => tooltip.message ?? '')
+      .firstWhere((String message) => message.startsWith('$month ·'));
 }

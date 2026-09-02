@@ -34,6 +34,24 @@
       ],
       "cwd": "frontend",
       "port": 5600
+    },
+    {
+      "name": "schedule-wizard-live",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/dev/schedule_wizard_live.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5601",
+        "--web-hostname",
+        "127.0.0.1",
+        "--dart-define=API_ORIGIN=http://localhost:8080"
+      ],
+      "cwd": "frontend",
+      "port": 5601
     }
   ]
 }

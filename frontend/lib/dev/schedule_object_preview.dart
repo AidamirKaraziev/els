@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../screns/schedule/models/schedule_role.dart';
 import '../screns/schedule/object/repository/fixture_schedule_object_repository.dart';
 import '../screns/schedule/object/view/schedule_object_screen.dart';
+import '../screns/schedule/object/wizard/repository/fixture_schedule_wizard_repository.dart';
 
 /// Отдельная точка входа: показать экран графика объекта на фикстуре.
 ///
@@ -39,6 +40,11 @@ class ScheduleObjectPreviewApp extends StatelessWidget {
       home: ScheduleObjectScreen(
         objectId: 1,
         repository: FixtureScheduleObjectRepository(),
+        // Мастер расстановки — тоже на фикстуре: эта точка входа показывает
+        // экран без сервера, и уходить из неё в сеть одной кнопкой нельзя.
+        // Живой мастер смотрится отдельной точкой `schedule_wizard_live.dart`.
+        wizardRepository: (String modelName) =>
+            const FixtureScheduleWizardRepository(),
         role: ScheduleRole.admin,
         objectName: 'График',
       ),

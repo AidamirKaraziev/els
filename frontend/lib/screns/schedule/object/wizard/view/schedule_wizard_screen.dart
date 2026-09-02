@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../helper/class_colors.dart';
-import '../models/schedule_wizard_data.dart';
+import '../bloc/schedule_wizard_bloc.dart';
+import '../repository/schedule_wizard_repository.dart';
 import '../widgets/wizard_anchor_step.dart';
 import '../widgets/wizard_preview_step.dart';
 import '../widgets/wizard_program_step.dart';
@@ -10,59 +12,75 @@ import '../widgets/wizard_steps_header.dart';
 /// Мастер расстановки годового графика — три шага вместо кнопки, которая
 /// раскладывала весь год одним нажатием.
 ///
-/// **Пока набросок.** Данные приходят готовыми ([data]), сети здесь нет:
-/// внешний вид утверждается до логики (правило репозитория). Следующей
-/// работой [data] заполнится из `GET /planned-to/preview/`, а «Утвердить»
-/// позовёт `POST /planned-to/` — формы моделей под это уже подогнаны.
+/// Заготовку строит сервер: `GET /planned-to/preview/` отдаёт двенадцать
+/// клеток года по программе модели, ничего не записывая. Мастер её только
+/// показывает — своей арифметики цикла здесь нет.
+///
+/// «Утвердить» пока закрывает мастер с `true`, а расстановку по-прежнему
+/// делает экран объекта прежним событием: `POST /planned-to/generate/`
+/// подключается следующей работой.
 ///
 /// Кадра на мастер нет: рисовали сами, в стиле принятых блоков экрана
 /// объекта — те же карточки `objectCardDecoration()` и та же палитра.
-///
-/// Шаг держится в `setState`, а не в блоке: у наброска нет ни загрузки, ни
-/// ошибок, и блок здесь был бы обёрткой вокруг одного числа.
-class ScheduleWizardScreen extends StatefulWidget {
+class ScheduleWizardScreen extends StatelessWidget {
   const ScheduleWizardScreen({
     Key? key,
-    required this.data,
+    required this.repository,
+    required this.objectId,
+    required this.year,
     this.objectName,
   }) : super(key: key);
 
-  final ScheduleWizardData data;
+  /// Откуда берётся заготовка. Обязателен: под ним стоит либо фикстура, либо
+  /// сеть, и умолчания у него быть не должно.
+  final ScheduleWizardRepository repository;
+
+  final int objectId;
+
+  /// Год, на который расставляется график.
+  final int year;
 
   /// Название объекта для шапки — то же, что в шапке экрана графика.
   final String? objectName;
 
   @override
-  State<ScheduleWizardScreen> createState() => _ScheduleWizardScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider<ScheduleWizardBloc>(
+      create: (_) => ScheduleWizardBloc(
+        repository: repository,
+        objectId: objectId,
+        year: year,
+      )..add(const WizardOpened()),
+      child: _WizardView(year: year, objectName: objectName),
+    );
+  }
 }
 
-class _ScheduleWizardScreenState extends State<ScheduleWizardScreen> {
-  /// Индекс текущего шага в [_titles], с нуля.
+/// Шаги мастера поверх готового состояния.
+///
+/// Номер шага живёт здесь, а не в блоке: это перелистывание уже загруженного,
+/// без запросов и без ошибок. Якорь, наоборот, в блоке — от него зависит
+/// запрос к серверу.
+class _WizardView extends StatefulWidget {
+  const _WizardView({Key? key, required this.year, this.objectName})
+      : super(key: key);
+
+  final int year;
+  final String? objectName;
+
+  @override
+  State<_WizardView> createState() => _WizardViewState();
+}
+
+class _WizardViewState extends State<_WizardView> {
+  /// Индекс текущего шага в списке заголовков, с нуля.
   int _step = 0;
 
-  /// Месяц начала цикла. С прошлогодним графиком он известен и не
-  /// спрашивается; без него человек выбирает на шаге 2, а до выбора стоит
-  /// январь — видимое умолчание, а не молча применённый сдвиг.
-  late int _anchorMonth = widget.data.previousYearAnchor ?? 1;
-
-  /// Шаг «Точка отсчёта» отпадает, когда цикл продолжается с прошлого года.
-  bool get _hasAnchorStep => !widget.data.hasPreviousYear;
-
-  List<String> get _titles => <String>[
+  List<String> _titles(bool hasAnchorStep) => <String>[
         'Программа модели',
-        if (_hasAnchorStep) 'Точка отсчёта',
+        if (hasAnchorStep) 'Точка отсчёта',
         'Предпросмотр',
       ];
-
-  bool get _isLast => _step == _titles.length - 1;
-
-  /// «Утвердить» гаснет, пока в предпросмотре есть клетка «нет шаблона».
-  bool get _canApprove => !widget.data.hasMissingTemplate;
-
-  void _next() {
-    if (_isLast) return;
-    setState(() => _step++);
-  }
 
   /// «Назад» с первого шага закрывает мастер: отдельной кнопки «Отмена» в
   /// нижней панели нет, а уходить из мастера человек должен уметь тем же
@@ -75,27 +93,33 @@ class _ScheduleWizardScreenState extends State<ScheduleWizardScreen> {
     setState(() => _step--);
   }
 
+  void _next(int last) {
+    if (_step >= last) return;
+    setState(() => _step++);
+  }
+
   void _approve() {
-    if (!_canApprove) return;
-    // Набросок ничего не создаёт сам: экран графика на `true` шлёт то же
+    // Мастер ничего не создаёт сам: экран графика на `true` шлёт то же
     // событие, что раньше слала кнопка. Выбранный месяц пока никуда не
-    // уходит — его заберёт `preview`/`generate` следующей работой.
+    // уходит — его заберёт `generate` следующей работой.
     Navigator.of(context).pop(true);
   }
 
-  Widget _body() {
-    final String title = _titles[_step];
+  Widget _body(ScheduleWizardLoaded state) {
+    final String title = _titles(state.hasAnchorStep)[_step];
     if (title == 'Программа модели') {
-      return WizardProgramStep(data: widget.data);
+      return WizardProgramStep(data: state.data);
     }
     if (title == 'Точка отсчёта') {
       return WizardAnchorStep(
-        data: widget.data,
-        anchorMonth: _anchorMonth,
-        onChanged: (int month) => setState(() => _anchorMonth = month),
+        data: state.data,
+        anchorMonth: state.anchorMonth,
+        onChanged: (int month) => context
+            .read<ScheduleWizardBloc>()
+            .add(WizardAnchorChanged(month)),
       );
     }
-    return WizardPreviewStep(data: widget.data, anchorMonth: _anchorMonth);
+    return WizardPreviewStep(data: state.data, anchorMonth: state.anchorMonth);
   }
 
   @override
@@ -107,7 +131,7 @@ class _ScheduleWizardScreenState extends State<ScheduleWizardScreen> {
         elevation: 0.0,
         foregroundColor: ColorApp.myColorBlack,
         title: Text(
-          'График на ${widget.data.year}',
+          'График на ${widget.year}',
           style: const TextStyle(
             fontSize: 22.0,
             fontWeight: FontWeight.w700,
@@ -135,30 +159,138 @@ class _ScheduleWizardScreenState extends State<ScheduleWizardScreen> {
                 ),
               ),
       ),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(ColorApp.kPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  WizardStepsHeader(titles: _titles, current: _step),
-                  const SizedBox(height: 24.0),
-                  _body(),
-                ],
+      body: BlocBuilder<ScheduleWizardBloc, ScheduleWizardState>(
+        builder: (BuildContext context, ScheduleWizardState state) {
+          if (state is ScheduleWizardFailure) {
+            return _Failure(
+              message: state.message,
+              onRetry: () =>
+                  context.read<ScheduleWizardBloc>().add(const WizardOpened()),
+              onClose: () => Navigator.of(context).pop(false),
+            );
+          }
+          if (state is! ScheduleWizardLoaded) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final List<String> titles = _titles(state.hasAnchorStep);
+          // Шаг мог остаться за концом списка: с прошлогодним графиком шагов
+          // три, без него — четыре, и после перезапроса список короче.
+          final int step = _step >= titles.length ? titles.length - 1 : _step;
+          final bool isLast = step == titles.length - 1;
+
+          return Column(
+            children: <Widget>[
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(ColorApp.kPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      WizardStepsHeader(titles: titles, current: step),
+                      const SizedBox(height: 24.0),
+                      if (state.error != null) ...<Widget>[
+                        _ErrorNote(message: state.error!),
+                        const SizedBox(height: 16.0),
+                      ],
+                      _body(state),
+                    ],
+                  ),
+                ),
               ),
+              _Bottom(
+                isLast: isLast,
+                isFirst: step == 0,
+                // «Утвердить» гаснет, пока в предпросмотре есть клетка «нет
+                // шаблона», и на время перезапроса: утверждать заготовку,
+                // которая сейчас сменится, нечего.
+                canApprove: !state.data.hasMissingTemplate && !state.isReloading,
+                onBack: _back,
+                onNext: () => _next(titles.length - 1),
+                onApprove: _approve,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Заготовку построить не удалось: показываем причину словами и два выхода.
+class _Failure extends StatelessWidget {
+  const _Failure({
+    Key? key,
+    required this.message,
+    required this.onRetry,
+    required this.onClose,
+  }) : super(key: key);
+
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14.0, color: ColorApp.myColorBlack),
             ),
-          ),
-          _Bottom(
-            isLast: _isLast,
-            isFirst: _step == 0,
-            canApprove: _canApprove,
-            onBack: _back,
-            onNext: _next,
-            onApprove: _approve,
-          ),
-        ],
+            const SizedBox(height: 16.0),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextButton(
+                  onPressed: onClose,
+                  style: TextButton.styleFrom(
+                    foregroundColor: ColorApp.myColorGray,
+                  ),
+                  child: const Text('Закрыть'),
+                ),
+                const SizedBox(width: 8.0),
+                ElevatedButton(
+                  onPressed: onRetry,
+                  style: _Bottom._primaryStyle(),
+                  child: const Text('Повторить'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Неудача перезапроса при живой заготовке — плашкой над шагами.
+///
+/// Не всплывающей: человек только что сменил месяц и должен понять, что
+/// лента осталась прежней, а за три секунды `SnackBar` он этого не успеет.
+class _ErrorNote extends StatelessWidget {
+  const _ErrorNote({Key? key, required this.message}) : super(key: key);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: ColorApp.myColorYellowLight,
+        border: Border.all(color: ColorApp.myColorYellow),
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      child: Text(
+        message,
+        style: const TextStyle(fontSize: 13.0, color: ColorApp.myColorBlack),
       ),
     );
   }

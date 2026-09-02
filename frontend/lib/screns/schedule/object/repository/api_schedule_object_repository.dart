@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../../../../helper/api_client.dart';
 import '../../../../helper/api_config.dart';
 import '../../models/month_cell.dart';
+import '../../repository/api_envelope.dart';
 import '../../repository/schedules_repository.dart';
 import '../models/schedule_object_card.dart';
 import '../models/schedule_responsible.dart';
@@ -61,24 +62,24 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
     final Map<String, dynamic> object = data.cast<String, dynamic>();
 
     return ScheduleObjectCard(
-      id: _asInt(object['id']) ?? objectId,
+      id: asInt(object['id']) ?? objectId,
       // Организация у объекта — голый `id`, названия в ответе нет. Ходим за
       // ним отдельно и молча: не ответило — в строке прочерк, а весь экран
       // из-за названия организации падать не должен.
       organization: await _organizationName(object['organization_id']),
-      division: _asString(_nested(object['division_id'], 'title')),
-      address: _asString(object['address']),
-      type: _asString(
-        _nested(_nested(object['factory_model_id'], 'type_object_id'), 'name'),
+      division: asString(nested(object['division_id'], 'title')),
+      address: asString(object['address']),
+      type: asString(
+        nested(nested(object['factory_model_id'], 'type_object_id'), 'name'),
       ),
-      model: _asString(_nested(object['factory_model_id'], 'model')),
-      registrationNumber: _asString(object['registration_number']),
-      factoryNumber: _asString(object['factory_number']),
-      company: _asString(_nested(object['company_id'], 'name')),
-      contactPerson: _asString(_nested(object['contact_person_id'], 'name')),
-      contactPhone: _asString(_nested(object['contact_person_id'], 'phone')),
-      contract: _asString(_nested(object['contract_id'], 'title')),
-      geo: ScheduleGeoPoint.tryParse(_asString(object['geo'])),
+      model: asString(nested(object['factory_model_id'], 'model')),
+      registrationNumber: asString(object['registration_number']),
+      factoryNumber: asString(object['factory_number']),
+      company: asString(nested(object['company_id'], 'name')),
+      contactPerson: asString(nested(object['contact_person_id'], 'name')),
+      contactPhone: asString(nested(object['contact_person_id'], 'phone')),
+      contract: asString(nested(object['contract_id'], 'title')),
+      geo: ScheduleGeoPoint.tryParse(asString(object['geo'])),
       foreman: _responsible('Прораб', object['foreman_id']),
       mechanic: _responsible('Механик', object['mechanic_id']),
     );
@@ -129,32 +130,32 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return;
     }
-    throw SchedulesException(_errorText(response));
+    throw SchedulesException(errorText(response));
   }
 
   /// Название организации по её `id`. Неудача — не ошибка экрана.
   Future<String?> _organizationName(dynamic organizationId) async {
-    final int? id = _asInt(organizationId);
+    final int? id = asInt(organizationId);
     if (id == null) return null;
     try {
       final Map<String, dynamic> body =
           await _request('/organization/$id/', const <String, String>{});
       final dynamic data = body['data'];
-      return data is Map ? _asString(data['name']) : null;
+      return data is Map ? asString(data['name']) : null;
     } catch (_) {
       return null;
     }
   }
 
   ScheduleResponsible? _responsible(String title, dynamic value) {
-    final String? name = _asString(_nested(value, 'name'));
+    final String? name = asString(nested(value, 'name'));
     if (name == null) return null;
     return ScheduleResponsible(
       title: title,
       fullName: name,
       // Id нужен переходу в карточку сотрудника; имени для него мало.
-      id: _asInt(_nested(value, 'id')),
-      photo: _asString(_nested(value, 'photo')),
+      id: asInt(nested(value, 'id')),
+      photo: asString(nested(value, 'photo')),
     );
   }
 
@@ -198,68 +199,9 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
     }
 
     if (response.statusCode != 200) {
-      throw SchedulesException(_errorText(response));
+      throw SchedulesException(errorText(response));
     }
 
-    try {
-      final dynamic decoded = jsonDecode(utf8.decode(response.bodyBytes));
-      if (decoded is! Map) {
-        throw const SchedulesException('Сервер вернул неожиданный ответ');
-      }
-      return decoded.cast<String, dynamic>();
-    } on SchedulesException {
-      rethrow;
-    } catch (_) {
-      throw const SchedulesException('Не удалось прочитать ответ сервера');
-    }
+    return decodeEnvelope(response);
   }
-
-  /// Текст неудачи для человека.
-  ///
-  /// У 422 сервер объясняет причину словами — «нет шаблона чек-листа на
-  /// ТО 6», «месяц начала цикла подобрать не удалось», — и как раз это
-  /// человеку и нужно: по такому тексту он знает, что чинить.
-  String _errorText(http.Response response) {
-    if (response.statusCode == 401 || response.statusCode == 403) {
-      return 'Недостаточно прав или истёк вход';
-    }
-
-    final String? detail = _detail(response);
-    if (detail != null) return detail;
-
-    return 'Сервер ответил ошибкой ${response.statusCode}';
-  }
-
-  String? _detail(http.Response response) {
-    try {
-      final dynamic decoded = jsonDecode(utf8.decode(response.bodyBytes));
-      if (decoded is! Map) return null;
-      final dynamic detail = decoded['detail'] ?? decoded['message'];
-      if (detail is String && detail.trim().isNotEmpty) return detail.trim();
-      // FastAPI умеет отдавать список ошибок валидации; человеку хватит
-      // первой — вторая про то же тело запроса.
-      if (detail is List && detail.isNotEmpty) {
-        final dynamic first = detail.first;
-        if (first is Map && first['msg'] is String) return first['msg'] as String;
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
-}
-
-dynamic _nested(dynamic value, String key) =>
-    value is Map ? value[key] : null;
-
-int? _asInt(dynamic value) {
-  if (value is int) return value;
-  if (value is num) return value.toInt();
-  if (value is String) return int.tryParse(value);
-  return null;
-}
-
-String? _asString(dynamic value) {
-  if (value is String && value.trim().isNotEmpty) return value.trim();
-  return null;
 }

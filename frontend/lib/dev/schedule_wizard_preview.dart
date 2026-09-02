@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../helper/class_colors.dart';
 import '../screns/schedule/object/wizard/fixture_schedule_wizard_data.dart';
-import '../screns/schedule/object/wizard/models/schedule_wizard_data.dart';
+import '../screns/schedule/object/wizard/repository/fixture_schedule_wizard_repository.dart';
 import '../screns/schedule/object/wizard/view/schedule_wizard_screen.dart';
 
 /// Отдельная точка входа: показать мастер расстановки графика на фикстуре.
@@ -54,14 +54,15 @@ class _WizardPickerState extends State<_WizardPicker> {
   bool _withPreviousYear = false;
 
   void _open(WizardFixture fixture) {
-    final ScheduleWizardData data = buildWizardFixture(
-      fixture,
-      withPreviousYear: _withPreviousYear,
-    );
     Navigator.of(context).push(
       MaterialPageRoute<bool>(
         builder: (BuildContext context) => ScheduleWizardScreen(
-          data: data,
+          repository: FixtureScheduleWizardRepository(
+            fixture: fixture,
+            withPreviousYear: _withPreviousYear,
+          ),
+          objectId: 1,
+          year: DateTime.now().year + 1,
           objectName: 'г. Краснодар, ул. Северная, 356',
         ),
       ),
