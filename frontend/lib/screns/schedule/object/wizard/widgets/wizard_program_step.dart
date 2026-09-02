@@ -43,12 +43,9 @@ class WizardProgramStep extends StatelessWidget {
             ),
             const SizedBox(height: 16.0),
             _Positions(items: data.program, twoColumnsWidth: _twoColumnsWidth),
-            if (data.hasPreviousYear) ...<Widget>[
+            if (data.hasKnownAnchor) ...<Widget>[
               const SizedBox(height: 16.0),
-              _PreviousYearNote(
-                year: data.year,
-                anchorMonth: data.previousYearAnchor!,
-              ),
+              _KnownAnchorNote(anchorMonth: data.knownAnchor!),
             ],
           ],
         ),
@@ -150,19 +147,19 @@ class _Row extends StatelessWidget {
   }
 }
 
-/// «Цикл продолжается с прошлого года» — вместо шага «Точка отсчёта».
+/// «Цикл уже известен» — вместо шага «Точка отсчёта».
 ///
 /// Шаг пропускается молча только в коде; человеку сказать надо, иначе он
 /// видит два шага там, где ему обещали три, и не понимает, с какого месяца
 /// пойдёт цикл.
-class _PreviousYearNote extends StatelessWidget {
-  const _PreviousYearNote({
-    Key? key,
-    required this.year,
-    required this.anchorMonth,
-  }) : super(key: key);
+///
+/// Откуда взят якорь — из прошлого года или из этого же, расставленного
+/// раньше, — ручка не сообщает, и текст про год не пишем: назвать не тот
+/// год хуже, чем не называть никакого.
+class _KnownAnchorNote extends StatelessWidget {
+  const _KnownAnchorNote({Key? key, required this.anchorMonth})
+      : super(key: key);
 
-  final int year;
   final int anchorMonth;
 
   @override
@@ -175,7 +172,7 @@ class _PreviousYearNote extends StatelessWidget {
         borderRadius: BorderRadius.circular(8.0),
       ),
       child: Text(
-        'График за ${year - 1} год есть — цикл продолжается без разрыва, '
+        'У объекта уже есть график — цикл продолжается без разрыва, '
         'начало цикла: ${kMonthsNominative[anchorMonth - 1].toLowerCase()}. '
         'Точку отсчёта выбирать не нужно.',
         style: const TextStyle(fontSize: 13.0, color: ColorApp.myColorBlack),

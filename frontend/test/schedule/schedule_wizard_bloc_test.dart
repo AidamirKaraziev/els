@@ -17,7 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// Репозиторий, который записывает вопросы и отвечает по указке теста.
 class _Recorder implements ScheduleWizardRepository {
   _Recorder({
-    this.previousYearAnchor,
+    this.knownAnchor,
     this.failWith,
     this.generateFailure,
     this.generateGate,
@@ -25,7 +25,7 @@ class _Recorder implements ScheduleWizardRepository {
 
   /// Якорь, который «восстановился по прошлому году». `null` — сервер просит
   /// назвать месяц.
-  final int? previousYearAnchor;
+  final int? knownAnchor;
 
   /// Чем ответить на запрос **с** якорем. Нужен ветке «перезапрос не удался».
   final SchedulesException? failWith;
@@ -52,14 +52,14 @@ class _Recorder implements ScheduleWizardRepository {
     asked.add(anchorMonth);
 
     if (anchorMonth == null) {
-      if (previousYearAnchor == null) {
+      if (knownAnchor == null) {
         throw const ScheduleAnchorRequiredException('Укажите месяц начала цикла');
       }
       return buildWizardFixture(
         WizardFixture.ok,
         year: year,
-        withPreviousYear: true,
-        anchorMonth: previousYearAnchor!,
+        withKnownAnchor: true,
+        anchorMonth: knownAnchor!,
       );
     }
 
@@ -91,7 +91,7 @@ ScheduleWizardBloc _bloc(_Recorder repository) => ScheduleWizardBloc(
 
 void main() {
   test('прошлогодний график: один запрос и шага «Точка отсчёта» нет', () async {
-    final _Recorder repository = _Recorder(previousYearAnchor: 3);
+    final _Recorder repository = _Recorder(knownAnchor: 3);
     final ScheduleWizardBloc bloc = _bloc(repository)..add(const WizardOpened());
     addTearDown(bloc.close);
 
@@ -145,7 +145,7 @@ void main() {
   });
 
   test('тот же месяц второй раз сервер не дёргает', () async {
-    final _Recorder repository = _Recorder(previousYearAnchor: 3);
+    final _Recorder repository = _Recorder(knownAnchor: 3);
     final ScheduleWizardBloc bloc = _bloc(repository)..add(const WizardOpened());
     addTearDown(bloc.close);
 
@@ -161,7 +161,7 @@ void main() {
 
   test('неудачный перезапрос оставляет прежнюю заготовку и месяц', () async {
     final _Recorder repository = _Recorder(
-      previousYearAnchor: 3,
+      knownAnchor: 3,
       failWith: const SchedulesException('Не удалось связаться с сервером'),
     );
     final ScheduleWizardBloc bloc = _bloc(repository)..add(const WizardOpened());
@@ -202,7 +202,7 @@ void main() {
   // ------------------------------------------------- «Утвердить»
 
   test('«Утвердить» создаёт график с показанным месяцем', () async {
-    final _Recorder repository = _Recorder(previousYearAnchor: 3);
+    final _Recorder repository = _Recorder(knownAnchor: 3);
     final ScheduleWizardBloc bloc = _bloc(repository)..add(const WizardOpened());
     addTearDown(bloc.close);
 
@@ -247,7 +247,7 @@ void main() {
 
   test('неудача создания оставляет мастер на месте с причиной', () async {
     final _Recorder repository = _Recorder(
-      previousYearAnchor: 3,
+      knownAnchor: 3,
       generateFailure: const SchedulesException('Не удалось связаться с сервером'),
     );
     final ScheduleWizardBloc bloc = _bloc(repository)..add(const WizardOpened());
@@ -272,7 +272,7 @@ void main() {
   test('второе нажатие при идущем создании запроса не делает', () async {
     final Completer<void> gate = Completer<void>();
     final _Recorder repository = _Recorder(
-      previousYearAnchor: 3,
+      knownAnchor: 3,
       generateGate: gate,
     );
     final ScheduleWizardBloc bloc = _bloc(repository)..add(const WizardOpened());

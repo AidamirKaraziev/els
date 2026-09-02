@@ -43,7 +43,7 @@ class ScheduleWizardLoaded extends ScheduleWizardState {
   final String? error;
 
   /// Шаг «Точка отсчёта» отпадает, когда цикл продолжается с прошлого года.
-  bool get hasAnchorStep => !data.hasPreviousYear;
+  bool get hasAnchorStep => !data.hasKnownAnchor;
 
   /// [error] задаётся только явно: `null` в аргументе означает «убрать прошлую
   /// ошибку», а не «оставить как было». Иначе текст неудачи висел бы на экране

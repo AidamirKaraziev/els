@@ -48,7 +48,7 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
       final ScheduleWizardData data = await _repository.preview(objectId, year);
       emit(ScheduleWizardLoaded(
         data: data,
-        anchorMonth: data.previousYearAnchor ?? _defaultAnchor,
+        anchorMonth: data.knownAnchor ?? _defaultAnchor,
       ));
     } on ScheduleAnchorRequiredException {
       // Якорь не восстановился. Это не ошибка экрана: заготовку всё равно

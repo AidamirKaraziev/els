@@ -51,7 +51,7 @@ class _WizardPicker extends StatefulWidget {
 }
 
 class _WizardPickerState extends State<_WizardPicker> {
-  bool _withPreviousYear = false;
+  bool _withKnownAnchor = false;
 
   void _open(WizardFixture fixture) {
     Navigator.of(context).push(
@@ -59,7 +59,7 @@ class _WizardPickerState extends State<_WizardPicker> {
         builder: (BuildContext context) => ScheduleWizardScreen(
           repository: FixtureScheduleWizardRepository(
             fixture: fixture,
-            withPreviousYear: _withPreviousYear,
+            withKnownAnchor: _withKnownAnchor,
           ),
           objectId: 1,
           year: DateTime.now().year + 1,
@@ -87,9 +87,9 @@ class _WizardPickerState extends State<_WizardPicker> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               SwitchListTile(
-                value: _withPreviousYear,
+                value: _withKnownAnchor,
                 onChanged: (bool value) =>
-                    setState(() => _withPreviousYear = value),
+                    setState(() => _withKnownAnchor = value),
                 title: const Text('Есть график за прошлый год'),
                 subtitle: const Text('Шаг «Точка отсчёта» пропускается'),
               ),

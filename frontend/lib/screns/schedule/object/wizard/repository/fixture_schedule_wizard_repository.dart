@@ -11,7 +11,7 @@ import 'schedule_wizard_repository.dart';
 class FixtureScheduleWizardRepository implements ScheduleWizardRepository {
   const FixtureScheduleWizardRepository({
     this.fixture = WizardFixture.ok,
-    this.withPreviousYear = false,
+    this.withKnownAnchor = false,
     this.delay = const Duration(milliseconds: 200),
   });
 
@@ -19,7 +19,7 @@ class FixtureScheduleWizardRepository implements ScheduleWizardRepository {
 
   /// Есть ли у объекта график за прошлый год: есть — шаг «Точка отсчёта»
   /// пропускается, нет — первый же запрос требует месяц.
-  final bool withPreviousYear;
+  final bool withKnownAnchor;
 
   /// Задержка ответа. Без неё загрузку не видно вовсе, и проверить, что экран
   /// её показывает, можно было бы только на живом сервере.
@@ -36,7 +36,7 @@ class FixtureScheduleWizardRepository implements ScheduleWizardRepository {
     // Прошлого года нет и месяц не назвали — ровно тот случай, ради которого
     // существует шаг «Точка отсчёта». Фикстура повторяет ответ сервера, иначе
     // эту ветку было бы негде увидеть без базы.
-    if (!withPreviousYear && anchorMonth == null) {
+    if (!withKnownAnchor && anchorMonth == null) {
       throw const ScheduleAnchorRequiredException(
         'Укажите месяц, с которого начинается цикл: графика за прошлый год нет',
       );
@@ -45,7 +45,7 @@ class FixtureScheduleWizardRepository implements ScheduleWizardRepository {
     return buildWizardFixture(
       fixture,
       year: year,
-      withPreviousYear: withPreviousYear,
+      withKnownAnchor: withKnownAnchor,
       anchorMonth: anchorMonth ?? _fixtureAnchor,
     );
   }

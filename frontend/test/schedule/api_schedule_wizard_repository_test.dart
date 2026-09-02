@@ -127,16 +127,16 @@ void main() {
 
     final ScheduleWizardData restored =
         await _repository(response).preview(7, 2027);
-    expect(restored.previousYearAnchor, 3);
-    expect(restored.hasPreviousYear, isTrue);
+    expect(restored.knownAnchor, 3);
+    expect(restored.hasKnownAnchor, isTrue);
 
     // Тот же ответ, но месяц назвали мы: шаг «Точка отсчёта» обязан остаться.
     final List<Uri> seen = <Uri>[];
     final ScheduleWizardData chosen = await _repository(response, seen: seen)
         .preview(7, 2027, anchorMonth: 5);
     expect(seen.single.queryParameters['anchor_month'], '5');
-    expect(chosen.previousYearAnchor, isNull);
-    expect(chosen.hasPreviousYear, isFalse);
+    expect(chosen.knownAnchor, isNull);
+    expect(chosen.hasKnownAnchor, isFalse);
   });
 
   test('422 с кодом 144 — это вопрос человеку, а не поломка', () async {

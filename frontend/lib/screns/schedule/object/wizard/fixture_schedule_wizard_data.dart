@@ -14,6 +14,10 @@ enum WizardFixture {
 
   /// У модели нет шаблона на ТО 6: «Утвердить» гаснет.
   withMissingTemplate,
+
+  /// Год расставлен целиком — добавлять нечего, «Утвердить» гаснет. Так
+  /// выглядит повторный заход в мастер на уже расставленный год.
+  fullyOccupied,
 }
 
 extension WizardFixtureTitle on WizardFixture {
@@ -26,6 +30,8 @@ extension WizardFixtureTitle on WizardFixture {
         return 'Есть занятые месяцы';
       case WizardFixture.withMissingTemplate:
         return 'Нет шаблона на ТО 6';
+      case WizardFixture.fullyOccupied:
+        return 'Год уже расставлен';
     }
   }
 }
@@ -46,21 +52,30 @@ const int _anchorMonth = 3;
 
 /// Собрать расклад мастера.
 ///
-/// [withPreviousYear] — есть ли у объекта график за прошлый год. Есть —
+/// [withKnownAnchor] — есть ли у объекта график за прошлый год. Есть —
 /// якорь восстановлен, шаг «Точка отсчёта» пропускается.
 ScheduleWizardData buildWizardFixture(
   WizardFixture fixture, {
-  bool withPreviousYear = false,
+  bool withKnownAnchor = false,
   int? year,
   int anchorMonth = _anchorMonth,
 }) {
   final int targetYear = year ?? DateTime.now().year + 1;
 
-  // Месяцы, занятые актами. Только в раскладе `withOccupied`: в остальных
-  // год чистый, и клетки «уже занято» показывать неоткуда.
-  final Set<int> occupied = fixture == WizardFixture.withOccupied
-      ? <int>{4, 5}
-      : <int>{};
+  // Месяцы, занятые актами: два в раскладе `withOccupied` и все двенадцать
+  // в `fullyOccupied`. В остальных год чистый, и клетки «уже занято»
+  // показывать неоткуда.
+  final Set<int> occupied;
+  switch (fixture) {
+    case WizardFixture.withOccupied:
+      occupied = <int>{4, 5};
+      break;
+    case WizardFixture.fullyOccupied:
+      occupied = <int>{for (int month = 1; month <= 12; month++) month};
+      break;
+    default:
+      occupied = <int>{};
+  }
 
   // Нет шаблона — у вида ТО, а не у месяца: шаблон чек-листа заводится на
   // модель и вид работы. ТО 6 в программе один, но помечаем именно по виду,
@@ -93,6 +108,6 @@ ScheduleWizardData buildWizardFixture(
         ),
     ],
     cells: cells,
-    previousYearAnchor: withPreviousYear ? anchorMonth : null,
+    knownAnchor: withKnownAnchor ? anchorMonth : null,
   );
 }

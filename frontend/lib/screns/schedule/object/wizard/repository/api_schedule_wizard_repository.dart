@@ -159,7 +159,7 @@ class ApiScheduleWizardRepository implements ScheduleWizardRepository {
       // прошлому году, либо переданный нами. Прошлогодним он считается только
       // во втором случае, иначе шаг «Точка отсчёта» пропал бы сразу после
       // первого же выбора месяца.
-      previousYearAnchor: anchorPassed ? null : asInt(preview['anchor_month']),
+      knownAnchor: anchorPassed ? null : asInt(preview['anchor_month']),
     );
   }
 

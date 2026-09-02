@@ -56,6 +56,9 @@ class WizardPreviewStep extends StatelessWidget {
                 names: _missingNames(data.cells),
                 onCreateTemplate: onCreateTemplate,
               ),
+            ] else if (data.hasNothingToAdd) ...<Widget>[
+              const SizedBox(height: 16.0),
+              const _NothingToAddNote(),
             ],
           ],
         ),
@@ -297,6 +300,32 @@ class _LegendItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Год уже расставлен целиком: утверждать нечего.
+///
+/// Плашка тихая, серая: это не ошибка и не предупреждение, а сообщение о том,
+/// что работа уже сделана — скорее всего, в прошлый заход в этот же мастер.
+class _NothingToAddNote extends StatelessWidget {
+  const _NothingToAddNote({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: ColorApp.myColorGrayShadow,
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: ColorApp.myColorGrayBorder),
+      ),
+      child: const Text(
+        'Все месяцы этого года уже расставлены. Занятые месяцы расстановка '
+        'не трогает, поэтому добавлять нечего.',
+        style: TextStyle(fontSize: 13.0, color: ColorApp.myColorBlack),
+      ),
     );
   }
 }

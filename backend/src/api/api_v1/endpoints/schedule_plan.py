@@ -129,6 +129,19 @@ def _resolve_preview(
         if item.type_act is not None and item.type_act.name is not None
     }
 
+    occupied = months_of_year(session, object_id=object_id, year=year)
+
+    if anchor_month is None and occupied:
+        # Сам этот год уже расставляли — цикл берётся из него, а не из
+        # прошлогоднего. Иначе повторный заход в мастер предлагал бы январь
+        # поверх года, разложенного, скажем, с марта: расстановка ничего не
+        # испортила бы (занятые месяцы не трогаются), но человеку показали бы
+        # раскладку, которой в базе нет.
+        anchor_month = detect_anchor(
+            program_by_position=program_by_position,
+            known_type_acts={month: row.type_act_id for month, row in occupied.items()},
+        )
+
     if anchor_month is None:
         previous = months_of_year(session, object_id=object_id, year=year - 1)
         if not previous:
@@ -136,16 +149,12 @@ def _resolve_preview(
 
         anchor_month = detect_anchor(
             program_by_position=program_by_position,
-            previous_type_acts={
-                month: row.type_act_id for month, row in previous.items()
-            },
+            known_type_acts={month: row.type_act_id for month, row in previous.items()},
         )
         if anchor_month is None:
             raise _anchor_required(
                 f"график за {year - 1} год не ложится на эту программу однозначно"
             )
-
-    occupied = months_of_year(session, object_id=object_id, year=year)
 
     preview = build_preview(
         object_id=object_id,
@@ -174,12 +183,13 @@ def _resolve_preview(
         "это заготовка, которую человек ещё утверждает.\n\n"
         "`position` — месяц **цикла**, `month` — месяц календаря. Связывает "
         "их якорь: на `anchor_month` приходится первая позиция программы.\n\n"
-        "**Якорь можно не передавать**, если у объекта есть график за "
-        "прошлый год: тогда сдвиг цикла подбирается по видам ТО его "
-        "заполненных месяцев, и цикл продолжается через границу года без "
-        "разрыва. Прошлого года нет, он расставлен не по этой программе или "
-        "ложится на неё несколькими способами — `anchor_month` обязателен, "
-        "иначе 422.\n\n"
+        "**Якорь можно не передавать**, если у объекта уже есть график: "
+        "сдвиг цикла подбирается по видам ТО его заполненных месяцев. "
+        "Сначала смотрится сам запрошенный год — если его расставляли, "
+        "продолжается его цикл, — и только потом прошлый, чтобы цикл шёл "
+        "через границу года без разрыва. Ни того ни другого нет, они "
+        "расставлены не по этой программе или ложатся на неё несколькими "
+        "способами — `anchor_month` обязателен, иначе 422.\n\n"
         "`occupied` — месяц уже занят актом: создание графика такой месяц не "
         "тронет. `template_missing` — у модели нет шаблона чек-листа "
         "(`acts_bases`) на этот вид ТО: клетка показывается, но утвердить "

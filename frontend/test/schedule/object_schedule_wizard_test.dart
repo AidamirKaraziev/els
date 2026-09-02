@@ -61,7 +61,7 @@ class _FailingWizardRepository implements ScheduleWizardRepository {
 
   static const FixtureScheduleWizardRepository _inner =
       FixtureScheduleWizardRepository(
-    withPreviousYear: true,
+    withKnownAnchor: true,
     delay: Duration.zero,
   );
 
@@ -91,7 +91,7 @@ const int _emptyYear = 2027;
 Future<void> _pumpWizard(
   WidgetTester tester, {
   WizardFixture fixture = WizardFixture.ok,
-  bool withPreviousYear = false,
+  bool withKnownAnchor = false,
 }) async {
   tester.view.physicalSize = const Size(1600.0, 1400.0);
   tester.view.devicePixelRatio = 1.0;
@@ -102,7 +102,7 @@ Future<void> _pumpWizard(
       home: ScheduleWizardScreen(
         repository: FixtureScheduleWizardRepository(
           fixture: fixture,
-          withPreviousYear: withPreviousYear,
+          withKnownAnchor: withKnownAnchor,
           delay: Duration.zero,
         ),
         objectId: 1,
@@ -187,7 +187,7 @@ void main() {
 
   testWidgets('прошлогодний график убирает шаг «Точка отсчёта»',
       (WidgetTester tester) async {
-    await _pumpWizard(tester, withPreviousYear: true);
+    await _pumpWizard(tester, withKnownAnchor: true);
 
     await _tap(tester, 'Далее');
 
@@ -199,7 +199,7 @@ void main() {
       (WidgetTester tester) async {
     // Фикстура ведёт цикл с марта. Месяц в родительном падеже: «с марта», а
     // не «с март» — на такой строке спотыкается глаз, а не только редактор.
-    await _pumpWizard(tester, withPreviousYear: true);
+    await _pumpWizard(tester, withKnownAnchor: true);
 
     await _tap(tester, 'Далее');
 
@@ -211,7 +211,7 @@ void main() {
     await _pumpWizard(
       tester,
       fixture: WizardFixture.withMissingTemplate,
-      withPreviousYear: true,
+      withKnownAnchor: true,
     );
 
     await _tap(tester, 'Далее');
@@ -222,7 +222,7 @@ void main() {
 
   testWidgets('чистый год — «Утвердить» доступна и закрывает мастер по ответу',
       (WidgetTester tester) async {
-    await _pumpWizard(tester, withPreviousYear: true);
+    await _pumpWizard(tester, withKnownAnchor: true);
 
     await _tap(tester, 'Далее');
 
@@ -249,7 +249,7 @@ void main() {
           repository: repository,
           wizardRepository: (String modelName) =>
               const FixtureScheduleWizardRepository(
-            withPreviousYear: true,
+            withKnownAnchor: true,
             delay: Duration.zero,
           ),
           role: ScheduleRole.admin,
@@ -300,12 +300,28 @@ void main() {
     expect(_enabled(tester, 'Утвердить'), isTrue);
   });
 
+  testWidgets('год расставлен целиком — «Утвердить» выключена',
+      (WidgetTester tester) async {
+    // Повторный заход в мастер на уже расставленный год: создание вернуло бы
+    // двенадцать `skipped`, а мастер закрылся бы как после работы.
+    await _pumpWizard(
+      tester,
+      fixture: WizardFixture.fullyOccupied,
+      withKnownAnchor: true,
+    );
+
+    await _tap(tester, 'Далее');
+
+    expect(_enabled(tester, 'Утвердить'), isFalse);
+    expect(find.textContaining('уже расставлены'), findsOneWidget);
+  });
+
   testWidgets('занятые месяцы утверждению не мешают',
       (WidgetTester tester) async {
     await _pumpWizard(
       tester,
       fixture: WizardFixture.withOccupied,
-      withPreviousYear: true,
+      withKnownAnchor: true,
     );
 
     await _tap(tester, 'Далее');

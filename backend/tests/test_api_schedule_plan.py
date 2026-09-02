@@ -352,6 +352,49 @@ class TestAnchor:
         assert client_with_db.get(_url(obj)).status_code == 422
 
     @pytest.mark.integration
+    def test_anchor_is_taken_from_the_year_itself(
+        self, client_with_db, as_role, make_model, make_object, plan_year
+    ):
+        # Год уже расставлен с марта: повторный заход в мастер обязан
+        # показать его же цикл, а не начать заново с января.
+        obj = make_object(factory_model_id=make_model().id)
+        planned = cycle_month(FULL_CYCLE, anchor_month=3)
+        plan_year(obj, year=YEAR, months=planned)
+        as_role(ADMIN)
+
+        data = _data(client_with_db.get(_url(obj)))
+        cells = {cell["month"]: cell["type_act_id"] for cell in data["cells"]}
+
+        assert data["anchor_month"] == 3
+        assert cells == planned
+
+    @pytest.mark.integration
+    def test_the_year_itself_wins_over_the_previous_one(
+        self, client_with_db, as_role, make_model, make_object, plan_year
+    ):
+        # Прошлый год расставлен по одному сдвигу, этот — по другому.
+        # Продолжать надо тот, что уже лежит в запрошенном году.
+        obj = make_object(factory_model_id=make_model().id)
+        plan_year(obj, year=YEAR - 1, months=cycle_month(FULL_CYCLE, anchor_month=3))
+        plan_year(obj, year=YEAR, months=cycle_month(FULL_CYCLE, anchor_month=7))
+        as_role(ADMIN)
+
+        assert _data(client_with_db.get(_url(obj)))["anchor_month"] == 7
+
+    @pytest.mark.integration
+    def test_ambiguous_year_falls_back_to_the_previous_one(
+        self, client_with_db, as_role, make_model, make_object, plan_year
+    ):
+        # В этом году один месяц с ТО1 — по нему сдвиг не опознать. Тогда
+        # смотрим прошлый год, как и раньше.
+        obj = make_object(factory_model_id=make_model().id)
+        plan_year(obj, year=YEAR - 1, months=cycle_month(FULL_CYCLE, anchor_month=5))
+        plan_year(obj, year=YEAR, months={4: TO_1})
+        as_role(ADMIN)
+
+        assert _data(client_with_db.get(_url(obj)))["anchor_month"] == 5
+
+    @pytest.mark.integration
     def test_previous_year_off_program_is_422(
         self, client_with_db, as_role, make_model, make_object, plan_year
     ):

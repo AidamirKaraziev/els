@@ -136,7 +136,7 @@ class ScheduleWizardData {
     required this.modelName,
     required this.program,
     required this.cells,
-    this.previousYearAnchor,
+    this.knownAnchor,
   });
 
   final int year;
@@ -151,16 +151,24 @@ class ScheduleWizardData {
   /// Двенадцать клеток года, январь..декабрь.
   final List<WizardPreviewCell> cells;
 
-  /// Месяц начала цикла, восстановленный из графика за прошлый год.
+  /// Месяц начала цикла, восстановленный ручкой по уже расставленному году:
+  /// сначала по самому запрошенному, потом по прошлому.
   ///
   /// Не `null` — шаг «Точка отсчёта» пропускается: цикл продолжается сам, и
   /// спрашивать человека не о чем. `null` — месяц выбирает он.
-  final int? previousYearAnchor;
+  final int? knownAnchor;
 
-  bool get hasPreviousYear => previousYearAnchor != null;
+  bool get hasKnownAnchor => knownAnchor != null;
 
   /// Пока есть хоть одна клетка «нет шаблона», утверждать нельзя: по такому
   /// ТО механику нечего показать, и акт не создастся.
   bool get hasMissingTemplate =>
       cells.any((WizardPreviewCell cell) => cell.mark == WizardCellMark.templateMissing);
+
+  /// Ни одной клетки «добавится»: год уже расставлен целиком.
+  ///
+  /// Утверждать такое нечего — создание вернуло бы двенадцать `skipped` и
+  /// закрыло мастер, как будто что-то произошло. Кнопку в этом случае гасим.
+  bool get hasNothingToAdd =>
+      cells.every((WizardPreviewCell cell) => cell.mark != WizardCellMark.toAdd);
 }

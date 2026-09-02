@@ -208,9 +208,16 @@ class _WizardViewState extends State<_WizardView> {
                 isLast: isLast,
                 isFirst: step == 0,
                 // «Утвердить» гаснет, пока в предпросмотре есть клетка «нет
-                // шаблона», и на время перезапроса: утверждать заготовку,
-                // которая сейчас сменится, нечего.
-                canApprove: !state.data.hasMissingTemplate && !state.isReloading,
+                // шаблона», когда добавлять нечего, и на время перезапроса:
+                // утверждать заготовку, которая сейчас сменится, нечего.
+                canApprove: !state.data.hasMissingTemplate &&
+                    !state.data.hasNothingToAdd &&
+                    !state.isReloading,
+                disabledReason: state.data.hasMissingTemplate
+                    ? 'Сначала заведите шаблон чек-листа на отмеченные виды ТО'
+                    : (state.data.hasNothingToAdd
+                        ? 'Все месяцы этого года уже расставлены — добавлять нечего'
+                        : null),
                 isApproving: state.isApproving,
                 onBack: _back,
                 onNext: () => _next(titles.length - 1),
@@ -310,6 +317,7 @@ class _Bottom extends StatelessWidget {
     required this.isLast,
     required this.isFirst,
     required this.canApprove,
+    this.disabledReason,
     this.isApproving = false,
     required this.onBack,
     required this.onNext,
@@ -319,6 +327,11 @@ class _Bottom extends StatelessWidget {
   final bool isLast;
   final bool isFirst;
   final bool canApprove;
+
+  /// Почему «Утвердить» не нажимается — текст тултипа. `null`, когда кнопка
+  /// выключена не по вине заготовки, а на время перезапроса: объяснять
+  /// мгновенную паузу нечем.
+  final String? disabledReason;
 
   /// Идёт создание графика: обе кнопки выключены, на правой крутилка. Уйти
   /// назад посреди записи нельзя — запрос уже ушёл.
@@ -346,14 +359,11 @@ class _Bottom extends StatelessWidget {
             )
           : Text(isLast ? 'Утвердить' : 'Далее'),
     );
-    if (isLast && !canApprove && !isApproving) {
+    if (isLast && !canApprove && !isApproving && disabledReason != null) {
       // Выключенная кнопка обязана объяснять себя: почему она серая, иначе
       // написано только в примечании под клетками. Обёртка только на
       // выключенной: с пустым текстом тултип всплывает пустой рамкой.
-      primary = Tooltip(
-        message: 'Сначала заведите шаблон чек-листа на отмеченные виды ТО',
-        child: primary,
-      );
+      primary = Tooltip(message: disabledReason!, child: primary);
     }
 
     return Container(
