@@ -19,6 +19,7 @@ class ScheduleWizardLoaded extends ScheduleWizardState {
     required this.data,
     required this.anchorMonth,
     this.isReloading = false,
+    this.isApproving = false,
     this.error,
   });
 
@@ -32,7 +33,11 @@ class ScheduleWizardLoaded extends ScheduleWizardState {
   /// остаётся на экране — человек смотрит, что изменится в ленте.
   final bool isReloading;
 
-  /// Что пошло не так с перезапросом. Живёт рядом с заготовкой, а не
+  /// Идёт создание графика после «Утвердить». Мастер на это время остаётся
+  /// на месте с погашенными кнопками: уйти из него посреди записи нельзя.
+  final bool isApproving;
+
+  /// Что пошло не так с перезапросом или с созданием. Живёт рядом с заготовкой, а не
   /// отдельным состоянием: прежнюю ленту терять из-за одной неудачной смены
   /// месяца незачем.
   final String? error;
@@ -47,15 +52,25 @@ class ScheduleWizardLoaded extends ScheduleWizardState {
     ScheduleWizardData? data,
     int? anchorMonth,
     bool? isReloading,
+    bool? isApproving,
     String? error,
   }) {
     return ScheduleWizardLoaded(
       data: data ?? this.data,
       anchorMonth: anchorMonth ?? this.anchorMonth,
       isReloading: isReloading ?? false,
+      isApproving: isApproving ?? false,
       error: error,
     );
   }
+}
+
+/// График создан: мастеру больше нечего показывать.
+///
+/// Отдельным состоянием, а не флагом в [ScheduleWizardLoaded]: экран на него
+/// закрывается, и перерисовывать шаги под закрывающимся мастером незачем.
+class ScheduleWizardApproved extends ScheduleWizardState {
+  const ScheduleWizardApproved();
 }
 
 /// Заготовку построить не удалось.

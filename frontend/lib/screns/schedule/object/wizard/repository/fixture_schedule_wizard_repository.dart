@@ -1,3 +1,4 @@
+import '../../../repository/schedules_repository.dart';
 import '../fixture_schedule_wizard_data.dart';
 import '../models/schedule_wizard_data.dart';
 import 'schedule_wizard_repository.dart';
@@ -47,6 +48,24 @@ class FixtureScheduleWizardRepository implements ScheduleWizardRepository {
       withPreviousYear: withPreviousYear,
       anchorMonth: anchorMonth ?? _fixtureAnchor,
     );
+  }
+
+  @override
+  Future<void> generate(
+    int objectId,
+    int year, {
+    required int anchorMonth,
+  }) async {
+    if (delay > Duration.zero) await Future<void>.delayed(delay);
+
+    // Живой бэкенд на такой расклад отвечает 422 и график не создаёт вовсе.
+    // Повторяем отказ здесь, иначе на фикстуре «Утвердить» заканчивалось бы
+    // успехом там, где на сервере ничего не создастся.
+    if (fixture == WizardFixture.withMissingTemplate) {
+      throw const SchedulesException(
+        'У модели нет шаблонов чек-листа на отмеченные виды ТО!',
+      );
+    }
   }
 
   /// Якорь, который «восстановился по прошлому году». Тот же, что зашит в

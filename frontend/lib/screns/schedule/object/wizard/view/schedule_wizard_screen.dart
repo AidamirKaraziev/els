@@ -16,9 +16,10 @@ import '../widgets/wizard_steps_header.dart';
 /// клеток года по программе модели, ничего не записывая. Мастер её только
 /// показывает — своей арифметики цикла здесь нет.
 ///
-/// «Утвердить» пока закрывает мастер с `true`, а расстановку по-прежнему
-/// делает экран объекта прежним событием: `POST /planned-to/generate/`
-/// подключается следующей работой.
+/// «Утвердить» расставляет год сам — `POST /planned-to/generate/` с тем
+/// месяцем начала цикла, который человек видел в предпросмотре. Мастер
+/// закрывается с `true`, а экран объекта по нему только перечитывает ленту
+/// года: создаёт график ровно один запрос.
 ///
 /// Кадра на мастер нет: рисовали сами, в стиле принятых блоков экрана
 /// объекта — те же карточки `objectCardDecoration()` и та же палитра.
@@ -99,10 +100,10 @@ class _WizardViewState extends State<_WizardView> {
   }
 
   void _approve() {
-    // Мастер ничего не создаёт сам: экран графика на `true` шлёт то же
-    // событие, что раньше слала кнопка. Выбранный месяц пока никуда не
-    // уходит — его заберёт `generate` следующей работой.
-    Navigator.of(context).pop(true);
+    // Закрываемся не здесь, а по ответу сервера: пока идёт запись, мастер
+    // остаётся на экране с погашенными кнопками, а неудача показывается
+    // прямо в нём — закрыв его раньше времени, показать её было бы негде.
+    context.read<ScheduleWizardBloc>().add(const WizardApproved());
   }
 
   Widget _body(ScheduleWizardLoaded state) {
@@ -159,7 +160,12 @@ class _WizardViewState extends State<_WizardView> {
                 ),
               ),
       ),
-      body: BlocBuilder<ScheduleWizardBloc, ScheduleWizardState>(
+      body: BlocConsumer<ScheduleWizardBloc, ScheduleWizardState>(
+        listener: (BuildContext context, ScheduleWizardState state) {
+          // График создан — возвращаем `true`: по нему экран объекта
+          // перечитывает ленту года.
+          if (state is ScheduleWizardApproved) Navigator.of(context).pop(true);
+        },
         builder: (BuildContext context, ScheduleWizardState state) {
           if (state is ScheduleWizardFailure) {
             return _Failure(
@@ -205,6 +211,7 @@ class _WizardViewState extends State<_WizardView> {
                 // шаблона», и на время перезапроса: утверждать заготовку,
                 // которая сейчас сменится, нечего.
                 canApprove: !state.data.hasMissingTemplate && !state.isReloading,
+                isApproving: state.isApproving,
                 onBack: _back,
                 onNext: () => _next(titles.length - 1),
                 onApprove: _approve,
@@ -303,6 +310,7 @@ class _Bottom extends StatelessWidget {
     required this.isLast,
     required this.isFirst,
     required this.canApprove,
+    this.isApproving = false,
     required this.onBack,
     required this.onNext,
     required this.onApprove,
@@ -311,6 +319,10 @@ class _Bottom extends StatelessWidget {
   final bool isLast;
   final bool isFirst;
   final bool canApprove;
+
+  /// Идёт создание графика: обе кнопки выключены, на правой крутилка. Уйти
+  /// назад посреди записи нельзя — запрос уже ушёл.
+  final bool isApproving;
   final VoidCallback onBack;
   final VoidCallback onNext;
   final VoidCallback onApprove;
@@ -318,11 +330,23 @@ class _Bottom extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget primary = ElevatedButton(
-      onPressed: isLast ? (canApprove ? onApprove : null) : onNext,
+      onPressed: isApproving
+          ? null
+          : (isLast ? (canApprove ? onApprove : null) : onNext),
       style: _primaryStyle(),
-      child: Text(isLast ? 'Утвердить' : 'Далее'),
+      child: isApproving
+          ? const SizedBox(
+              width: 18.0,
+              height: 18.0,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.0,
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(ColorApp.myColorWhite),
+              ),
+            )
+          : Text(isLast ? 'Утвердить' : 'Далее'),
     );
-    if (isLast && !canApprove) {
+    if (isLast && !canApprove && !isApproving) {
       // Выключенная кнопка обязана объяснять себя: почему она серая, иначе
       // написано только в примечании под клетками. Обёртка только на
       // выключенной: с пустым текстом тултип всплывает пустой рамкой.
@@ -343,7 +367,7 @@ class _Bottom extends StatelessWidget {
         child: Row(
           children: <Widget>[
             TextButton(
-              onPressed: onBack,
+              onPressed: isApproving ? null : onBack,
               style: TextButton.styleFrom(
                 foregroundColor: ColorApp.myColorGray,
                 padding: const EdgeInsets.symmetric(

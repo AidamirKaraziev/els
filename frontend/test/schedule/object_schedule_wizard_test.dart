@@ -1,26 +1,87 @@
 /// Мастер расстановки графика: проверяем вид и шаги, а не расстановку.
 ///
-/// Заготовку мастер берёт у репозитория — здесь фикстурного, — а в базу
-/// по-прежнему ничего не пишет: `generate` подключается следующей работой.
-/// Поэтому и проверяем то, что уже есть, — что кнопка ведёт в мастер, а не
-/// раскладывает год сразу; что шаги листаются туда и обратно; что «Утвердить»
-/// гаснет на исходе «нет шаблона»; что шаг «Точка отсчёта» отпадает, когда
-/// цикл продолжается с прошлого года, — и как выделена клетка старта цикла.
+/// Заготовку и расстановку мастер берёт у репозитория — здесь фикстурного.
+/// Проверяем: что кнопка ведёт в мастер, а не раскладывает год сразу; что
+/// шаги листаются туда и обратно; что «Утвердить» гаснет на исходе «нет
+/// шаблона», а на чистом годе создаёт график и закрывает мастер — ровно один
+/// раз, без второй расстановки с экрана объекта; что неудача создания
+/// оставляет мастер на месте; что шаг «Точка отсчёта» отпадает, когда цикл
+/// продолжается с прошлого года, — и как выделена клетка старта цикла.
 library;
 
 import 'package:els/helper/class_colors.dart';
+import 'package:els/screns/schedule/models/month_cell.dart';
 import 'package:els/screns/schedule/models/schedule_role.dart';
+import 'package:els/screns/schedule/object/models/schedule_object_card.dart';
 import 'package:els/screns/schedule/object/repository/fixture_schedule_object_repository.dart';
+import 'package:els/screns/schedule/object/repository/schedule_object_repository.dart';
 import 'package:els/screns/schedule/object/view/schedule_object_screen.dart';
 import 'package:els/screns/schedule/object/wizard/fixture_schedule_wizard_data.dart';
 import 'package:els/screns/schedule/object/wizard/models/schedule_wizard_data.dart';
 import 'package:els/screns/schedule/object/wizard/repository/fixture_schedule_wizard_repository.dart';
+import 'package:els/screns/schedule/object/wizard/repository/schedule_wizard_repository.dart';
 import 'package:els/screns/schedule/object/wizard/view/schedule_wizard_screen.dart';
 import 'package:els/screns/schedule/object/wizard/widgets/wizard_anchor_step.dart';
 import 'package:els/screns/schedule/object/wizard/widgets/wizard_preview_step.dart';
 import 'package:els/screns/schedule/object/wizard/widgets/wizard_program_step.dart';
+import 'package:els/screns/schedule/repository/schedules_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Экранная фикстура, которая считает вызовы прежней расстановки.
+///
+/// Ради одного вопроса: не идёт ли `generate` дважды — из мастера и следом с
+/// экрана объекта. Раньше шло именно так, и год расставлялся бы двумя
+/// разными якорями.
+class _CountingObjectRepository implements ScheduleObjectRepository {
+  _CountingObjectRepository(this._inner);
+
+  final FixtureScheduleObjectRepository _inner;
+
+  int generateCalls = 0;
+
+  @override
+  Future<ScheduleObjectCard> fetchCard(int objectId) => _inner.fetchCard(objectId);
+
+  @override
+  Future<List<MonthCell>> fetchYear(int objectId, int year) =>
+      _inner.fetchYear(objectId, year);
+
+  @override
+  Future<void> generateYear(int objectId, int year) async {
+    generateCalls++;
+    // ignore: deprecated_member_use_from_same_package
+    await _inner.generateYear(objectId, year);
+  }
+}
+
+/// Мастер, у которого создание графика не удаётся.
+class _FailingWizardRepository implements ScheduleWizardRepository {
+  const _FailingWizardRepository();
+
+  static const FixtureScheduleWizardRepository _inner =
+      FixtureScheduleWizardRepository(
+    withPreviousYear: true,
+    delay: Duration.zero,
+  );
+
+  @override
+  Future<ScheduleWizardData> preview(
+    int objectId,
+    int year, {
+    int? anchorMonth,
+  }) =>
+      _inner.preview(objectId, year, anchorMonth: anchorMonth);
+
+  @override
+  Future<void> generate(
+    int objectId,
+    int year, {
+    required int anchorMonth,
+  }) async {
+    throw const SchedulesException('Не удалось связаться с сервером');
+  }
+}
 
 /// Год, на который фикстура экрана кладёт заполненную ленту. Мастер
 /// открываем на соседнем: кнопка создания есть только у пустого года.
@@ -159,7 +220,7 @@ void main() {
     expect(find.textContaining('нет шаблона чек-листа'), findsOneWidget);
   });
 
-  testWidgets('чистый год — «Утвердить» доступна и закрывает мастер',
+  testWidgets('чистый год — «Утвердить» доступна и закрывает мастер по ответу',
       (WidgetTester tester) async {
     await _pumpWizard(tester, withPreviousYear: true);
 
@@ -169,6 +230,74 @@ void main() {
 
     await _tap(tester, 'Утвердить');
     expect(find.byType(WizardPreviewStep), findsNothing);
+  });
+
+  testWidgets('«Утвердить» закрывает мастер и не расставляет год второй раз',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1600.0, 1400.0);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final _CountingObjectRepository repository = _CountingObjectRepository(
+      FixtureScheduleObjectRepository(filledYear: _filledYear),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ScheduleObjectScreen(
+          objectId: 1,
+          repository: repository,
+          wizardRepository: (String modelName) =>
+              const FixtureScheduleWizardRepository(
+            withPreviousYear: true,
+            delay: Duration.zero,
+          ),
+          role: ScheduleRole.admin,
+          initialYear: _emptyYear,
+          objectName: 'ТЦ Карнавал 3 этаж 1',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _tap(tester, 'Создать график на $_emptyYear');
+    await _tap(tester, 'Далее');
+    await _tap(tester, 'Утвердить');
+
+    // Мастер закрылся, вернулись на экран объекта.
+    expect(find.byType(ScheduleWizardScreen), findsNothing);
+    expect(find.text('Создать график на $_emptyYear'), findsOneWidget);
+
+    // Расстановку сделал мастер. Прежнее событие экрана больше не зовётся —
+    // иначе год лёг бы дважды и с чужим якорем.
+    expect(repository.generateCalls, 0);
+  });
+
+  testWidgets('неудача создания оставляет мастер открытым с причиной',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1600.0, 1400.0);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ScheduleWizardScreen(
+          repository: _FailingWizardRepository(),
+          objectId: 1,
+          year: _emptyYear,
+          objectName: 'ТЦ Карнавал 3 этаж 1',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _tap(tester, 'Далее');
+    await _tap(tester, 'Утвердить');
+
+    // Закрыть мастер по неудаче было бы негде показать причину.
+    expect(find.byType(WizardPreviewStep), findsOneWidget);
+    expect(find.text('Не удалось связаться с сервером'), findsOneWidget);
+    expect(_enabled(tester, 'Утвердить'), isTrue);
   });
 
   testWidgets('занятые месяцы утверждению не мешают',

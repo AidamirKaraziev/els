@@ -110,6 +110,10 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
   }
 
   @override
+  @Deprecated(
+    'График расставляет мастер: ScheduleWizardRepository.generate шлёт '
+    'выбранный месяц. Метод оставлен живым — он в проде.',
+  )
   Future<void> generateYear(int objectId, int year) async {
     final Uri uri = Uri.parse('${ApiConfig.base}/planned-to/generate/');
     final String body = jsonEncode(<String, dynamic>{

@@ -76,6 +76,10 @@ class FixtureScheduleObjectRepository implements ScheduleObjectRepository {
   }
 
   @override
+  @Deprecated(
+    'График расставляет мастер: ScheduleWizardRepository.generate шлёт '
+    'выбранный месяц. Метод оставлен живым — он в проде.',
+  )
   Future<void> generateYear(int objectId, int year) async {
     await _wait();
     // Как на сервере: акты созданы, но ни один не закрыт. Значит прошедшие

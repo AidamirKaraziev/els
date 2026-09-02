@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 import '../../../../../helper/api_client.dart';
@@ -19,7 +21,9 @@ class ApiScheduleWizardRepository implements ScheduleWizardRepository {
     required this.modelName,
     this.timeout = const Duration(seconds: 20),
     Future<http.Response> Function(Uri uri)? send,
-  }) : _send = send ?? _getViaApi;
+    Future<http.Response> Function(Uri uri, String body)? sendPost,
+  })  : _send = send ?? _getViaApi,
+        _sendPost = sendPost ?? _postViaApi;
 
   /// Модель оборудования — чья это программа. В ответе `preview` её нет, а
   /// человеку надо видеть, программу какой модели он смотрит: правка касается
@@ -34,8 +38,22 @@ class ApiScheduleWizardRepository implements ScheduleWizardRepository {
   /// нельзя.
   final Future<http.Response> Function(Uri uri) _send;
 
+  /// Как уходит создание графика. Отдельно от [_send]: у POST другое тело и
+  /// другие заголовки, и подменять их одной функцией пришлось бы с пустой
+  /// строкой вместо тела у каждого GET.
+  final Future<http.Response> Function(Uri uri, String body) _sendPost;
+
   static Future<http.Response> _getViaApi(Uri uri) =>
       Api.get(uri, headers: <String, String>{'Accept': 'application/json'});
+
+  static Future<http.Response> _postViaApi(Uri uri, String body) => Api.post(
+        uri,
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: body,
+      );
 
   /// Номер ошибки «якорь не восстановился» (`backend/.../schedule_plan.py`).
   static const int _anchorRequiredCode = 144;
@@ -81,6 +99,36 @@ class ApiScheduleWizardRepository implements ScheduleWizardRepository {
       year: year,
       anchorPassed: anchorMonth != null,
     );
+  }
+
+  @override
+  Future<void> generate(
+    int objectId,
+    int year, {
+    required int anchorMonth,
+  }) async {
+    final Uri uri = Uri.parse('${ApiConfig.base}/planned-to/generate/');
+    // Месяц шлём всегда: без него сервер подбирает якорь заново по прошлому
+    // году, и в базу лёг бы не тот расклад, что человек утверждал.
+    final String body = jsonEncode(<String, dynamic>{
+      'object_id': objectId,
+      'year': year,
+      'anchor_month': anchorMonth,
+    });
+
+    http.Response response;
+    try {
+      response = await _sendPost(uri, body).timeout(timeout);
+    } catch (_) {
+      throw const SchedulesException('Не удалось связаться с сервером');
+    }
+
+    // Отдельного типа на 146 («у модели нет шаблонов чек-листа») здесь нет:
+    // ветки работы у него не заводится — кнопка «Утвердить» до этого места и
+    // не пускает, — а текст сервера человеку понятен как есть.
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw SchedulesException(errorText(response));
+    }
   }
 
   ScheduleWizardData _data(

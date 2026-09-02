@@ -205,4 +205,72 @@ void main() {
       )),
     );
   });
+
+  // ------------------------------------------------- создание графика
+
+  test('generate шлёт выбранный месяц в теле, а не в адресе', () async {
+    final List<Uri> seen = <Uri>[];
+    final List<String> bodies = <String>[];
+    final ApiScheduleWizardRepository repository = ApiScheduleWizardRepository(
+      modelName: 'LIFT',
+      sendPost: (Uri uri, String body) async {
+        seen.add(uri);
+        bodies.add(body);
+        return _json(<String, dynamic>{'data': <String, dynamic>{}});
+      },
+    );
+
+    await repository.generate(7, 2027, anchorMonth: 5);
+
+    expect(seen.single.path, endsWith('/planned-to/generate/'));
+    expect(seen.single.queryParameters, isEmpty);
+    expect(
+      jsonDecode(bodies.single),
+      <String, dynamic>{'object_id': 7, 'year': 2027, 'anchor_month': 5},
+    );
+  });
+
+  test('201 — тоже удача: график создан', () async {
+    final ApiScheduleWizardRepository repository = ApiScheduleWizardRepository(
+      modelName: 'LIFT',
+      sendPost: (Uri uri, String body) async =>
+          _json(<String, dynamic>{'data': <String, dynamic>{}}, status: 201),
+    );
+
+    await expectLater(repository.generate(7, 2027, anchorMonth: 1), completes);
+  });
+
+  test('нет шаблонов чек-листа — причина словами из конверта', () async {
+    final ApiScheduleWizardRepository repository = ApiScheduleWizardRepository(
+      modelName: 'LIFT',
+      sendPost: (Uri uri, String body) async =>
+          _error(146, 'У модели нет шаблонов чек-листа на виды ТО [6]!'),
+    );
+
+    await expectLater(
+      repository.generate(7, 2027, anchorMonth: 1),
+      throwsA(isA<SchedulesException>().having(
+        (SchedulesException error) => error.message,
+        'message',
+        'У модели нет шаблонов чек-листа на виды ТО [6]!',
+      )),
+    );
+  });
+
+  test('обрыв связи при создании — тот же текст, что и у предпросмотра',
+      () async {
+    final ApiScheduleWizardRepository repository = ApiScheduleWizardRepository(
+      modelName: 'LIFT',
+      sendPost: (Uri uri, String body) async => throw Exception('нет сети'),
+    );
+
+    await expectLater(
+      repository.generate(7, 2027, anchorMonth: 1),
+      throwsA(isA<SchedulesException>().having(
+        (SchedulesException error) => error.message,
+        'message',
+        'Не удалось связаться с сервером',
+      )),
+    );
+  });
 }

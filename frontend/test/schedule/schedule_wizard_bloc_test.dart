@@ -5,6 +5,8 @@
 /// состояния из неё выходят.
 library;
 
+import 'dart:async';
+
 import 'package:els/screns/schedule/object/wizard/bloc/schedule_wizard_bloc.dart';
 import 'package:els/screns/schedule/object/wizard/fixture_schedule_wizard_data.dart';
 import 'package:els/screns/schedule/object/wizard/models/schedule_wizard_data.dart';
@@ -14,7 +16,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Репозиторий, который записывает вопросы и отвечает по указке теста.
 class _Recorder implements ScheduleWizardRepository {
-  _Recorder({this.previousYearAnchor, this.failWith});
+  _Recorder({
+    this.previousYearAnchor,
+    this.failWith,
+    this.generateFailure,
+    this.generateGate,
+  });
 
   /// Якорь, который «восстановился по прошлому году». `null` — сервер просит
   /// назвать месяц.
@@ -23,8 +30,18 @@ class _Recorder implements ScheduleWizardRepository {
   /// Чем ответить на запрос **с** якорем. Нужен ветке «перезапрос не удался».
   final SchedulesException? failWith;
 
+  /// Чем ответить на создание графика. `null` — удачей.
+  final SchedulesException? generateFailure;
+
+  /// Задержка создания, которой управляет тест. Нужна ветке «второе нажатие
+  /// при идущем запросе»: без неё запрос успевает закончиться раньше.
+  final Completer<void>? generateGate;
+
   /// Все запросы по порядку: `null` — без якоря.
   final List<int?> asked = <int?>[];
+
+  /// Месяцы, с которыми звали создание графика.
+  final List<int> generated = <int>[];
 
   @override
   Future<ScheduleWizardData> preview(
@@ -52,6 +69,17 @@ class _Recorder implements ScheduleWizardRepository {
       year: year,
       anchorMonth: anchorMonth,
     );
+  }
+
+  @override
+  Future<void> generate(
+    int objectId,
+    int year, {
+    required int anchorMonth,
+  }) async {
+    generated.add(anchorMonth);
+    if (generateGate != null) await generateGate!.future;
+    if (generateFailure != null) throw generateFailure!;
   }
 }
 
@@ -169,5 +197,105 @@ void main() {
 
     expect(state, isA<ScheduleWizardFailure>());
     expect((state as ScheduleWizardFailure).message, 'Сервер ответил ошибкой 500');
+  });
+
+  // ------------------------------------------------- «Утвердить»
+
+  test('«Утвердить» создаёт график с показанным месяцем', () async {
+    final _Recorder repository = _Recorder(previousYearAnchor: 3);
+    final ScheduleWizardBloc bloc = _bloc(repository)..add(const WizardOpened());
+    addTearDown(bloc.close);
+
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardLoaded,
+    );
+
+    bloc.add(const WizardApproved());
+    final ScheduleWizardState state = await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardApproved,
+    );
+
+    expect(repository.generated, <int>[3]);
+    expect(state, isA<ScheduleWizardApproved>());
+  });
+
+  test('в базу уходит выбранный человеком месяц, а не первый показанный',
+      () async {
+    final _Recorder repository = _Recorder();
+    final ScheduleWizardBloc bloc = _bloc(repository)..add(const WizardOpened());
+    addTearDown(bloc.close);
+
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardLoaded,
+    );
+
+    bloc.add(const WizardAnchorChanged(5));
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) =>
+          state is ScheduleWizardLoaded && !state.isReloading,
+    );
+
+    bloc.add(const WizardApproved());
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardApproved,
+    );
+
+    // Ровно ради этого мастер и заводили: без якоря сервер подобрал бы месяц
+    // заново и записал не то, что человек утвердил.
+    expect(repository.generated, <int>[5]);
+  });
+
+  test('неудача создания оставляет мастер на месте с причиной', () async {
+    final _Recorder repository = _Recorder(
+      previousYearAnchor: 3,
+      generateFailure: const SchedulesException('Не удалось связаться с сервером'),
+    );
+    final ScheduleWizardBloc bloc = _bloc(repository)..add(const WizardOpened());
+    addTearDown(bloc.close);
+
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardLoaded,
+    );
+
+    bloc.add(const WizardApproved());
+    final ScheduleWizardLoaded loaded = await bloc.stream.firstWhere(
+      (ScheduleWizardState state) =>
+          state is ScheduleWizardLoaded && state.error != null,
+    ) as ScheduleWizardLoaded;
+
+    // Заготовку не теряем: человеку есть что перечитать и куда нажать снова.
+    expect(loaded.isApproving, isFalse);
+    expect(loaded.anchorMonth, 3);
+    expect(loaded.error, 'Не удалось связаться с сервером');
+  });
+
+  test('второе нажатие при идущем создании запроса не делает', () async {
+    final Completer<void> gate = Completer<void>();
+    final _Recorder repository = _Recorder(
+      previousYearAnchor: 3,
+      generateGate: gate,
+    );
+    final ScheduleWizardBloc bloc = _bloc(repository)..add(const WizardOpened());
+    addTearDown(bloc.close);
+
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardLoaded,
+    );
+
+    bloc.add(const WizardApproved());
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) =>
+          state is ScheduleWizardLoaded && state.isApproving,
+    );
+
+    bloc.add(const WizardApproved());
+    await Future<void>.delayed(Duration.zero);
+    expect(repository.generated, <int>[3]);
+
+    gate.complete();
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardApproved,
+    );
+    expect(repository.generated, <int>[3]);
   });
 }

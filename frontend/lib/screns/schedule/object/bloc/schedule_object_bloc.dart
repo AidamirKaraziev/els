@@ -24,6 +24,7 @@ class ScheduleObjectBloc extends Bloc<ScheduleObjectEvent, ScheduleObjectState> 
         super(const ScheduleObjectInitial()) {
     on<ScheduleObjectRequested>(_onRequested);
     on<ScheduleObjectYearRequested>(_onYearRequested);
+    // ignore: deprecated_member_use_from_same_package
     on<ScheduleObjectGenerateRequested>(_onGenerateRequested);
   }
 
@@ -87,6 +88,7 @@ class ScheduleObjectBloc extends Bloc<ScheduleObjectEvent, ScheduleObjectState> 
     final int year = current.year;
     emit(current.copyWith(isGenerating: true));
     try {
+      // ignore: deprecated_member_use_from_same_package
       await _repository.generateYear(objectId, year);
     } on SchedulesException catch (error) {
       emit(_latest(current).copyWith(isGenerating: false, yearError: error.message));

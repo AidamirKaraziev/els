@@ -23,3 +23,11 @@ class WizardAnchorChanged extends ScheduleWizardEvent {
   /// 1..12, месяц календаря.
   final int month;
 }
+
+/// Человек нажал «Утвердить»: расставить год в базе.
+///
+/// Месяца в событии нет намеренно — блок берёт тот, что сейчас показан в
+/// предпросмотре. Иначе на кнопке и в ленте могли бы оказаться разные якоря.
+class WizardApproved extends ScheduleWizardEvent {
+  const WizardApproved();
+}

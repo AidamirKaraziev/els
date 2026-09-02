@@ -27,6 +27,10 @@ class ScheduleObjectYearRequested extends ScheduleObjectEvent {
 ///
 /// Года в событии нет намеренно: создаём ровно то, на что человек смотрит, и
 /// подпись на кнопке с годом запроса разъехаться не может.
+@Deprecated(
+  'График расставляет мастер: WizardApproved шлёт generate с выбранным '
+  'месяцем. Событие оставлено живым — оно в проде.',
+)
 class ScheduleObjectGenerateRequested extends ScheduleObjectEvent {
   const ScheduleObjectGenerateRequested();
 }

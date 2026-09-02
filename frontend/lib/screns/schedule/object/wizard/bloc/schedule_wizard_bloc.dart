@@ -25,6 +25,7 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
         super(const ScheduleWizardInitial()) {
     on<WizardOpened>(_onOpened);
     on<WizardAnchorChanged>(_onAnchorChanged);
+    on<WizardApproved>(_onApproved);
   }
 
   final ScheduleWizardRepository _repository;
@@ -73,6 +74,33 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
     // месте читался бы как «мастер сбросился».
     emit(current.copyWith(anchorMonth: event.month, isReloading: true));
     await _load(emit, event.month, previous: current);
+  }
+
+  Future<void> _onApproved(
+    WizardApproved event,
+    Emitter<ScheduleWizardState> emit,
+  ) async {
+    final ScheduleWizardState current = state;
+    if (current is! ScheduleWizardLoaded) return;
+    // Второе нажатие, пока идёт первое, отбиваем здесь, а не только серым
+    // видом кнопки: ручка идемпотентна, но лишний запрос всё равно незачем.
+    if (current.isApproving) return;
+
+    emit(current.copyWith(isApproving: true));
+    try {
+      // Месяц берём тот, что показан в предпросмотре: человек утверждал
+      // именно эту ленту.
+      await _repository.generate(
+        objectId,
+        year,
+        anchorMonth: current.anchorMonth,
+      );
+      emit(const ScheduleWizardApproved());
+    } on SchedulesException catch (error) {
+      emit(current.copyWith(error: error.message));
+    } catch (_) {
+      emit(current.copyWith(error: 'Не удалось создать график'));
+    }
   }
 
   /// Запрос заготовки с названным месяцем.
