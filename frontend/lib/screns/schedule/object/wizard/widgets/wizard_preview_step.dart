@@ -124,27 +124,56 @@ class _Cell extends StatelessWidget {
 
   final WizardPreviewCell cell;
 
+  /// Первая позиция программы — та, с которой разворачиваются все двенадцать
+  /// ТО. Считаем по [WizardPreviewCell.position], а не по совпадению с
+  /// месяцем-якорем: позиция и есть смысл «первое ТО цикла», и она уже
+  /// посчитана сервером.
+  bool get _isAnchor => cell.position == 1;
+
+  /// Старт на клетке без шаблона не закрашивается тёмным.
+  ///
+  /// Иначе один акцент съел бы другой: предупреждение важнее, из-за него
+  /// график не утверждается. Заливка остаётся янтарной, а старт помечается
+  /// тёмной рамкой и тем же тегом — видны оба сигнала.
+  bool get _isDark =>
+      _isAnchor && cell.mark != WizardCellMark.templateMissing;
+
   @override
   Widget build(BuildContext context) {
     final WizardCellMark mark = cell.mark;
+    final Color foreground =
+        _isDark ? ColorApp.myColorWhite : mark.foreground;
+    final Color monthColor =
+        _isDark ? ColorApp.myColorGrayText : mark.foreground;
+
     return Tooltip(
       message: '${kMonthsNominative[cell.month - 1]} · ${cell.typeActName} · '
-          '${mark.title}',
+          '${mark.title}${_isAnchor ? ' · старт цикла' : ''}',
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
         decoration: BoxDecoration(
-          color: mark.fill,
-          border: Border.all(color: mark.border),
+          color: _isDark ? ColorApp.myColorBlack : mark.fill,
+          border: Border.all(
+            color: _isAnchor ? ColorApp.myColorBlack : mark.border,
+            width: _isAnchor && !_isDark ? 2.0 : 1.0,
+          ),
           borderRadius: BorderRadius.circular(6.0),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            // Место под тег держат все клетки, а не только клетка старта:
+            // иначе она одна становится выше соседей и ряд идёт волной.
+            SizedBox(
+              height: _AnchorTag.height,
+              child: _isAnchor ? const _AnchorTag() : null,
+            ),
+            const SizedBox(height: 4.0),
             Text(
               kMonthsShort[cell.month - 1],
               style: TextStyle(
                 fontSize: 10.0,
-                color: mark.foreground,
+                color: monthColor,
               ),
             ),
             const SizedBox(height: 4.0),
@@ -153,7 +182,7 @@ class _Cell extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13.0,
                 fontWeight: FontWeight.w600,
-                color: mark.foreground,
+                color: foreground,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -161,6 +190,44 @@ class _Cell extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Тег «СТАРТ» над месяцем. Словом, а не одним цветом: тёмная клетка сама по
+/// себе читается как «ещё один статус», и без подписи её пришлось бы угадывать.
+class _AnchorTag extends StatelessWidget {
+  const _AnchorTag({Key? key}) : super(key: key);
+
+  /// Высота, которую тег занимает в клетке. Ею же резервируется место в
+  /// клетках без тега — см. `_Cell`.
+  static const double height = 14.0;
+
+  @override
+  Widget build(BuildContext context) {
+    // Row с `min` — чтобы бейдж был по ширине надписи, а не во всю клетку:
+    // родитель даёт свободную ширину, и Container без этого растянулся бы.
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          decoration: BoxDecoration(
+            color: ColorApp.myColorGreenAuth,
+            borderRadius: BorderRadius.circular(3.0),
+          ),
+          child: const Text(
+            'СТАРТ',
+            style: TextStyle(
+              fontSize: 9.0,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+              color: ColorApp.myColorWhite,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -177,28 +244,58 @@ class _Legend extends StatelessWidget {
       runSpacing: 8.0,
       children: <Widget>[
         for (final WizardCellMark mark in WizardCellMark.values)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                width: 12.0,
-                height: 12.0,
-                decoration: BoxDecoration(
-                  color: mark.fill,
-                  border: Border.all(color: mark.border),
-                  borderRadius: BorderRadius.circular(3.0),
-                ),
-              ),
-              const SizedBox(width: 6.0),
-              Text(
-                mark.title,
-                style: const TextStyle(
-                  fontSize: 12.0,
-                  color: ColorApp.myColorGray,
-                ),
-              ),
-            ],
+          _LegendItem(
+            fill: mark.fill,
+            border: mark.border,
+            title: mark.title,
           ),
+        // Старт цикла — не пометка клетки, а отдельная ось: он приходится на
+        // любую из трёх. Но в легенде он обязан быть, иначе тёмная клетка
+        // читается как четвёртый статус.
+        const _LegendItem(
+          fill: ColorApp.myColorBlack,
+          border: ColorApp.myColorBlack,
+          title: 'старт цикла',
+        ),
+      ],
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  const _LegendItem({
+    Key? key,
+    required this.fill,
+    required this.border,
+    required this.title,
+  }) : super(key: key);
+
+  final Color fill;
+  final Color border;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(
+          width: 12.0,
+          height: 12.0,
+          decoration: BoxDecoration(
+            color: fill,
+            border: Border.all(color: border),
+            borderRadius: BorderRadius.circular(3.0),
+          ),
+        ),
+        const SizedBox(width: 6.0),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 12.0,
+            color: ColorApp.myColorGray,
+          ),
+        ),
       ],
     );
   }
@@ -221,9 +318,9 @@ class _MissingTemplateNote extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
-        color: ColorApp.myColorGrayShadow,
+        color: ColorApp.myColorYellowLight,
         borderRadius: BorderRadius.circular(8.0),
-        border: Border.all(color: ColorApp.myColorRed),
+        border: Border.all(color: ColorApp.myColorYellow),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

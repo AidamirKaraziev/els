@@ -18,6 +18,10 @@ class ColorApp {
   static const Color myColorTransparent = Color(0xffF5F6F6);
   static const Color myColorRed = Color(0xffDF726F);
   static const Color myColorYellow = Color(0xffF0BB01);
+
+  /// Бледная янтарная заливка под тем же `myColorYellow` в рамке. Нужна там,
+  /// где помечают недоделку, а не отказ: на сплошном #F0BB01 текст не читается.
+  static const Color myColorYellowLight = Color(0xffFFF5E6);
   static const Color myColorBlue = Color(0xff8BAEF9);
 
   ///Мой Падинг

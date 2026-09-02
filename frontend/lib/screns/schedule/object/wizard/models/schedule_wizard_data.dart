@@ -47,36 +47,41 @@ enum WizardCellMark {
 
 extension WizardCellMarkView on WizardCellMark {
   /// Заливка клетки. Цвета только из палитры проекта.
+  ///
+  /// Лента намеренно тихая: серое и белое. Громкий цвет на ней ровно один —
+  /// янтарный «нет шаблона», и потому его видно. Пока «добавится» было
+  /// зелёным, оно занимало почти весь год и глушило и предупреждение, и
+  /// пометку старта цикла.
   Color get fill {
     switch (this) {
       case WizardCellMark.toAdd:
-        return ColorApp.myColorGreen;
-      case WizardCellMark.occupied:
         return ColorApp.myColorGrayShadow;
+      case WizardCellMark.occupied:
+        return ColorApp.myColorWhite;
       case WizardCellMark.templateMissing:
-        return ColorApp.myColorRed;
+        return ColorApp.myColorYellowLight;
     }
   }
 
   Color get border {
     switch (this) {
-      case WizardCellMark.occupied:
-        return ColorApp.myColorGrayBorder;
+      case WizardCellMark.templateMissing:
+        return ColorApp.myColorYellow;
       default:
-        return fill;
+        return ColorApp.myColorGrayBorder;
     }
   }
 
-  /// Цвет текста внутри клетки: на бледной заливке занятого месяца белый не
-  /// читается.
+  /// Цвет текста внутри клетки. Заливки все светлые, поэтому текст тёмный;
+  /// у занятого месяца он приглушён — этот месяц расстановка не тронет, и
+  /// читать его наравне с остальными незачем.
   Color get foreground {
     switch (this) {
       case WizardCellMark.occupied:
-        return ColorApp.myColorGray;
+        return ColorApp.myColorGrayText;
       case WizardCellMark.toAdd:
-        return ColorApp.myColorBlack;
       case WizardCellMark.templateMissing:
-        return ColorApp.myColorWhite;
+        return ColorApp.myColorBlack;
     }
   }
 
