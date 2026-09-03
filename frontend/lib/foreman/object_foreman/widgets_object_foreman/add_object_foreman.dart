@@ -14,6 +14,8 @@ import '../../../screns/object/widgets/add_contact_person_object.dart';
 import '../../../screns/object/widgets/add_contract.dart';
 import '../../../screns/object/widgets/add_model.dart';
 import '../../../screns/object/widgets/add_plot.dart';
+import '../../../screns/schedule/models/schedule_role.dart';
+import '../../../screns/schedule/view/schedule_after_create_offer.dart';
 import '../../../screns/user/user_contact.dart';
 import '../../../widgets_create/organization_greate.dart';
 import 'package:els/helper/api_client.dart';
@@ -47,7 +49,10 @@ class AddObjectForeman extends StatefulWidget {
 class _AddObjectForemanState extends State<AddObjectForeman> {
 
   /// Создание Обьекта ======
-  createObjectForeman() async {
+  ///
+  /// Возвращает созданный объект из ответа — из него предложение расставить
+  /// график берёт id, название и модель.
+  Future<dynamic> createObjectForeman() async {
     var response = await Api.post(
       Uri.parse("${ApiConfig.base}/object/"),
       headers: {
@@ -82,6 +87,7 @@ class _AddObjectForemanState extends State<AddObjectForeman> {
     var listAddObject = jsonDecode(utf8.decode(response.bodyBytes));
     print('Новый обьект +++++${listAddObject}++++');
     dataObjectForeman.add(listAddObject['data']);
+    return listAddObject['data'];
   }
   /// =======================
 
@@ -1483,10 +1489,16 @@ class _AddObjectForemanState extends State<AddObjectForeman> {
                         numLiftingHeight.currentState!.validate();
                         numSfStops.currentState!.validate();
                         if(nameObject.text.isNotEmpty && legalAddress.text.isNotEmpty){
-                          await createObjectForeman();
+                          final dynamic created = await createObjectForeman();
                           myStream.add(IntTest.indexScreens);
-                          Navigator.pop(context);
-                          setState(() {});
+                          if (!context.mounted) return;
+                          // Форма закрывается внутри: диалог с предложением
+                          // иначе встал бы под ней.
+                          await closeFormAndOfferSchedule(
+                            context,
+                            created: created,
+                            role: ScheduleRole.foreman,
+                          );
                         }
                       }, child: const Text('Сохранить',style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)))
                         : ElevatedButton(

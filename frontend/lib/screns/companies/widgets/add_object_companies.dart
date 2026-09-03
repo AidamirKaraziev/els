@@ -16,6 +16,8 @@ import '../../object/widgets/add_contract.dart';
 import '../../object/widgets/add_model.dart';
 import '../../object/widgets/add_object.dart';
 import '../../object/widgets/add_plot.dart';
+import '../../schedule/models/schedule_role.dart';
+import '../../schedule/view/schedule_after_create_offer.dart';
 import '../view/companies_screen.dart';
 import 'add_contact_person.dart';
 import 'package:els/helper/api_client.dart';
@@ -34,7 +36,10 @@ class AddObjectCompanies extends StatefulWidget {
 
 class _AddObjectCompaniesState extends State<AddObjectCompanies> {
   /// Создание Обьекта компании =====
-  createObjectCompanies() async {
+  ///
+  /// Возвращает созданный объект из ответа — из него предложение расставить
+  /// график берёт id, название и модель.
+  Future<dynamic> createObjectCompanies() async {
     var response = await Api.post(
       Uri.parse("${ApiConfig.base}/object/"), // listSelectedCompany['data']['id']
       headers: {
@@ -71,6 +76,7 @@ class _AddObjectCompaniesState extends State<AddObjectCompanies> {
     listSelectedObjectCompany.add(listAddObject['data']);
     dataObject.add(listAddObject['data']);
     myStream.add(IntTest.indexScreens);
+    return listAddObject['data'];
   }
   /// ===============================
 
@@ -1475,10 +1481,17 @@ class _AddObjectCompaniesState extends State<AddObjectCompanies> {
                           numLiftingHeight.currentState!.validate();
                           numSfStops.currentState!.validate();
                           if(nameObject.text.isNotEmpty && legalAddress.text.isNotEmpty){
-                            await createObjectCompanies();
+                            final dynamic created =
+                                await createObjectCompanies();
                             myStream.add(IntTest.indexScreens);
-                            Navigator.pop(context);
-                            setState(() {});
+                            if (!context.mounted) return;
+                            // Форма закрывается внутри: диалог с предложением
+                            // иначе встал бы под ней.
+                            await closeFormAndOfferSchedule(
+                              context,
+                              created: created,
+                              role: ScheduleRole.admin,
+                            );
                           }
                         }, child: const Text('Сохранить',style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)))
                         : ElevatedButton(

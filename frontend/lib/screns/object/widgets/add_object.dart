@@ -18,6 +18,8 @@ import 'add_contract.dart';
 import 'add_model.dart';
 import 'add_plot.dart';
 import 'package:els/helper/api_client.dart';
+import '../../schedule/models/schedule_role.dart';
+import '../../schedule/view/schedule_after_create_offer.dart';
 
 ///Создание объекта
 
@@ -48,7 +50,11 @@ class AddObject extends StatefulWidget {
 class _AddObjectState extends State<AddObject> {
 
   /// Создание Обьекта ======
-  createObject() async {
+  ///
+  /// Возвращает созданный объект из ответа — из него предложение расставить
+  /// график берёт id, название и модель. Раньше ответ разбирался и тут же
+  /// выбрасывался: списку хватало того, что он перечитывает себя целиком.
+  Future<dynamic> createObject() async {
     var response = await Api.post(
       Uri.parse("${ApiConfig.base}/object/"),
       headers: {
@@ -90,6 +96,7 @@ class _AddObjectState extends State<AddObject> {
     // print('Новый обьект +++++${listAddObject['description']}++++');
     dataObject.add(listAddObject['data']);
     MyObjectBloc().add(ObjectGetEvent());
+    return listAddObject['data'];
   }
   /// =======================
 
@@ -1487,10 +1494,16 @@ class _AddObjectState extends State<AddObject> {
                         // numLiftingHeight.currentState!.validate();
                         // numSfStops.currentState!.validate();
                         if(nameObject.text.isNotEmpty && legalAddress.text.isNotEmpty){
-                          await createObject();
+                          final dynamic created = await createObject();
                           myStream.add(IntTest.indexScreens);
-                          Navigator.pop(context);
-                          setState(() {});
+                          if (!context.mounted) return;
+                          // Форма закрывается внутри: диалог с предложением
+                          // иначе встал бы под ней.
+                          await closeFormAndOfferSchedule(
+                            context,
+                            created: created,
+                            role: ScheduleRole.admin,
+                          );
                         }
                       }, child: const Text('Сохранить',style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)))
                         : ElevatedButton(

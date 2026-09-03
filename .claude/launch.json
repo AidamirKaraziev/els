@@ -36,6 +36,23 @@
       "port": 5600
     },
     {
+      "name": "schedule-offer-preview",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/dev/schedule_offer_preview.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5603",
+        "--web-hostname",
+        "127.0.0.1"
+      ],
+      "cwd": "frontend",
+      "port": 5603
+    },
+    {
       "name": "schedule-wizard-live",
       "runtimeExecutable": "flutter",
       "runtimeArgs": [
