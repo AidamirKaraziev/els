@@ -19,7 +19,7 @@ import '../screns/in_progress_works/repository/in_progress_works_repository.dart
 import '../screns/report/report_screen.dart';
 import '../screns/schedule/schedule_page.dart';
 import '../screns/schedule/view/schedule_section.dart';
-import '../screns/schedule/view/shell_schedule_object_opener.dart';
+import '../screns/schedule/view/route_schedule_object_opener.dart';
 import '../screns/schedule/view/schedules_screen.dart';
 import '../screns/submitted_works/repository/submitted_works_repository.dart';
 import '../screns/submitted_works/view/submitted_works_screen.dart';
@@ -68,9 +68,9 @@ class _HomeForemanState extends State<HomeForeman> {
     return ScheduleSection(
       role: ScheduleRole.foreman,
       bloc: _scheduleBloc,
-      // Клик в строку уводит на экран «График» прораба — тот же, куда вёл
-      // прежний список графиков.
-      opener: const ShellScheduleObjectOpener.foreman(),
+      // Клик в строку открывает тот же экран «График объекта», что и у
+      // админа, — маршрутом поверх оболочки, но глазами прораба.
+      opener: const RouteScheduleObjectOpener.foreman(),
       drawer: const DrawerForeman(),
     );
   }

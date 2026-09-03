@@ -72,23 +72,6 @@
       "port": 5602
     },
     {
-      "name": "schedule-program-draft",
-      "runtimeExecutable": "flutter",
-      "runtimeArgs": [
-        "run",
-        "-t",
-        "lib/dev/schedule_program_draft.dart",
-        "-d",
-        "web-server",
-        "--web-port",
-        "5603",
-        "--web-hostname",
-        "127.0.0.1"
-      ],
-      "cwd": "frontend",
-      "port": 5603
-    },
-    {
       "name": "app-live",
       "runtimeExecutable": "flutter",
       "runtimeArgs": [

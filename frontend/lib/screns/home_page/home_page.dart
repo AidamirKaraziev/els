@@ -7,7 +7,7 @@ import 'package:els/screns/report/report_screen.dart';
 import 'package:els/screns/schedule/bloc/schedules_bloc.dart';
 import 'package:els/screns/schedule/models/schedule_filters.dart';
 import 'package:els/screns/schedule/view/schedule_section.dart';
-import 'package:els/screns/schedule/view/shell_schedule_object_opener.dart';
+import 'package:els/screns/schedule/view/route_schedule_object_opener.dart';
 import 'package:els/screns/schedule/view/schedules_screen.dart';
 import 'package:els/screns/task/view/task_screen.dart';
 import 'package:els/screns/user/user_page.dart';
@@ -104,9 +104,9 @@ class _HomePageState extends State<HomePage> {
     return ScheduleSection(
       role: ScheduleRole.admin,
       bloc: _scheduleBloc,
-      // Клик в строку уводит на экран «График» объекта — экран подрядчика,
-      // тот же, куда вёл прежний список графиков.
-      opener: const ShellScheduleObjectOpener.admin(),
+      // Клик в строку открывает экран «График объекта» маршрутом поверх
+      // оболочки. Экран подрядчика из этого пути ушёл.
+      opener: const RouteScheduleObjectOpener.admin(),
       // Ключ меняется только на заходе с главной: иначе Flutter переиспользовал
       // бы состояние прежней ленты, и новый фильтр приехал бы к старым строкам.
       key: ValueKey<int>(_scheduleRequests),

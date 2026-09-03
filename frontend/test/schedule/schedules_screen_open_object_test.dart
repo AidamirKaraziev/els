@@ -1,9 +1,8 @@
 /// Клик по строке ленты открывает экран «График» этого объекта.
 ///
-/// Открывает не лента: экран графика живёт в оболочке подрядчика и
-/// показывается сменой её номера экрана. Лента только зовёт
-/// [ScheduleObjectOpener], и в тесте он подставной — иначе проверка ушла бы в
-/// сеть и в глобальные переменные подрядчика.
+/// Открывает не лента: она только зовёт [ScheduleObjectOpener], а маршрут на
+/// экран графика ставит место встраивания. В тесте вход подставной — иначе
+/// проверка ушла бы в сеть за карточкой объекта и его лентой ТО.
 library;
 
 import 'dart:async';
@@ -29,7 +28,7 @@ class _OpenerSpy extends ScheduleObjectOpener {
   final Completer<void> gate = Completer<void>();
 
   @override
-  Future<void> open(ScheduleRow row) async {
+  Future<void> open(BuildContext context, ScheduleRow row) async {
     opened.add(row);
     await gate.future;
     if (fails) throw Exception('ручка ответила 500');
