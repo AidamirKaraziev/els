@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../helper/calendar/month_picker.dart' show kMonthsGenitive;
 import '../../../../helper/class_colors.dart';
+import '../../../../helper/hints/hint_icon.dart';
+import '../../../../helper/hints/hints.dart';
 import '../../models/month_cell.dart';
 import '../../models/schedule_role.dart';
 import '../../widgets/month_strip.dart';
@@ -143,6 +145,7 @@ class ObjectScheduleCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+        const HintIcon(id: HintIds.scheduleMonthCreatesAct),
         if (isLoading) ...<Widget>[
           const SizedBox(width: 8.0),
           const SizedBox(

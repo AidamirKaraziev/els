@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../helper/class_colors.dart';
+import '../../../helper/hints/hint_icon.dart';
+import '../../../helper/hints/hints.dart';
 import '../../in_progress_works/bloc/work_details_bloc.dart';
 import '../../submitted_works/models/submitted_work.dart' show WorkKind;
 import '../../in_progress_works/repository/work_details_repository.dart';
@@ -47,6 +49,15 @@ class _CardView extends StatelessWidget {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(objectName.isEmpty ? 'Работа' : objectName),
+        // Значок в шапке, а не у блока времён: `WorkTimesBlock` общий с
+        // карточками идущих и сданных работ, и подсказка про закрытие ТО
+        // уехала бы туда, где ТО ни при чём.
+        actions: const <Widget>[
+          Padding(
+            padding: EdgeInsets.only(right: 12.0),
+            child: Center(child: HintIcon(id: HintIds.scheduleFinishTo, size: 20.0)),
+          ),
+        ],
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: ColorApp.myColorBlack,

@@ -15,7 +15,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../helper/class_colors.dart';
 import '../../helper/my_drawer/my_drawer.dart';
-import '../../my_test_screen.dart';
 import '../companies/view/companies_screen_archive.dart';
 import '../companies/view/company_page_archive.dart';
 import '../employee/view/employee_archive_page.dart';
@@ -26,11 +25,9 @@ import '../../bloc/user_bloc/user_bloc.dart';
 import '../object/view/object_page.dart';
 import '../object/view/object_page_archive.dart';
 import '../object/view/object_screen_archive.dart';
-import '../schedule/schedule_page.dart';
 import '../task/view/archive/task_page_archive.dart';
 import '../task/view/archive/task_screen_archive.dart';
 import '../task/view/task_page.dart';
-import '../test_window.dart';
 
 ///Главная User
 
@@ -154,12 +151,12 @@ class _HomePageState extends State<HomePage> {
     ///Окно выбранного Юзера 12
     const OpenViewEmployee(),
 
-    ///  13
-    const SchedulePage(),
+    ///  13 — экран графика подрядчика снят, слот держит нумерацию
+    const SizedBox.shrink(),
     /// Окно выбранной задачи 14
     const TaskPage(),
-    ///Окно Test 15
-    const TestWindow(),
+    ///Окно Test 15 — экран снят, слот держит нумерацию
+    const SizedBox.shrink(),
     ///Окно Архив сотрудники 16
      EmployeesArchiveScreen(),
     ///Окно Архив выбранного сотрудника 17

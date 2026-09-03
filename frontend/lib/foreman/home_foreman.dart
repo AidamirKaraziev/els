@@ -1,6 +1,5 @@
 import 'package:els/screns/schedule/bloc/schedules_bloc.dart';
 import 'package:els/foreman/companies_foreman/companies_screen_foreman.dart';
-import 'package:els/foreman/schedule_foreman/schedule_page_foreman.dart';
 import 'package:els/foreman/task_foreman/task_completed_foreman/task_page_completed_foreman.dart';
 import 'package:els/foreman/task_foreman/task_completed_foreman/task_screen_completed_foreman.dart';
 import 'package:els/foreman/task_foreman/task_page_foreman.dart';
@@ -17,7 +16,6 @@ import '../screns/in_progress_works/in_progress_counts.dart';
 import '../screns/in_progress_works/models/in_progress_work.dart';
 import '../screns/in_progress_works/repository/in_progress_works_repository.dart';
 import '../screns/report/report_screen.dart';
-import '../screns/schedule/schedule_page.dart';
 import '../screns/schedule/view/schedule_section.dart';
 import '../screns/schedule/view/route_schedule_object_opener.dart';
 import '../screns/schedule/view/schedules_screen.dart';
@@ -108,8 +106,8 @@ class _HomeForemanState extends State<HomeForeman> {
     ///Окно выбранного Юзера 9
     const OpenViewEmployee(),
 
-    ///  10
-    const SchedulePage(),
+    ///  10 — экран графика подрядчика снят, слот держит нумерацию
+    const SizedBox.shrink(),
 
     /// Окно выбранной задачи 11
     const TaskPage(),
@@ -120,8 +118,8 @@ class _HomeForemanState extends State<HomeForeman> {
     /// Окно архив выбранного объекта 13
     const ObjectPageArchiveForeman(),
 
-    /// Окно выбранного графика 14
-    const SchedulePageForeman(),
+    /// Окно выбранного графика 14 — экран подрядчика снят, слот держит нумерацию
+    const SizedBox.shrink(),
 
     /// Окно выбранной задачи 15
     const TaskPageForeman(),
