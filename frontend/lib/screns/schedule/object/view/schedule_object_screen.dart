@@ -179,6 +179,7 @@ class _Content extends StatelessWidget {
   /// же содержимого. Решено 2 сентября, к кадру вернёмся отдельной задачей.
   void _openWork(BuildContext context, MonthCell cell) {
     if (!cell.isTappable) return;
+    final ScheduleObjectBloc bloc = context.read<ScheduleObjectBloc>();
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (BuildContext context) => ScheduleWorkCardScreen(
@@ -187,6 +188,11 @@ class _Content extends StatelessWidget {
           // его попросту не отдают. Берём то же, что стоит в шапке экрана;
           // пусто — карточка работы напишет «Работа».
           objectName: objectName ?? '',
+          // Закрыли ТО — перечитываем ленту показанного года. Клетка месяца
+          // и подпись «срок ближайшего ТО» считаются из одних и тех же
+          // клеток, поэтому второго запроса под срок не нужно.
+          onToFinished: () =>
+              bloc.add(ScheduleObjectYearRequested(state.year)),
         ),
       ),
     );

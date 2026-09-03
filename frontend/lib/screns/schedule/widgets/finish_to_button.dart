@@ -47,6 +47,7 @@ class FinishTOButton extends StatefulWidget {
     required this.actId,
     required this.finishedAt,
     this.onFinished,
+    this.request,
   }) : super(key: key);
 
   /// Акт выбранного месяца. Ноль означает, что месяц ещё не выбран.
@@ -57,6 +58,12 @@ class FinishTOButton extends StatefulWidget {
 
   /// Позвать после успешного закрытия: экрану нужно перечитать график.
   final Future<void> Function()? onFinished;
+
+  /// Чем закрывать акт. По умолчанию [finishFactAct] — настоящий PUT.
+  ///
+  /// Подменяется только в тестах: иначе кнопку не проверить, она ходит в сеть
+  /// прямо из обработчика нажатия.
+  final Future<bool> Function(int actId)? request;
 
   @override
   State<FinishTOButton> createState() => _FinishTOButtonState();
@@ -101,7 +108,7 @@ class _FinishTOButtonState extends State<FinishTOButton> {
     setState(() => _sending = true);
     bool ok = false;
     try {
-      ok = await finishFactAct(widget.actId);
+      ok = await (widget.request ?? finishFactAct)(widget.actId);
     } catch (_) {
       ok = false;
     }
