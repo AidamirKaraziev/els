@@ -171,6 +171,7 @@ class _WizardViewState extends State<_WizardView> {
     }
     return WizardPreviewStep(
       data: state.data,
+      year: widget.year,
       anchorMonth: state.anchorMonth,
       // Модели нет — править нечего: строка программы гасит кнопку и говорит
       // почему. Идти в окно с выдуманным `modelId` было бы хуже.

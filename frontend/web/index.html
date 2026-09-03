@@ -36,12 +36,9 @@
   <title>ELS — Единая лифтовая система</title>
   <link rel="manifest" href="manifest.json">
 
-  <script>
-    // The value below is injected by flutter build, do not touch.
-    var serviceWorkerVersion = '{{flutter_service_worker_version}}';
-  </script>
-  <!-- This script adds the flutter initialization JS code -->
-  <script src="flutter.js" defer></script>
+  <!-- Версию service worker и загрузку flutter.js берёт на себя
+       flutter_bootstrap.js: подстановка {{flutter_service_worker_version}}
+       в 3.47 приезжает с апострофом внутри и рвёт строку. -->
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

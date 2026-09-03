@@ -446,7 +446,7 @@ Future<void> _pumpPreview(WidgetTester tester, ScheduleWizardData data) async {
     MaterialApp(
       home: Scaffold(
         body: SingleChildScrollView(
-          child: WizardPreviewStep(data: data, anchorMonth: 3),
+          child: WizardPreviewStep(data: data, year: data.year, anchorMonth: 3),
         ),
       ),
     ),

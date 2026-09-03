@@ -45,8 +45,9 @@ class WizardAnchorStep extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              'Графика за ${data.year - 1} год у объекта нет, поэтому месяц '
-              'начала цикла выбирается вручную.',
+              'Начало цикла не удалось определить по графику за '
+              '${data.year - 1} год: его либо нет, либо он не ложится на '
+              'программу однозначно. Месяц выбирается вручную.',
               style: const TextStyle(fontSize: 13.0, color: ColorApp.myColorGray),
             ),
             const SizedBox(height: 16.0),

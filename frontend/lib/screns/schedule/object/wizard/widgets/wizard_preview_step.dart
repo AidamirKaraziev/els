@@ -22,6 +22,7 @@ class WizardPreviewStep extends StatelessWidget {
   const WizardPreviewStep({
     Key? key,
     required this.data,
+    required this.year,
     required this.anchorMonth,
     this.onEditProgram,
     this.onAnchorMoved,
@@ -32,6 +33,10 @@ class WizardPreviewStep extends StatelessWidget {
   /// раскладывать нечего, и от шага остаётся строка программы с предложением
   /// её завести.
   final ScheduleWizardData? data;
+
+  /// Год, который расставляем. Заголовок называет его и без заготовки: у
+  /// модели без программы `data` пуста, а год человек всё равно выбрал.
+  final int year;
 
   /// Месяц начала цикла — тот, что применён: с прошлого года, выбранный на
   /// шаге «Точка отсчёта» или полученный перетаскиванием клетки.
@@ -77,9 +82,7 @@ class WizardPreviewStep extends StatelessWidget {
         ),
         const SizedBox(height: 20.0),
         ObjectBlock(
-          title: preview == null
-              ? 'Что ляжет в год'
-              : 'Что ляжет в ${preview.year} год',
+          title: 'Что ляжет в $year год',
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16.0),
