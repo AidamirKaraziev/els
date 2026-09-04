@@ -273,30 +273,26 @@ def apply_planned_to_scope(query, scope: AccessScope):
     return query.filter(PlannedTO.object_id.in_(visible_object_ids(scope)))
 
 
-def visible_planned_to_ids(scope: AccessScope):
-    """Подзапрос с id доступных плановых ТО — для дефектных ведомостей."""
-    return (
-        select(PlannedTO.id)
-        .where(PlannedTO.object_id.in_(visible_object_ids(scope)))
-        .correlate(None)
-    ).scalar_subquery()
-
-
 def defective_act_scope_filter(scope: AccessScope):
-    """SQL-условие «эта дефектная ведомость человеку видна»."""
+    """SQL-условие «эта дефектная ведомость человеку видна».
+
+    Ось доступа — объект, а не плановое ТО: акт заводится из четырёх мест, и
+    у трёх из них `planned_to_id` пуст. Через ТО такой акт не увидел бы никто,
+    кроме автора и ответственного.
+    """
     if scope.kind is ScopeKind.ALL:
         return true()
     if scope.kind is ScopeKind.NOTHING:
         return false()
     return or_(
-        DefectiveAct.planned_to_id.in_(visible_planned_to_ids(scope)),
+        DefectiveAct.object_id.in_(visible_object_ids(scope)),
         DefectiveAct.responsible_user_id == scope.user_id,
         DefectiveAct.created_by_user_id == scope.user_id,
     )
 
 
 def apply_defective_act_scope(query, scope: AccessScope):
-    """Список дефектных ведомостей: через плановое ТО к объекту, плюс свои."""
+    """Список дефектных ведомостей: по объекту, плюс свои."""
     return query.filter(defective_act_scope_filter(scope))
 
 
@@ -407,7 +403,7 @@ def can_access_planned_to(scope: AccessScope, planned) -> bool:
 
 
 def can_access_defective_act(scope: AccessScope, act) -> bool:
-    """Доступна ли дефектная ведомость: через плановое ТО, плюс своё участие."""
+    """Доступна ли дефектная ведомость: через объект, плюс своё участие."""
     if scope.kind is ScopeKind.ALL:
         return True
     if scope.kind is ScopeKind.NOTHING or act is None:
@@ -417,7 +413,7 @@ def can_access_defective_act(scope: AccessScope, act) -> bool:
         or act.created_by_user_id == scope.user_id
     ):
         return True
-    return can_access_planned_to(scope, act.planned_to)
+    return can_access_object(scope, act.object)
 
 
 def can_access_user(scope: AccessScope, user) -> bool:

@@ -97,6 +97,10 @@ defective_act_not_found = -1340
 defective_act_photo_not_found = -1341
 defective_act_photo_file_is_none = -1342
 defective_act_invalid_month = -1343
+defective_act_no_link = -1344
+defective_act_links_conflict = -1345
+defective_act_invalid_state = -1346
+defective_act_photo_foreign = -1347
 
 act_fact_step_photo_not_found = -1350
 act_fact_step_photo_file_is_none = -1351
@@ -525,6 +529,37 @@ def get_raise(code: Any):
             message="Некорректный месяц (1–12)",
             num=1343,
             description="Укажите месяц в диапазоне 1–12",
+            path="$.body",
+        )
+    if code == -1344:
+        raise UnprocessableEntity(
+            message="Не указано, к чему относится дефектный акт",
+            num=1344,
+            description=(
+                "Пришлите хотя бы одну привязку: object_id, act_fact_id, "
+                "order_id или planned_to_id"
+            ),
+            path="$.body",
+        )
+    if code == -1345:
+        raise UnprocessableEntity(
+            message="Привязки дефектного акта указывают на разные объекты",
+            num=1345,
+            description="Проверьте act_fact_id, order_id, planned_to_id и object_id",
+            path="$.body",
+        )
+    if code == -1346:
+        raise UnprocessableEntity(
+            message="Недопустимое состояние дефектного акта",
+            num=1346,
+            description="Допустимы created, reviewed, issued и fixed",
+            path="$.body",
+        )
+    if code == -1347:
+        raise UnprocessableEntity(
+            message="Фото не принадлежит этому дефектному акту",
+            num=1347,
+            description="В клиентский акт попадают только снимки первоисточника",
             path="$.body",
         )
     if code == -1350:

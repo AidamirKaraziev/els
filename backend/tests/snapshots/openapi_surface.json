@@ -249,6 +249,20 @@
     "required_body": [],
     "required_params": []
   },
+  "GET /api/v1/defective-act/by-object/{object_id}/": {
+    "required_body": [],
+    "required_params": [
+      "object_id",
+      "year"
+    ]
+  },
+  "GET /api/v1/defective-act/by-object/{object_id}/count/": {
+    "required_body": [],
+    "required_params": [
+      "object_id",
+      "year"
+    ]
+  },
   "GET /api/v1/defective-act/by-planned-to/{planned_to_id}/": {
     "required_body": [],
     "required_params": [
@@ -730,12 +744,15 @@
   },
   "POST /api/v1/defective-act/": {
     "required_body": [
-      "month",
-      "planned_to_id",
-      "responsible_user_id",
       "title"
     ],
     "required_params": []
+  },
+  "POST /api/v1/defective-act/{defective_act_id}/issue-to-client/": {
+    "required_body": [],
+    "required_params": [
+      "defective_act_id"
+    ]
   },
   "POST /api/v1/defective-act/{defective_act_id}/pdf/": {
     "required_body": [],
@@ -1020,6 +1037,14 @@
   },
   "PUT /api/v1/defective-act/{defective_act_id}/": {
     "required_body": [],
+    "required_params": [
+      "defective_act_id"
+    ]
+  },
+  "PUT /api/v1/defective-act/{defective_act_id}/state/": {
+    "required_body": [
+      "state"
+    ],
     "required_params": [
       "defective_act_id"
     ]

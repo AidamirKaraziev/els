@@ -382,6 +382,27 @@ def test_defective_acts_follow_the_planned_to(
     assert seen == {mine.id}
 
 
+@pytest.mark.integration
+def test_defective_acts_without_a_plan_follow_the_object(
+    client_with_db, as_role, world, db_session
+):
+    """Акт, заведённый не с планового ТО, всё равно виден по своему лифту.
+
+    Через `planned_to` такой акт не увидел бы никто, кроме автора: три точки
+    входа из четырёх плановое ТО не заполняют.
+    """
+    mine = DefectiveAct(object_id=world["own_lift"].id, title="своя ведомость")
+    foreign = DefectiveAct(object_id=world["other_lift"].id, title="чужая ведомость")
+    db_session.add_all([mine, foreign])
+    db_session.flush()
+
+    as_role(Role.ENGINEER, division_id=world["division_a"].id)
+
+    seen = _ids(client_with_db.get(f"{API}/defective-act/all"))
+
+    assert seen == {mine.id}
+
+
 # --- пользователи ----------------------------------------------------------
 
 

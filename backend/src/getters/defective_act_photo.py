@@ -11,20 +11,19 @@ from src.utils.time_stamp import to_timestamp
 def getting_defective_act_photo(
     obj, request: Optional[Request], config: Settings = settings
 ) -> Optional[DefectiveActPhotoGet]:
-    if obj.created_at is not None:
-        obj.created_at = to_timestamp(obj.created_at)
+    # Считаем в локальные переменные, а не в поля записи: один и тот же
+    # снимок попадает в ответ дважды — своим у внутреннего акта и отобранным у
+    # клиентского. Правка на месте приписала бы ему адрес статики второй раз.
+    created_at = to_timestamp(obj.created_at) if obj.created_at is not None else None
 
-    if request is not None:
-        url = static_base_url(request, config)
-        if obj.photo is not None:
-            obj.photo = url + str(obj.photo)
-        else:
-            obj.photo = None
+    photo = obj.photo
+    if request is not None and photo is not None:
+        photo = static_base_url(request, config) + str(photo)
 
     return DefectiveActPhotoGet(
         id=obj.id,
         defective_act_id=obj.defective_act_id,
-        photo=obj.photo,
-        created_at=obj.created_at,
+        photo=photo,
+        created_at=created_at,
         created_by_user_id=obj.created_by_user_id,
     )

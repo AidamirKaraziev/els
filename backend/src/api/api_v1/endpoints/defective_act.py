@@ -10,6 +10,8 @@ from src.getters.defective_act import getting_defective_act
 from src.schemas.defective_act import (
     DefectiveActCreate,
     DefectiveActGet,
+    DefectiveActIssueToClient,
+    DefectiveActStateUpdate,
     DefectiveActStatusUpdate,
     DefectiveActUpdate,
 )
@@ -68,6 +70,53 @@ def get_defective_acts_by_planned_to(
     return ListOfEntityResponse(
         data=[getting_defective_act(obj=datum, request=request) for datum in data]
     )
+
+
+@router.get(
+    path="/defective-act/by-object/{object_id}/",
+    response_model=ListOfEntityResponse,
+    name="get_defective_acts_by_object",
+    description="Дефектные акты одного объекта за год (по дате создания)",
+    tags=["Админ панель / Дефектные акты"],
+)
+def get_defective_acts_by_object(
+    request: Request,
+    session=Depends(deps.get_db),
+    object_id: int = Path(..., title="ID объекта"),
+    year: int = Query(..., ge=2000, le=2100, title="Год"),
+    current_user=Depends(deps.require(Permission.ACT_READ)),
+    scope=Depends(deps.get_read_scope),
+):
+    data_q, code, _ = crud_defective_act.get_by_object_and_year(
+        db=session, object_id=object_id, year=year, scope=scope
+    )
+    get_raise(code=code)
+    return ListOfEntityResponse(
+        data=[
+            getting_defective_act(obj=datum, request=request) for datum in data_q.all()
+        ]
+    )
+
+
+@router.get(
+    path="/defective-act/by-object/{object_id}/count/",
+    response_model=SingleEntityResponse[int],
+    name="count_defective_acts_by_object",
+    description="Счётчик дефектных актов объекта за год",
+    tags=["Админ панель / Дефектные акты"],
+)
+def count_defective_acts_by_object(
+    session=Depends(deps.get_db),
+    object_id: int = Path(..., title="ID объекта"),
+    year: int = Query(..., ge=2000, le=2100, title="Год"),
+    current_user=Depends(deps.require(Permission.ACT_READ)),
+    scope=Depends(deps.get_read_scope),
+):
+    total, code, _ = crud_defective_act.count_by_object_and_year(
+        db=session, object_id=object_id, year=year, scope=scope
+    )
+    get_raise(code=code)
+    return SingleEntityResponse(data=total)
 
 
 @router.get(
@@ -154,6 +203,54 @@ def update_defective_act_status(
 ):
     obj, code, _ = crud_defective_act.update_status(
         db=session, defective_act_id=defective_act_id, new_data=new_data, scope=scope
+    )
+    get_raise(code=code)
+    return SingleEntityResponse(data=getting_defective_act(obj, request))
+
+
+@router.put(
+    path="/defective-act/{defective_act_id}/state/",
+    response_model=SingleEntityResponse,
+    name="update_defective_act_state",
+    description="Изменить состояние дефектного акта: created, reviewed, issued, fixed",
+    tags=["Админ панель / Дефектные акты"],
+)
+def update_defective_act_state(
+    request: Request,
+    new_data: DefectiveActStateUpdate,
+    current_user=Depends(deps.require(Permission.ACT_UPDATE)),
+    defective_act_id: int = Path(..., title="ID defective act"),
+    session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
+):
+    obj, code, _ = crud_defective_act.update_state(
+        db=session, defective_act_id=defective_act_id, new_data=new_data, scope=scope
+    )
+    get_raise(code=code)
+    return SingleEntityResponse(data=getting_defective_act(obj, request))
+
+
+@router.post(
+    path="/defective-act/{defective_act_id}/issue-to-client/",
+    response_model=SingleEntityResponse,
+    name="issue_defective_act_to_client",
+    description="Оформить дефектный акт клиенту: отдельная запись с своими текстами и отобранными фото",
+    tags=["Админ панель / Дефектные акты"],
+)
+def issue_defective_act_to_client(
+    request: Request,
+    new_data: DefectiveActIssueToClient,
+    current_user=Depends(deps.require(Permission.ACT_UPDATE)),
+    defective_act_id: int = Path(..., title="ID defective act"),
+    session=Depends(deps.get_db),
+    scope=Depends(deps.get_write_scope),
+):
+    obj, code, _ = crud_defective_act.issue_to_client(
+        db=session,
+        defective_act_id=defective_act_id,
+        new_data=new_data,
+        current_user=current_user,
+        scope=scope,
     )
     get_raise(code=code)
     return SingleEntityResponse(data=getting_defective_act(obj, request))

@@ -16,24 +16,31 @@ from src.utils.time_stamp import to_timestamp
 def getting_defective_act(
     obj: DefectiveAct, request: Optional[Request], config: Settings = settings
 ) -> Optional[DefectiveActGet]:
-    if obj.created_at is not None:
-        obj.created_at = to_timestamp(obj.created_at)
-    if obj.updated_at is not None:
-        obj.updated_at = to_timestamp(obj.updated_at)
+    # Считаем в локальные переменные, а не в поля записи: акт остаётся в
+    # сессии, и записанная на место `created_at` метка времени ушла бы обратно
+    # в базу целым числом при следующем же flush.
+    created_at = to_timestamp(obj.created_at) if obj.created_at is not None else None
+    updated_at = to_timestamp(obj.updated_at) if obj.updated_at is not None else None
 
-    if request is not None:
-        url = static_base_url(request, config)
-        if obj.pdf_file is not None:
-            obj.pdf_file = url + str(obj.pdf_file)
-        else:
-            obj.pdf_file = None
+    pdf_file = obj.pdf_file
+    if request is not None and pdf_file is not None:
+        pdf_file = static_base_url(request, config) + str(pdf_file)
 
     return DefectiveActGet(
         id=obj.id,
+        object_id=obj.object_id,
         planned_to_id=get_planned_to(obj.planned_to, request=request)
         if obj.planned_to is not None
         else None,
         month=obj.month,
+        act_fact_id=obj.act_fact_id,
+        checklist_step_id=obj.checklist_step_id,
+        order_id=obj.order_id,
+        kind=obj.kind,
+        state=obj.state,
+        parent_id=obj.parent_id,
+        client_title=obj.client_title,
+        client_description=obj.client_description,
         title=obj.title,
         description=obj.description,
         responsible_user_id=get_universal_user(obj.responsible_user, request=request)
@@ -43,11 +50,17 @@ def getting_defective_act(
         if obj.created_by_user is not None
         else None,
         status_id=get_statuses(obj.status) if obj.status is not None else None,
-        pdf_file=obj.pdf_file,
-        created_at=obj.created_at,
-        updated_at=obj.updated_at,
+        pdf_file=pdf_file,
+        created_at=created_at,
+        updated_at=updated_at,
         photos=[
             getting_defective_act_photo(photo, request=request)
             for photo in (obj.photos or [])
+        ],
+        # Связь, а не копия: снимок лежит у первоисточника, здесь только отбор.
+        client_photos=[
+            getting_defective_act_photo(link.photo, request=request)
+            for link in (obj.client_photos or [])
+            if link.photo is not None
         ],
     )
