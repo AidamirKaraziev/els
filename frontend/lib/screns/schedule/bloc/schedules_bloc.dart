@@ -22,6 +22,7 @@ class SchedulesBloc extends Bloc<SchedulesEvent, SchedulesState> {
     on<SchedulesRequested>(_onRequested);
     on<SchedulesFilterOptionsRequested>(_onFilterOptionsRequested);
     on<SchedulesNextPageRequested>(_onNextPageRequested);
+    on<SchedulesRowRefreshed>(_onRowRefreshed);
   }
 
   final SchedulesRepository _repository;
@@ -118,6 +119,60 @@ class SchedulesBloc extends Bloc<SchedulesEvent, SchedulesState> {
       if (requestId != _requestId) return;
       emit(state.copyWith(isLoadingMore: false));
     }
+  }
+
+  /// Одна строка вместо всей ленты.
+  ///
+  /// Номер запроса (`_requestId`) здесь не трогаем: он разводит гонку между
+  /// сменами ленты, а обновление строки лентой не является. Подняв его, мы
+  /// отменили бы догрузку страницы, которая как раз едет, — и человек остался
+  /// бы без неё, ничего об этом не узнав.
+  ///
+  /// Строку из списка не убираем, даже если она перестала подходить под отбор
+  /// (закрыли последнее ТО при фильтре «есть незакрытые»): объект, исчезающий
+  /// из-под рук сразу по возврату из карточки, читается как потеря. Переотбор
+  /// случится на следующем [SchedulesRequested].
+  Future<void> _onRowRefreshed(
+    SchedulesRowRefreshed event,
+    Emitter<SchedulesState> emit,
+  ) async {
+    final SchedulesState current = state;
+    if (current is! SchedulesLoaded) return;
+
+    // Строки на экране нет — и ходить за ней незачем: обновлять нечего.
+    final bool shown =
+        current.rows.any((ScheduleRow row) => row.objectId == event.objectId);
+    if (!shown) return;
+
+    final ScheduleRow? fresh;
+    try {
+      fresh = await _repository.fetchRow(
+        objectId: event.objectId,
+        year: _filters.year,
+      );
+    } on SchedulesException {
+      // Молча: человек смотрит на ленту, а не на строку, и плашка об ошибке
+      // ради одного объекта — обмен нужного на второстепенное.
+      return;
+    }
+    if (fresh == null) return;
+
+    // Список берём заново: пока шёл запрос, могла приехать следующая страница
+    // или смениться отбор, и класть строку в старый снимок значило бы
+    // откатить ленту к тому, чем она была до ответа.
+    final SchedulesState latest = state;
+    if (latest is! SchedulesLoaded) return;
+
+    final int at = latest.rows
+        .indexWhere((ScheduleRow row) => row.objectId == event.objectId);
+    if (at < 0) return;
+    // Год мог смениться, пока ехал ответ: класть клетки чужого года под
+    // подпись нынешнего нельзя.
+    if (fresh.year != latest.filters.year) return;
+
+    final List<ScheduleRow> rows = <ScheduleRow>[...latest.rows];
+    rows[at] = fresh;
+    emit(latest.copyWith(rows: rows));
   }
 
   /// Тот же экран, но со значениями фильтров.

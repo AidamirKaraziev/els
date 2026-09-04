@@ -6,6 +6,7 @@ library;
 
 import 'package:els/screns/schedule/bloc/schedules_bloc.dart';
 import 'package:els/screns/schedule/models/schedule_filters.dart';
+import 'package:els/screns/schedule/models/schedule_row.dart';
 import 'fixture_schedules_repository.dart';
 import 'package:els/screns/schedule/repository/schedules_repository.dart';
 import 'package:els/screns/schedule/view/schedules_screen.dart';
@@ -36,6 +37,13 @@ class _CountingRepository implements SchedulesRepository {
     requestedPages.add(page);
     return _inner.fetchRows(filters: filters, page: page);
   }
+
+  @override
+  Future<ScheduleRow?> fetchRow({
+    required int objectId,
+    required int year,
+  }) =>
+      _inner.fetchRow(objectId: objectId, year: year);
 
   @override
   Future<ScheduleFilterOptions> fetchFilterOptions() =>

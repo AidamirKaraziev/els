@@ -30,3 +30,19 @@ class SchedulesFilterOptionsRequested extends SchedulesEvent {
 class SchedulesNextPageRequested extends SchedulesEvent {
   const SchedulesNextPageRequested();
 }
+
+/// Перечитать одну строку ленты — ту, у которой поменялся график.
+///
+/// Отдельно от [SchedulesRequested] намеренно: тот сбрасывает список на первую
+/// страницу, и человек, закрывший ТО после пяти прокруток, оказался бы в
+/// начале ленты. Здесь же меняется ровно одна строка, а страницы, отбор и
+/// прокрутка остаются на месте.
+///
+/// Клетки берём у сервера, а не считаем на клиенте: «выполнено с опозданием»
+/// отличается от «выполнено» тем, кончился ли плановый месяц, и по часам
+/// браузера эта граница едет.
+class SchedulesRowRefreshed extends SchedulesEvent {
+  const SchedulesRowRefreshed(this.objectId);
+
+  final int objectId;
+}

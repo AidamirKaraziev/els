@@ -42,6 +42,7 @@ class ScheduleObjectScreen extends StatelessWidget {
     this.role = ScheduleRole.admin,
     this.objectName,
     this.initialYear,
+    this.onScheduleChanged,
   }) : super(key: key);
 
   final int objectId;
@@ -71,6 +72,11 @@ class ScheduleObjectScreen extends StatelessWidget {
   /// Год, с которого открывается лента. По умолчанию текущий — решение 8.
   final int? initialYear;
 
+  /// Позвать, когда график объекта поменялся: закрыли ТО, расставили год
+  /// мастером. Нужен ленте «Графиков» под маршрутом — её строка перечитывается
+  /// сразу, а не по возврату назад. Пусто — экран открыли не из ленты.
+  final VoidCallback? onScheduleChanged;
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider<ScheduleObjectBloc>(
@@ -84,6 +90,7 @@ class ScheduleObjectScreen extends StatelessWidget {
         role: role,
         wizardRepository: wizardRepository,
         programRepository: programRepository,
+        onScheduleChanged: onScheduleChanged,
       ),
     );
   }
@@ -96,6 +103,7 @@ class _ScheduleObjectView extends StatelessWidget {
     required this.role,
     required this.wizardRepository,
     required this.programRepository,
+    this.onScheduleChanged,
   }) : super(key: key);
 
   /// Ширина, ниже которой две колонки кадра встают одна под другой.
@@ -108,6 +116,10 @@ class _ScheduleObjectView extends StatelessWidget {
   final ScheduleRole role;
   final ScheduleWizardRepositoryBuilder wizardRepository;
   final MaintenanceProgramRepository programRepository;
+
+  /// Позвать, когда график поменялся: экрану, откуда пришли, нужна свежая
+  /// строка.
+  final VoidCallback? onScheduleChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -139,6 +151,7 @@ class _ScheduleObjectView extends StatelessWidget {
               twoColumnsWidth: _twoColumnsWidth,
               wizardRepository: wizardRepository,
               programRepository: programRepository,
+              onScheduleChanged: onScheduleChanged,
             );
           }
           return const Center(child: CircularProgressIndicator());
@@ -157,6 +170,7 @@ class _Content extends StatelessWidget {
     required this.wizardRepository,
     required this.programRepository,
     this.objectName,
+    this.onScheduleChanged,
   }) : super(key: key);
 
   final ScheduleObjectLoaded state;
@@ -167,6 +181,10 @@ class _Content extends StatelessWidget {
 
   /// Название объекта для шапки карточки работы — то же, что в шапке экрана.
   final String? objectName;
+
+  /// Позвать, когда график поменялся: экрану, откуда пришли, нужна свежая
+  /// строка.
+  final VoidCallback? onScheduleChanged;
 
   /// Клик по клетке открывает карточку работы за ней.
   ///
@@ -191,8 +209,10 @@ class _Content extends StatelessWidget {
           // Закрыли ТО — перечитываем ленту показанного года. Клетка месяца
           // и подпись «срок ближайшего ТО» считаются из одних и тех же
           // клеток, поэтому второго запроса под срок не нужно.
-          onToFinished: () =>
-              bloc.add(ScheduleObjectYearRequested(state.year)),
+          onToFinished: () {
+            bloc.add(ScheduleObjectYearRequested(state.year));
+            onScheduleChanged?.call();
+          },
         ),
       ),
     );
@@ -228,6 +248,7 @@ class _Content extends StatelessWidget {
     );
     if (approved != true) return;
     bloc.add(ScheduleObjectYearRequested(year));
+    onScheduleChanged?.call();
   }
 
   @override

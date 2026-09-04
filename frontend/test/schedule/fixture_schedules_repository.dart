@@ -52,6 +52,21 @@ class FixtureSchedulesRepository implements SchedulesRepository {
     );
   }
 
+  /// Одна строка по объекту — без отбора, как и боевая ручка: она отвечает на
+  /// вопрос «что сейчас у этого объекта», а не «подходит ли он под фильтр».
+  @override
+  Future<ScheduleRow?> fetchRow({
+    required int objectId,
+    required int year,
+  }) async {
+    await Future<void>.delayed(delay);
+
+    for (final ScheduleRow row in _rows) {
+      if (row.objectId == objectId) return _withYear(row, year);
+    }
+    return null;
+  }
+
   @override
   Future<ScheduleFilterOptions> fetchFilterOptions() async {
     await Future<void>.delayed(delay);

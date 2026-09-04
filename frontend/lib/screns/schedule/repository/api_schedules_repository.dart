@@ -57,6 +57,31 @@ class ApiSchedulesRepository implements SchedulesRepository {
   }
 
   @override
+  Future<ScheduleRow?> fetchRow({
+    required int objectId,
+    required int year,
+  }) async {
+    final Map<String, dynamic> body = await _fetch(
+      '/schedules/rows',
+      <String, String>{'object_id': '$objectId', 'year': '$year'},
+    );
+
+    final dynamic data = body['data'];
+    if (data is! List) {
+      throw const SchedulesException('Сервер вернул неожиданный ответ');
+    }
+    // Пусто — объекта в выдаче нет; отбор экрана сюда не уходит, значит дело
+    // не в фильтре, а в области видимости. Строку оставляем прежней.
+    if (data.isEmpty) return null;
+
+    final dynamic first = data.first;
+    if (first is! Map) {
+      throw const SchedulesException('Сервер вернул неожиданный ответ');
+    }
+    return ScheduleRow.fromJson(first.cast<String, dynamic>());
+  }
+
+  @override
   Future<ScheduleFilterOptions> fetchFilterOptions() async {
     final Map<String, dynamic> body =
         await _fetch('/schedules/filters', const <String, String>{});

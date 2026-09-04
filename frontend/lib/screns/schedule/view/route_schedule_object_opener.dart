@@ -31,7 +31,11 @@ class RouteScheduleObjectOpener extends ScheduleObjectOpener {
   final ScheduleRole _role;
 
   @override
-  Future<void> open(BuildContext context, ScheduleRow row) async {
+  Future<void> open(
+    BuildContext context,
+    ScheduleRow row, {
+    VoidCallback? onScheduleChanged,
+  }) async {
     // Маршрут не ждём: его future завершается при закрытии экрана, а лента до
     // возврата из `open` держит индикатор.
     unawaited(
@@ -49,6 +53,9 @@ class RouteScheduleObjectOpener extends ScheduleObjectOpener {
             initialYear: row.year,
             // Название лента знает — шапка не ждёт загрузки карточки.
             objectName: row.nameLabel,
+            // Лента под маршрутом жива: закрыли ТО или расставили график —
+            // её строка перечитывается сразу, а не по возврату назад.
+            onScheduleChanged: onScheduleChanged,
           ),
         ),
       ),

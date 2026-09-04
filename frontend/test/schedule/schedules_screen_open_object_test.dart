@@ -28,7 +28,11 @@ class _OpenerSpy extends ScheduleObjectOpener {
   final Completer<void> gate = Completer<void>();
 
   @override
-  Future<void> open(BuildContext context, ScheduleRow row) async {
+  Future<void> open(
+    BuildContext context,
+    ScheduleRow row, {
+    VoidCallback? onScheduleChanged,
+  }) async {
     opened.add(row);
     await gate.future;
     if (fails) throw Exception('ручка ответила 500');

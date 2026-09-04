@@ -9,6 +9,7 @@
 library;
 
 import 'package:els/screns/schedule/models/schedule_filters.dart';
+import 'package:els/screns/schedule/models/schedule_row.dart';
 import 'package:els/screns/schedule/repository/schedules_repository.dart';
 import 'package:els/screns/schedule/view/schedule_section.dart';
 import 'package:els/screns/schedule/view/schedules_screen.dart';
@@ -33,6 +34,13 @@ class _SpyRepository implements SchedulesRepository {
     asked.add(filters);
     return _inner.fetchRows(filters: filters, page: page);
   }
+
+  @override
+  Future<ScheduleRow?> fetchRow({
+    required int objectId,
+    required int year,
+  }) =>
+      _inner.fetchRow(objectId: objectId, year: year);
 
   @override
   Future<ScheduleFilterOptions> fetchFilterOptions() =>

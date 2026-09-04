@@ -111,6 +111,10 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
         builder: (BuildContext context) => ScheduleWorkCardScreen(
           workId: cell.actId!,
           objectName: row.nameLabel,
+          // Закрыли ТО — перечитываем одну эту строку. Не всю ленту: она
+          // сбросилась бы на первую страницу, и человек, закрывший ТО после
+          // пяти прокруток, вернулся бы в начало списка.
+          onToFinished: () => _bloc.add(SchedulesRowRefreshed(row.objectId)),
         ),
       ),
     );
@@ -126,7 +130,13 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
 
     setState(() => _opening = true);
     try {
-      await opener.open(context, row);
+      await opener.open(
+        context,
+        row,
+        // Закрыть ТО можно и с экрана графика объекта, и расставить график
+        // мастером — обратно в ленту это приезжает тем же обновлением строки.
+        onScheduleChanged: () => _bloc.add(SchedulesRowRefreshed(row.objectId)),
+      );
     } catch (_) {
       // Текст ошибки не показываем: за ним стоит ответ ручки, человеку он
       // ничего не объясняет. Важно другое — он остался в ленте, а не смотрит
