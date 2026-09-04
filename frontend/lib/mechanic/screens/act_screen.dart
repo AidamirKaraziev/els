@@ -29,6 +29,7 @@ import '../mechanic_theme.dart';
 import 'act_info_screen.dart';
 import 'act_steps_screen.dart';
 import 'close_act_sheet.dart';
+import 'defect_sheet.dart';
 
 /// Сколько пунктов показываем в предпросмотре.
 ///
@@ -188,11 +189,14 @@ class _MechanicActScreenState extends State<MechanicActScreen> {
         label: controls.mainLabel,
         onTap: _busy ? null : () => _mainAction(controls.main),
       ),
-      if (controls.canPause || controls.canReportProblem)
+      if (controls.canPause ||
+          controls.canReportProblem ||
+          controls.canReportDefect)
         _QuietActions(
           controls: controls,
           onPause: _busy ? null : _pause,
           onProblem: _busy ? null : _reportProblem,
+          onDefect: _busy ? null : _reportDefect,
         ),
       const _Note(
         'Отметка ложится в телефон сразу и уходит на сервер, как появится связь.',
@@ -275,6 +279,23 @@ class _MechanicActScreenState extends State<MechanicActScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Прораб увидит проблему в своём списке.')),
+    );
+  }
+
+  /// «Дефект» — единственное тихое действие, которое не трогает состояние
+  /// работы: механик записывает найденное и идёт дальше по чек-листу. Прораб
+  /// увидит дефект отдельной записью, а не сменой статуса ТО.
+  Future<void> _reportDefect() async {
+    final ActDetails? act = _act;
+    if (act == null) return;
+
+    final DefectDraft? draft = await showDefectSheet(context);
+    if (draft == null || !mounted) return;
+
+    // Логика отправки — следующим шагом этапа; сейчас лист утверждается
+    // внешним видом.
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Дефект «${draft.title}» записан.')),
     );
   }
 
@@ -690,6 +711,7 @@ class _QuietActions extends StatelessWidget {
     required this.controls,
     required this.onPause,
     required this.onProblem,
+    required this.onDefect,
   });
 
   /// Какие действия положены в этом состоянии. Занятость экрана — отдельно:
@@ -699,6 +721,7 @@ class _QuietActions extends StatelessWidget {
 
   final VoidCallback? onPause;
   final VoidCallback? onProblem;
+  final VoidCallback? onDefect;
 
   @override
   Widget build(BuildContext context) {
@@ -722,6 +745,15 @@ class _QuietActions extends StatelessWidget {
                 label: 'Проблема',
                 ink: ColorApp.myColorRed,
                 onTap: onProblem,
+              ),
+            ),
+          if (controls.canReportDefect)
+            Expanded(
+              child: _QuietButton(
+                icon: Icons.report_gmailerrorred_outlined,
+                label: 'Дефект',
+                ink: ColorApp.myColorGray,
+                onTap: onDefect,
               ),
             ),
         ],
@@ -750,8 +782,17 @@ class _QuietButton extends StatelessWidget {
       child: TextButton.icon(
         onPressed: onTap,
         icon: Icon(icon, size: 18.0),
-        label: Text(label, style: const TextStyle(fontSize: 14.0)),
-        style: TextButton.styleFrom(foregroundColor: ink),
+        // Кнопок в строке бывает три, и «Приостановить» на экране 375 точек
+        // в треть строки не влезает. Уменьшить подпись честнее, чем оборвать
+        // её многоточием: «Приостанови…» человек читать не должен.
+        label: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(label, style: const TextStyle(fontSize: 14.0)),
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: ink,
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        ),
       ),
     );
   }

@@ -179,6 +179,7 @@ class ActControls {
     required this.main,
     required this.canPause,
     required this.canReportProblem,
+    required this.canReportDefect,
   });
 
   final ActAction main;
@@ -190,6 +191,12 @@ class ActControls {
   /// Сообщить о проблеме можно из любой начатой работы. До начала — нет:
   /// проблема мешает делать, а делать ещё не начинали.
   final bool canReportProblem;
+
+  /// Записать дефект можно из любой начатой и незакрытой работы — в том
+  /// числе из вставшей: дефект и есть частая причина, по которой работа
+  /// встала, и запретить записать его там, где он нашёлся, значит заставить
+  /// механика помнить о нём до дома.
+  final bool canReportDefect;
 
   /// Подпись главной кнопки.
   String get mainLabel {
@@ -215,30 +222,35 @@ ActControls actControls(MaintenanceState state, {required bool allDone}) {
         main: ActAction.start,
         canPause: false,
         canReportProblem: false,
+        canReportDefect: false,
       );
     case MaintenanceState.inWork:
       return ActControls(
         main: allDone ? ActAction.close : ActAction.open,
         canPause: true,
         canReportProblem: true,
+        canReportDefect: true,
       );
     case MaintenanceState.paused:
       return const ActControls(
         main: ActAction.resume,
         canPause: false,
         canReportProblem: true,
+        canReportDefect: true,
       );
     case MaintenanceState.problem:
       return const ActControls(
         main: ActAction.resume,
         canPause: false,
         canReportProblem: false,
+        canReportDefect: true,
       );
     case MaintenanceState.done:
       return const ActControls(
         main: ActAction.none,
         canPause: false,
         canReportProblem: false,
+        canReportDefect: false,
       );
   }
 }

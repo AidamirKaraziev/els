@@ -105,6 +105,23 @@
       ],
       "cwd": "frontend",
       "port": 5610
+    },
+    {
+      "name": "defect-sheet-preview",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/dev/defect_sheet_preview.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5604",
+        "--web-hostname",
+        "127.0.0.1"
+      ],
+      "cwd": "frontend",
+      "port": 5604
     }
   ]
 }
