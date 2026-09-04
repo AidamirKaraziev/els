@@ -18,6 +18,7 @@ import '../../helper/api_client.dart';
 import '../../helper/api_config.dart';
 import '../../helper/image_picking.dart';
 import 'acts.dart';
+import 'defect_link.dart';
 import 'local_store.dart';
 import 'mechanic_sync.dart';
 import 'notifications.dart';
@@ -427,7 +428,11 @@ class MechanicWorkspace {
     await _publishQueue();
   }
 
-  /// Ставит в очередь дефект, найденный в работе по ТО, и снимки к нему.
+  /// Ставит в очередь дефект и снимки к нему.
+  ///
+  /// Куда дефект прицеплен — дело `link`: работа по ТО, пункт её чек-листа,
+  /// аварийная заявка или объект. Отправка одна на все четыре, потому что
+  /// отличаются они ровно одной парой полей в теле — см. `defect_link.dart`.
   ///
   /// Два запроса, а не один: адрес снимка — `/defective-act-photo/{id}/`, и
   /// `id` придумывает сервер в ответ на создание акта. Механик находит дефект
@@ -435,19 +440,20 @@ class MechanicWorkspace {
   /// адрес снимка остаётся шаблоном с ключом до тех пор, пока акт не уйдёт —
   /// см. `outbox.dart`.
   ///
-  /// Работу это не двигает: дефект пишется по ходу ТО и закрытию не мешает.
+  /// Работу это не двигает: дефект пишется по ходу дела и ничему не мешает —
+  /// ни закрытию ТО, ни статусу заявки.
   Future<void> sendDefect({
-    required int actId,
+    required DefectLink link,
     required String title,
     String? description,
     List<PickedImage> photos = const <PickedImage>[],
   }) async {
     final OutboxAction act = await outbox.enqueue(
-      title: 'Дефект по ТО №$actId — $title',
+      title: 'Дефект ${link.label} — $title',
       method: 'POST',
       path: '/defective-act/',
       body: <String, dynamic>{
-        'act_fact_id': actId,
+        ...link.toBody(),
         'title': title,
         if (description != null && description.trim().isNotEmpty)
           'description': description.trim(),

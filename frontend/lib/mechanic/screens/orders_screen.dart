@@ -46,7 +46,9 @@ import '../data/mechanic_workspace.dart';
 import '../data/tasks.dart';
 import '../mechanic_theme.dart';
 import 'act_screen.dart';
+import 'objects_screen.dart';
 import 'order_screen.dart';
+import 'quiet_button.dart';
 
 class MechanicOrdersScreen extends StatefulWidget {
   const MechanicOrdersScreen({Key? key}) : super(key: key);
@@ -115,14 +117,31 @@ class _MechanicOrdersScreenState extends State<MechanicOrdersScreen> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> body = <Widget>[
-      const Padding(
-        padding: EdgeInsets.fromLTRB(
+      Padding(
+        padding: const EdgeInsets.fromLTRB(
           MechanicLayout.screenPadding,
           24.0,
           MechanicLayout.screenPadding,
           16.0,
         ),
-        child: Text('Заявки', style: MechanicLayout.screenTitle),
+        child: Row(
+          children: <Widget>[
+            const Expanded(
+              child: Text('Заявки', style: MechanicLayout.screenTitle),
+            ),
+            // Дефект, найденный не по работе, записывается с объекта. Кнопка
+            // стоит здесь, а не только на вкладке «Объекты», потому что
+            // именно этот экран механик держит открытым: заставлять его
+            // искать вкладку ради трёх строк — верный способ, чтобы дефект
+            // остался незаписанным.
+            MechanicQuietButton(
+              icon: mechanicDefectIcon,
+              label: 'Дефект на объекте',
+              ink: ColorApp.myColorGray,
+              onTap: _openObjects,
+            ),
+          ],
+        ),
       ),
     ];
 
@@ -162,6 +181,17 @@ class _MechanicOrdersScreenState extends State<MechanicOrdersScreen> {
         padding: const EdgeInsets.only(bottom: 24.0),
         physics: const AlwaysScrollableScrollPhysics(),
         children: body,
+      ),
+    );
+  }
+
+  /// Список своих объектов — вторая дорога к нему, кроме вкладки.
+  void _openObjects() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => MechanicObjectsScreen(
+          onBack: () => Navigator.of(context).pop(),
+        ),
       ),
     );
   }

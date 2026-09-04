@@ -19,13 +19,12 @@ import 'package:flutter/material.dart';
 
 import '../helper/class_colors.dart';
 import '../screns/user/user_contact.dart';
-import 'data/local_store.dart';
 import 'data/mechanic_workspace.dart';
 import 'mechanic_theme.dart';
 import 'screens/notifications_screen.dart';
+import 'screens/objects_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/profile_screen.dart';
-import 'screens/soon_screen.dart';
 
 class MechanicShell extends StatefulWidget {
   const MechanicShell({Key? key}) : super(key: key);
@@ -112,13 +111,7 @@ class _MechanicShellState extends State<MechanicShell>
                 index: _tab,
                 children: <Widget>[
                   const MechanicOrdersScreen(),
-                  const MechanicSoonScreen(
-                    title: 'Объекты',
-                    note: 'Карточки объектов появятся следующим обновлением. '
-                        'Плановые ТО и их чек-листы уже открываются из списка '
-                        'работ.',
-                    collection: LocalCollection.maintenance,
-                  ),
+                  const MechanicObjectsScreen(),
                   const MechanicNotificationsScreen(),
                   MechanicProfileScreen(onBack: () => _pick(_tabBeforeProfile)),
                 ],

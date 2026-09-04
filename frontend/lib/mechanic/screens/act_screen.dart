@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 
 import '../../helper/class_colors.dart';
 import '../data/acts.dart';
+import '../data/defect_link.dart';
 import '../data/local_store.dart';
 import '../data/mechanic_workspace.dart';
 import '../data/tasks.dart';
@@ -30,6 +31,7 @@ import 'act_info_screen.dart';
 import 'act_steps_screen.dart';
 import 'close_act_sheet.dart';
 import 'defect_sheet.dart';
+import 'quiet_button.dart';
 
 /// Сколько пунктов показываем в предпросмотре.
 ///
@@ -295,7 +297,7 @@ class _MechanicActScreenState extends State<MechanicActScreen> {
     // Работу дефект не двигает: ни статуса, ни `_busy`. Его пишут между двумя
     // пунктами чек-листа, и запирать ради него карточку не за чем.
     await MechanicWorkspace.current?.sendDefect(
-      actId: act.id,
+      link: DefectLink.act(act.id),
       title: draft.title,
       description: draft.description,
       photos: draft.photos,
@@ -739,7 +741,7 @@ class _QuietActions extends StatelessWidget {
         children: <Widget>[
           if (controls.canPause)
             Expanded(
-              child: _QuietButton(
+              child: MechanicQuietButton(
                 icon: Icons.pause_circle_outline,
                 label: 'Приостановить',
                 ink: ColorApp.myColorGray,
@@ -748,7 +750,7 @@ class _QuietActions extends StatelessWidget {
             ),
           if (controls.canReportProblem)
             Expanded(
-              child: _QuietButton(
+              child: MechanicQuietButton(
                 icon: Icons.error_outline,
                 label: 'Проблема',
                 ink: ColorApp.myColorRed,
@@ -757,50 +759,14 @@ class _QuietActions extends StatelessWidget {
             ),
           if (controls.canReportDefect)
             Expanded(
-              child: _QuietButton(
-                icon: Icons.report_gmailerrorred_outlined,
+              child: MechanicQuietButton(
+                icon: mechanicDefectIcon,
                 label: 'Дефект',
                 ink: ColorApp.myColorGray,
                 onTap: onDefect,
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _QuietButton extends StatelessWidget {
-  const _QuietButton({
-    required this.icon,
-    required this.label,
-    required this.ink,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color ink;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40.0,
-      child: TextButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 18.0),
-        // Кнопок в строке бывает три, и «Приостановить» на экране 375 точек
-        // в треть строки не влезает. Уменьшить подпись честнее, чем оборвать
-        // её многоточием: «Приостанови…» человек читать не должен.
-        label: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(label, style: const TextStyle(fontSize: 14.0)),
-        ),
-        style: TextButton.styleFrom(
-          foregroundColor: ink,
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-        ),
       ),
     );
   }

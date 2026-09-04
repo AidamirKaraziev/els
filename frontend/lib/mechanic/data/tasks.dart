@@ -463,7 +463,7 @@ MechanicTask? taskFromOrder(
     // Счёт времени только у открытой аварии: у обычной заявки он превратился
     // бы в укор за каждую заявку, которая просто ждёт своей очереди.
     waitingSince: urgent && !closed && createdAt > 0 ? createdAt : null,
-    badge: _typeOfObject(object),
+    badge: objectTypeName(object),
     section: section,
     rank: rank,
     // Свежее сверху.
@@ -574,7 +574,7 @@ MechanicTask? taskFromMaintenance(
 
 /// Тип оборудования из объекта заявки — то, что в макете стоит зелёным
 /// значком в углу карточки: «Лифт», «Травалатор».
-String? _typeOfObject(Map<String, dynamic> object) {
+String? objectTypeName(Map<String, dynamic> object) {
   final Map<String, dynamic> model = asMap(object['factory_model_id']);
   return asString(asMap(model['type_object_id'])['name']);
 }

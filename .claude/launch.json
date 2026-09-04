@@ -122,6 +122,23 @@
       ],
       "cwd": "frontend",
       "port": 5604
+    },
+    {
+      "name": "objects-screen-preview",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/dev/objects_screen_preview.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5605",
+        "--web-hostname",
+        "127.0.0.1"
+      ],
+      "cwd": "frontend",
+      "port": 5605
     }
   ]
 }

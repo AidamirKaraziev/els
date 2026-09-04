@@ -28,9 +28,12 @@ import 'package:flutter/material.dart';
 
 import '../../helper/class_colors.dart';
 import '../../helper/image_picking.dart';
+import '../data/defect_link.dart';
 import '../data/mechanic_workspace.dart';
 import '../data/tasks.dart';
 import '../mechanic_theme.dart';
+import 'defect_sheet.dart';
+import 'quiet_button.dart';
 
 /// Сколько снимков разрешаем приложить к одной заявке за раз.
 ///
@@ -156,9 +159,44 @@ class _MechanicOrderScreenState extends State<MechanicOrderScreen> {
             const SizedBox(height: 16.0),
             ..._actions(task),
           ],
+          // Дефект — вне блока исполнителя намеренно. Кнопки статуса
+          // наблюдателю не показываем: сервер откажет, `POST /order-photo/`
+          // проверяет исполнителя. Дефект такой проверки не делает —
+          // `_resolve_object` смотрит только на видимость заявки, — и
+          // механик объекта, приехавший не по своей заявке, обязан иметь
+          // возможность записать то, что увидел.
+          if (_statusId != OrderStatus.done &&
+              _statusId != OrderStatus.problem) ...<Widget>[
+            const SizedBox(height: 8.0),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: MechanicQuietButton(
+                icon: mechanicDefectIcon,
+                label: 'Дефект по заявке',
+                ink: ColorApp.myColorGray,
+                onTap: _reportDefect,
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  /// Дефект по заявке: статус её не двигает и `_busy` не занимает — заявка
+  /// остаётся ровно в том состоянии, в каком была.
+  Future<void> _reportDefect() async {
+    final DefectDraft? draft = await showDefectSheet(context);
+    if (draft == null || !mounted) return;
+
+    await MechanicWorkspace.current?.sendDefect(
+      link: DefectLink.order(widget.task.id),
+      title: draft.title,
+      description: draft.description,
+      photos: draft.photos,
+    );
+    if (!mounted) return;
+    _say('Дефект «${draft.title}» записан.');
   }
 
   /// Кнопки перехода — ровно те, что имеют смысл в текущем состоянии.

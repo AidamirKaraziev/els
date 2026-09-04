@@ -23,8 +23,11 @@ import 'package:flutter/material.dart';
 import '../../helper/class_colors.dart';
 import '../../helper/image_picking.dart';
 import '../data/acts.dart';
+import '../data/defect_link.dart';
 import '../data/mechanic_workspace.dart';
 import '../mechanic_theme.dart';
+import 'defect_sheet.dart';
+import 'quiet_button.dart';
 
 /// Сколько снимков разрешаем приложить к одному шагу за раз. Пять — как в
 /// карточке заявки: ограничение не про сервер, а про телефон, снимки ждут
@@ -159,11 +162,48 @@ class _MechanicActStepScreenState extends State<MechanicActStepScreen> {
             onAdd: widget.readOnly || _busy ? null : _addPhoto,
           ),
           const SizedBox(height: 16.0),
+          // Дефект тут привязывается к самому пункту, а не только к ТО:
+          // «трос изношен» на пункте про тросы прораб поймёт без пересказа.
+          // Пункт без номера привязать не к чему — там же, где нельзя
+          // сфотографировать, нельзя и записать дефект.
+          if (!widget.readOnly && _step.id != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: MechanicQuietButton(
+                icon: mechanicDefectIcon,
+                label: 'Дефект по пункту',
+                ink: ColorApp.myColorGray,
+                onTap: _reportDefect,
+              ),
+            ),
+          const SizedBox(height: 8.0),
           if (!widget.readOnly)
             _Button(label: 'Сохранить и вернуться', onTap: _busy ? null : _save),
         ],
       ),
     );
+  }
+
+  /// Дефект на этом пункте: тихое действие, как в карточке ТО.
+  ///
+  /// Ни отметки, ни комментария, ни `_busy` — чек-лист не двигается. Механик
+  /// записал найденное и вернулся к пункту в том же виде, в каком его
+  /// оставил: несохранённый комментарий в поле остаётся на месте.
+  Future<void> _reportDefect() async {
+    final int? stepId = _step.id;
+    if (stepId == null) return;
+
+    final DefectDraft? draft = await showDefectSheet(context);
+    if (draft == null || !mounted) return;
+
+    await MechanicWorkspace.current?.sendDefect(
+      link: DefectLink.act(_act.id, stepId: stepId),
+      title: draft.title,
+      description: draft.description,
+      photos: draft.photos,
+    );
+    if (!mounted) return;
+    _say('Дефект «${draft.title}» записан.');
   }
 
   /// Сохраняет отметку и комментарий одной правкой чек-листа.
