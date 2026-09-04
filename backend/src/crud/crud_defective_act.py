@@ -93,7 +93,14 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         if code != 0:
             return None, code, None
 
+        # Объект теперь обязателен у любого акта, а старая ручка его не
+        # присылает: берём у планового ТО. Плана без объекта быть не должно —
+        # если он такой, акт вешать не на что.
+        if planned.object_id is None:
+            return None, self.not_found, None
+
         db_obj = DefectiveAct(
+            object_id=planned.object_id,
             planned_to_id=planned.id,
             month=new_data.month,
             title=new_data.title,
@@ -129,7 +136,11 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
             )
             if code != 0:
                 return None, code, None
+            if planned.object_id is None:
+                return None, self.not_found, None
             obj.planned_to_id = planned.id
+            # Переезд на другое плановое ТО — переезд на его объект.
+            obj.object_id = planned.object_id
 
         if update_data.month is not None:
             code = self._validate_month(update_data.month)

@@ -28,5 +28,6 @@ from .contract import Contract
 from .working_specialty import WorkingSpecialty
 from .defective_acts import DefectiveAct
 from .defective_act_photo import DefectiveActPhoto
+from .defective_act_client_photo import DefectiveActClientPhoto
 from .act_fact_step_photo import ActFactStepPhoto
 from .maintenance_program import MaintenanceProgram, MaintenanceProgramItem

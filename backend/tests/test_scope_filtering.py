@@ -360,9 +360,17 @@ def test_defective_acts_follow_the_planned_to(
     db_session.add_all([own_plan, other_plan])
     db_session.flush()
 
-    mine = DefectiveAct(planned_to_id=own_plan.id, month=5, title="своя ведомость")
+    mine = DefectiveAct(
+        object_id=world["own_lift"].id,
+        planned_to_id=own_plan.id,
+        month=5,
+        title="своя ведомость",
+    )
     foreign = DefectiveAct(
-        planned_to_id=other_plan.id, month=5, title="чужая ведомость"
+        object_id=world["other_lift"].id,
+        planned_to_id=other_plan.id,
+        month=5,
+        title="чужая ведомость",
     )
     db_session.add_all([mine, foreign])
     db_session.flush()
