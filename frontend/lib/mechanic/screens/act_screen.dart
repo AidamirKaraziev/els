@@ -290,10 +290,18 @@ class _MechanicActScreenState extends State<MechanicActScreen> {
     if (act == null) return;
 
     final DefectDraft? draft = await showDefectSheet(context);
-    if (draft == null || !mounted) return;
+    if (draft == null) return;
 
-    // Логика отправки — следующим шагом этапа; сейчас лист утверждается
-    // внешним видом.
+    // Работу дефект не двигает: ни статуса, ни `_busy`. Его пишут между двумя
+    // пунктами чек-листа, и запирать ради него карточку не за чем.
+    await MechanicWorkspace.current?.sendDefect(
+      actId: act.id,
+      title: draft.title,
+      description: draft.description,
+      photos: draft.photos,
+    );
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Дефект «${draft.title}» записан.')),
     );

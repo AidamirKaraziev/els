@@ -16,6 +16,7 @@ import 'package:http/http.dart' as http;
 
 import '../../helper/api_client.dart';
 import '../../helper/api_config.dart';
+import '../../helper/image_picking.dart';
 import 'acts.dart';
 import 'local_store.dart';
 import 'mechanic_sync.dart';
@@ -426,6 +427,49 @@ class MechanicWorkspace {
     await _publishQueue();
   }
 
+  /// Ставит в очередь дефект, найденный в работе по ТО, и снимки к нему.
+  ///
+  /// Два запроса, а не один: адрес снимка — `/defective-act-photo/{id}/`, и
+  /// `id` придумывает сервер в ответ на создание акта. Механик находит дефект
+  /// в машинном помещении, где связи нет, поэтому оба уходят в очередь, а
+  /// адрес снимка остаётся шаблоном с ключом до тех пор, пока акт не уйдёт —
+  /// см. `outbox.dart`.
+  ///
+  /// Работу это не двигает: дефект пишется по ходу ТО и закрытию не мешает.
+  Future<void> sendDefect({
+    required int actId,
+    required String title,
+    String? description,
+    List<PickedImage> photos = const <PickedImage>[],
+  }) async {
+    final OutboxAction act = await outbox.enqueue(
+      title: 'Дефект по ТО №$actId — $title',
+      method: 'POST',
+      path: '/defective-act/',
+      body: <String, dynamic>{
+        'act_fact_id': actId,
+        'title': title,
+        if (description != null && description.trim().isNotEmpty)
+          'description': description.trim(),
+      },
+      provides: true,
+    );
+
+    for (final PickedImage photo in photos) {
+      final List<int>? bytes = photo.data;
+      if (bytes == null) continue;
+      await outbox.enqueue(
+        title: 'Фото дефекта «$title»',
+        method: 'POST',
+        path: '/defective-act-photo/{${act.provides}}/',
+        file: bytes,
+        fileName: photo.fileName ?? 'defect.jpg',
+      );
+    }
+
+    await _publishQueue();
+  }
+
   /// Сколько снимков этого шага ещё не ушло на сервер.
   Future<int> queuedStepPhotos(int actId, int stepId) async {
     final Map<int, int> counts = await queuedStepPhotoCounts(actId);
@@ -468,7 +512,7 @@ class MechanicWorkspace {
   /// Путь хранится без хоста, поэтому адрес собирается здесь и всегда из
   /// текущей настройки — см. `helper/api_config.dart`.
   Future<SendOutcome> _send(OutboxAction action) async {
-    final Uri url = Uri.parse('${ApiConfig.base}${action.path}');
+    final Uri url = Uri.parse('${ApiConfig.base}${action.target}');
 
     final List<int>? bytes = action.bytes;
     if (bytes != null) return _sendFile(action, url, bytes);
@@ -495,7 +539,27 @@ class MechanicWorkspace {
     if (response.statusCode >= 400) {
       action.lastError = ApiError.messageOf(response);
     }
-    return outcomeForStatus(response.statusCode);
+    final SendOutcome outcome = outcomeForStatus(response.statusCode);
+
+    // Действие обещало ключ — значит, `id` созданной записи ждут следующие в
+    // очереди. Не разобрали — ключа не будет, и ждущий его снимок очередь
+    // отклонит: это честнее, чем отправить снимок в никуда.
+    if (outcome == SendOutcome.done && action.provides != null) {
+      action.createdId = _createdIdOf(response);
+    }
+    return outcome;
+  }
+
+  /// `id` созданной записи из ответа. Формат общий для всех ручек:
+  /// `{"data": {"id": 12, …}}`.
+  int? _createdIdOf(http.Response response) {
+    try {
+      final dynamic decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      final dynamic data = decoded is Map ? decoded['data'] : null;
+      return data is Map ? asInt(data['id']) : null;
+    } on FormatException {
+      return null;
+    }
   }
 
   /// Отправка действия с файлом — фотографии к заявке.

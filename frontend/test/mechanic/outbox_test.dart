@@ -292,6 +292,151 @@ void main() {
     });
   });
 
+  group('отложенный id', () {
+    late MemoryStore store;
+
+    setUp(() => store = MemoryStore());
+
+    /// Очередь, где создание акта отвечает своим `id`, а снимок просто уходит.
+    ///
+    /// Так же ведёт себя настоящий отправщик: `id` он разбирает из ответа
+    /// сервера и кладёт в действие, см. `mechanic_workspace.dart`.
+    Outbox outboxThatCreates(int id, {required List<String> sent}) {
+      return Outbox(
+        userId: 7,
+        store: store,
+        sender: (OutboxAction action) async {
+          if (action.provides != null) action.createdId = id;
+          sent.add(action.target);
+          return SendOutcome.done;
+        },
+      );
+    }
+
+    Future<void> enqueueDefectWithPhoto(Outbox outbox) async {
+      final OutboxAction act = await outbox.enqueue(
+        title: 'дефект',
+        method: 'POST',
+        path: '/defective-act/',
+        body: <String, dynamic>{'act_fact_id': 3, 'title': 'течь'},
+        provides: true,
+      );
+      await outbox.enqueue(
+        title: 'фото дефекта',
+        method: 'POST',
+        path: '/defective-act-photo/{${act.provides}}/',
+        file: <int>[1, 2, 3],
+        fileName: 'defect.jpg',
+      );
+    }
+
+    test('снимок уходит по адресу, который сервер выдал акту', () async {
+      final List<String> sent = <String>[];
+      final Outbox outbox = outboxThatCreates(42, sent: sent);
+
+      await enqueueDefectWithPhoto(outbox);
+      await outbox.flush();
+
+      expect(sent, <String>['/defective-act/', '/defective-act-photo/42/']);
+      expect(await outbox.pending(), isEmpty);
+    });
+
+    test('пока акт не ушёл, снимок ждёт и адрес не выдумывает', () async {
+      // Ровно случай машинного помещения: акт стоит на временной осечке, и
+      // отправить снимок некуда — `id` ещё не существует.
+      bool online = false;
+      final List<String> sent = <String>[];
+      final Outbox outbox = Outbox(
+        userId: 7,
+        store: store,
+        sender: (OutboxAction action) async {
+          if (!online) return SendOutcome.retry;
+          if (action.provides != null) action.createdId = 42;
+          sent.add(action.target);
+          return SendOutcome.done;
+        },
+      );
+
+      await enqueueDefectWithPhoto(outbox);
+      await outbox.flush();
+
+      expect(sent, isEmpty);
+      expect(await outbox.pending(), hasLength(2));
+
+      online = true;
+      await outbox.flush();
+
+      expect(sent, <String>['/defective-act/', '/defective-act-photo/42/']);
+    });
+
+    test('снимок без своего акта уходит в отклонённые, а не в никуда',
+        () async {
+      // Сервер отказал по существу: акта не будет никогда. Молча выбросить
+      // снимок нельзя — это работа человека, и он должен о ней услышать.
+      final List<String> sent = <String>[];
+      final Outbox outbox = Outbox(
+        userId: 7,
+        store: store,
+        sender: (OutboxAction action) async {
+          if (action.provides != null) return SendOutcome.rejected;
+          sent.add(action.target);
+          return SendOutcome.done;
+        },
+      );
+
+      await enqueueDefectWithPhoto(outbox);
+      await outbox.flush();
+
+      expect(sent, isEmpty, reason: 'снимок серверу не показывали');
+      expect(await outbox.pending(), isEmpty);
+      expect(await outbox.rejected(), hasLength(2));
+      expect(
+        (await outbox.rejected()).last.lastError,
+        contains('отправить некуда'),
+      );
+      expect(
+        await store.keys('mechanic.7.outbox.file.'),
+        isEmpty,
+        reason: 'отклонённый снимок не занимает место на телефоне',
+      );
+    });
+
+    test('ключ переживает перезапуск между актом и снимком', () async {
+      // Акт ушёл, приложение закрыли, снимок остался в очереди. Ключ обязан
+      // найтись: иначе перезапуск превращает снимок в осиротевший.
+      final List<String> first = <String>[];
+      final Outbox before = Outbox(
+        userId: 7,
+        store: store,
+        sender: (OutboxAction action) async {
+          if (action.provides == null) return SendOutcome.retry;
+          action.createdId = 42;
+          first.add(action.target);
+          return SendOutcome.done;
+        },
+      );
+      await enqueueDefectWithPhoto(before);
+      await before.flush();
+
+      expect(first, <String>['/defective-act/']);
+      expect(await before.pending(), hasLength(1));
+
+      final List<String> second = <String>[];
+      await outboxThatCreates(0, sent: second).flush();
+
+      expect(second, <String>['/defective-act-photo/42/']);
+    });
+
+    test('выход из системы забирает и разобранные ключи', () async {
+      final Outbox outbox = outboxThatCreates(42, sent: <String>[]);
+      await enqueueDefectWithPhoto(outbox);
+      await outbox.flush();
+      await outbox.forget();
+
+      expect(await store.keys('mechanic.7.'), isEmpty);
+    });
+  });
+
   group('полоса очереди', () {
     late MemoryStore store;
 

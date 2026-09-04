@@ -27,6 +27,11 @@
 ///   средствами `image_picker`, до сотен килобайт: в хранилище телефона
 ///   несжатый снимок на 4 МБ не поместится, да и на сервере том со статикой
 ///   растёт именно от них.
+/// * **Адрес может быть известен не до отправки.** Снимок дефекта уходит по
+///   `/defective-act-photo/{id}/`, а сам `id` придумывает сервер в ответ на
+///   создание акта — и в машинном помещении в очереди лежат оба. Поэтому
+///   действие умеет **давать** ключ, а путь другого — этот ключ содержать:
+///   очередь упорядочена, давший уходит раньше, чем ключ понадобится.
 /// * **Хранилище правится под замком.** Постановка в очередь и отправка
 ///   меняют один и тот же список по схеме «прочитал — изменил — записал».
 ///   Без замка одно затирает другое, и действие либо уходит дважды, либо
@@ -52,6 +57,7 @@ class OutboxAction {
     this.lastError,
     this.fileKey,
     this.fileName,
+    this.provides,
   });
 
   /// Идентификатор внутри очереди: время создания плюс счётчик. Нужен, чтобы
@@ -79,9 +85,26 @@ class OutboxAction {
   /// за файл.
   final String? fileName;
 
+  /// Ключ, который это действие даёт остальным, — или `null`, если не даёт
+  /// ничего. Совпадает с [id]: он уже уникален, и второй ключ ради того же
+  /// заводить незачем.
+  final String? provides;
+
   /// Байты файла. Заполняются очередью перед отправкой и в хранилище не
   /// пишутся: там они лежат отдельным ключом.
   List<int>? bytes;
+
+  /// Что сервер ответил на создание. Заполняет отправщик, разобрав ответ; в
+  /// хранилище не пишется — к следующему запуску запись уже в карте ключей.
+  int? createdId;
+
+  /// Адрес с подставленными ключами. Заполняется перед отправкой; само [path]
+  /// остаётся шаблоном, потому что в хранилище должен лежать шаблон, а не
+  /// однажды разрешённый адрес.
+  String? sendingPath;
+
+  /// Куда отправлять на самом деле.
+  String get target => sendingPath ?? path;
 
   int attempts;
 
@@ -98,6 +121,7 @@ class OutboxAction {
         'last_error': lastError,
         if (fileKey != null) 'file_key': fileKey,
         if (fileName != null) 'file_name': fileName,
+        if (provides != null) 'provides': provides,
       };
 
   static OutboxAction? fromJson(Map<String, dynamic> row) {
@@ -118,6 +142,7 @@ class OutboxAction {
       lastError: row['last_error'] is String ? row['last_error'] as String : null,
       fileKey: row['file_key'] is String ? row['file_key'] as String : null,
       fileName: row['file_name'] is String ? row['file_name'] as String : null,
+      provides: row['provides'] is String ? row['provides'] as String : null,
     );
   }
 }
@@ -172,6 +197,13 @@ class Outbox {
 
   String get _rejectedKey => '$_prefix.$userId.outbox.rejected';
 
+  /// Разрешённые ключи: что дали уже ушедшие действия.
+  ///
+  /// Отдельным ключом хранилища, а не внутри очереди: очередь
+  /// перезаписывается на каждом шаге, а между отправкой акта и отправкой
+  /// снимка телефон может успеть перезапуститься.
+  String get _idsKey => '$_prefix.$userId.outbox.ids';
+
   String _fileKeyFor(String actionId) => '$_prefix.$userId.outbox.file.$actionId';
 
   /// Идёт ли отправка прямо сейчас. Две параллельные отправки послали бы одно
@@ -189,10 +221,18 @@ class Outbox {
 
   int _counter = 0;
 
+  /// Отложенный ключ в пути: `/defective-act-photo/{1738…-0}/`.
+  static final RegExp _placeholder = RegExp(r'\{([^{}]+)\}');
+
   /// Ставит действие в очередь и пробует отправить сразу.
   ///
   /// Ждать отправки экран не должен: смысл очереди в том, что кнопка
   /// срабатывает мгновенно и без сети.
+  ///
+  /// `provides: true` означает «сервер в ответ на это создаст запись, и её
+  /// `id` понадобится следующим». Ключ вызывающий берёт из возвращённого
+  /// действия — [OutboxAction.provides] — и вставляет в путь фигурными
+  /// скобками: `/defective-act-photo/{ключ}/`.
   Future<OutboxAction> enqueue({
     required String title,
     required String method,
@@ -200,6 +240,7 @@ class Outbox {
     Map<String, dynamic> body = const <String, dynamic>{},
     List<int>? file,
     String? fileName,
+    bool provides = false,
   }) async {
     final DateTime moment = _now();
     final String id = '${moment.microsecondsSinceEpoch}-${_counter++}';
@@ -212,6 +253,7 @@ class Outbox {
       createdAt: moment.millisecondsSinceEpoch,
       fileKey: file == null ? null : _fileKeyFor(id),
       fileName: fileName,
+      provides: provides ? id : null,
     );
 
     await _guard(() async {
@@ -283,6 +325,17 @@ class Outbox {
       final OutboxAction? sending = action;
       if (sending == null) break;
 
+      // Адрес разрешается до чтения байтов: незачем поднимать в память
+      // полмегабайта ради действия, которое всё равно отправить некуда.
+      //
+      // Отправляем всегда голову очереди, поэтому давший ключ либо уже ушёл и
+      // ключ в карте, либо не ушёл никогда — и ждать его бессмысленно.
+      if (!await _resolvePath(sending)) {
+        sending.lastError = 'Дефект не создан — снимок отправить некуда';
+        await _settle(sending, SendOutcome.rejected);
+        continue;
+      }
+
       // Байты читаются вне замка: файл лежит своим ключом и никем больше не
       // правится, а замок нужен только очереди.
       if (sending.fileKey != null) {
@@ -341,6 +394,16 @@ class Outbox {
           denied.add(settled);
           await _save(_rejectedKey, denied);
         } else {
+          // Ключ записывается здесь же, под тем же замком, что убрал действие
+          // из очереди: между «ушло» и «ключ известен» не должно быть щели, в
+          // которую влезет отправка ждущего этот ключ снимка.
+          final String? key = settled.provides;
+          final int? created = sending.createdId;
+          if (key != null && created != null) {
+            final Map<String, int> known = await _loadIds();
+            known[key] = created;
+            await _store.write(_idsKey, jsonEncode(known));
+          }
           sent += 1;
         }
         left = true;
@@ -364,6 +427,7 @@ class Outbox {
     await _guard(() async {
       await _store.remove(_queueKey);
       await _store.remove(_rejectedKey);
+      await _store.remove(_idsKey);
       for (final String key in await _store.keys('$_prefix.$userId.outbox.file.')) {
         await _store.remove(key);
       }
@@ -394,6 +458,40 @@ class Outbox {
       }
     });
     _onChanged?.call();
+  }
+
+  /// Подставляет в путь известные ключи. `false` — ключ есть, а значения нет.
+  ///
+  /// Путей без фигурных скобок это не касается вовсе: их большинство, и
+  /// хранилище ради них не читается.
+  Future<bool> _resolvePath(OutboxAction action) async {
+    final Iterable<RegExpMatch> keys = _placeholder.allMatches(action.path);
+    if (keys.isEmpty) return true;
+
+    final Map<String, int> known = await _loadIds();
+    String path = action.path;
+    for (final RegExpMatch key in keys) {
+      final int? value = known[key.group(1)];
+      if (value == null) return false;
+      path = path.replaceFirst(key.group(0)!, '$value');
+    }
+    action.sendingPath = path;
+    return true;
+  }
+
+  Future<Map<String, int>> _loadIds() async {
+    final String? raw = await _store.read(_idsKey);
+    if (raw == null || raw.isEmpty) return <String, int>{};
+    try {
+      final dynamic decoded = jsonDecode(raw);
+      if (decoded is! Map) return <String, int>{};
+      return <String, int>{
+        for (final MapEntry<dynamic, dynamic> row in decoded.entries)
+          if (row.key is String && row.value is int) row.key as String: row.value as int,
+      };
+    } on FormatException {
+      return <String, int>{};
+    }
   }
 
   Future<List<int>?> _readFile(String key) async {
