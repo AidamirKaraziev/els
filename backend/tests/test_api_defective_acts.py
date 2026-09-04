@@ -350,3 +350,47 @@ def test_client_acts_stay_out_of_the_feed(client_with_db, world, act_with_photos
 
     assert response.status_code == 200, response.text
     assert {item["id"] for item in response.json()["data"]} == {act.id}
+
+
+# --- PDF -------------------------------------------------------------------
+
+
+@pytest.mark.integration
+def test_pdf_is_built_for_an_act_without_planned_to(client_with_db, act_with_photos):
+    """Акт, заведённый по объекту: планового ТО нет, а лист собраться обязан."""
+    act, _ = act_with_photos
+
+    response = client_with_db.post(f"{API}/defective-act/{act.id}/pdf/")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["pdf_file"]
+
+
+@pytest.mark.integration
+def test_pdf_of_the_client_act_takes_its_own_texts(
+    client_with_db, db_session, act_with_photos
+):
+    act, photos = act_with_photos
+    issued = client_with_db.post(
+        f"{API}/defective-act/{act.id}/issue-to-client/",
+        json={
+            "client_title": "Требуется замена троса",
+            "photo_ids": [photos[0].id],
+        },
+    ).json()["data"]
+
+    response = client_with_db.post(f"{API}/defective-act/{issued['id']}/pdf/")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["pdf_file"]
+
+
+@pytest.mark.integration
+def test_pdf_of_a_foreign_act_is_refused(client_with_db, world, db_session, mechanic):
+    stranger = DefectiveAct(object_id=world["other_lift"].id, title="чужой акт")
+    db_session.add(stranger)
+    db_session.flush()
+
+    response = client_with_db.post(f"{API}/defective-act/{stranger.id}/pdf/")
+
+    assert response.status_code in (403, 404)

@@ -21,7 +21,7 @@ from src.models import (
     DEFECTIVE_ACT_STATES,
     DefectiveAct,
     DefectiveActClientPhoto,
-    PlannedTO,
+    Object,
     UniversalUser,
 )
 from src.schemas.defective_act import (
@@ -33,6 +33,17 @@ from src.schemas.defective_act import (
 )
 from src.services.defective_act_pdf import DefectiveActPdfData, build_defective_act_pdf
 from src.utils import pagination
+
+
+def _attr(obj, name: str) -> str:
+    """Строковое поле связанной записи или пустая строка.
+
+    Связей у объекта четыре, и любая может быть не заполнена: `ondelete` у
+    всех — `SET NULL`. Прочерк вместо пустоты ставит уже шаблон.
+    """
+    if obj is None:
+        return ""
+    return (getattr(obj, name, None) or "").strip()
 
 
 class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUpdate]):
@@ -405,11 +416,18 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         obj = (
             self.scoped_query(db, scope)
             .options(
-                joinedload(DefectiveAct.planned_to).joinedload(PlannedTO.object),
+                # Реквизиты берутся через объект, а не через плановое ТО: три
+                # точки входа из четырёх заводят акт без `planned_to`, и у
+                # клиентского его чаще всего нет вовсе.
+                joinedload(DefectiveAct.object).joinedload(Object.organization),
+                joinedload(DefectiveAct.object).joinedload(Object.company_obj),
+                joinedload(DefectiveAct.object).joinedload(Object.contract),
+                joinedload(DefectiveAct.planned_to),
                 joinedload(DefectiveAct.photos),
-                joinedload(DefectiveAct.status),
+                joinedload(DefectiveAct.client_photos).joinedload(
+                    DefectiveActClientPhoto.photo
+                ),
                 joinedload(DefectiveAct.responsible_user),
-                joinedload(DefectiveAct.created_by_user),
             )
             .filter(DefectiveAct.id == defective_act_id)
             .first()
@@ -425,29 +443,38 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         abs_path = os.path.join(folder, filename)
         rel_path = "/".join(["defective_act", str(obj.id), "pdf", filename])
 
-        planned = obj.planned_to
-        equipment = "—"
-        year_str = "—"
-        if planned is not None:
-            year_str = str(planned.year) if planned.year else "—"
-            if planned.object is not None and planned.object.name:
-                equipment = planned.object.name.strip()
+        lift = obj.object
+        organization = lift.organization if lift is not None else None
+        customer = lift.company_obj if lift is not None else None
+        contract = lift.contract if lift is not None else None
 
-        status_name = obj.status.name if obj.status and obj.status.name else "—"
+        planned = obj.planned_to
+        year_str = str(planned.year) if planned is not None and planned.year else ""
+
         responsible = (
             obj.responsible_user.name
             if obj.responsible_user and obj.responsible_user.name
-            else "—"
+            else ""
         )
-        creator = (
-            obj.created_by_user.name
-            if obj.created_by_user and obj.created_by_user.name
-            else "—"
+
+        # Наружу уходит не то же самое, что механик писал для себя: у
+        # клиентского акта свои тексты и свой отбор снимков. Пустое поле
+        # откатывается на исходное — акт, оформленный без правки текста,
+        # не должен уйти пустым.
+        is_client = obj.kind == "client"
+        title = (obj.client_title if is_client else None) or obj.title or ""
+        description = (
+            (obj.client_description if is_client else None) or obj.description or ""
         )
+
+        if is_client:
+            photos = [link.photo for link in obj.client_photos or [] if link.photo]
+        else:
+            photos = list(obj.photos or [])
 
         static_root = os.path.abspath(base_path)
         photo_paths = []
-        for ph in sorted(obj.photos or [], key=lambda p: p.id or 0):
+        for ph in sorted(photos, key=lambda p: p.id or 0):
             if not ph.photo:
                 continue
             rel = ph.photo.replace("\\", "/")
@@ -456,14 +483,25 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
                 photo_paths.append(fp)
 
         pdf_data = DefectiveActPdfData(
-            equipment_name=equipment,
+            act_number=str(obj.id),
+            act_date=obj.created_at.strftime("%d.%m.%Y") if obj.created_at else "",
+            executor_name=_attr(organization, "title"),
+            executor_address=_attr(organization, "address"),
+            executor_phone=_attr(organization, "phone_office"),
+            executor_director=_attr(getattr(organization, "director", None), "name"),
+            customer_name=_attr(customer, "name"),
+            customer_address=_attr(customer, "cont_address"),
+            customer_director=_attr(customer, "director_name"),
+            object_name=_attr(lift, "name"),
+            object_address=_attr(lift, "address"),
+            factory_number=_attr(lift, "factory_number"),
+            registration_number=_attr(lift, "registration_number"),
+            contract_title=_attr(contract, "title"),
             planned_year=year_str,
             month=obj.month,
-            title=obj.title or "",
-            description=obj.description or "",
-            status_name=status_name,
+            title=title,
+            description=description,
             responsible_name=responsible,
-            creator_name=creator,
             photo_paths=photo_paths,
         )
         build_defective_act_pdf(abs_path, pdf_data)

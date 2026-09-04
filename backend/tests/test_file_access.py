@@ -335,3 +335,57 @@ def test_export_link_actually_downloads_the_report(client_with_db, real_admin):
 
     assert response.status_code == 200
     assert response.content[:4] == b"%PDF"
+
+
+# --- отдача через nginx ----------------------------------------------------
+
+
+@pytest.fixture
+def x_accel(monkeypatch):
+    """Включает отдачу файлов заголовком, как на собранном стеке."""
+    monkeypatch.setattr(settings, "X_ACCEL_REDIRECT", True)
+
+
+@pytest.mark.integration
+def test_x_accel_answers_with_a_header_instead_of_bytes(
+    client_with_db, as_role, uploaded_file, world, x_accel
+):
+    as_role(Role.CLIENT, company_id=world["company_mine"].id)
+    path = uploaded_file(f"objects/{world['own_lift'].id}/act_pto/x.pdf")
+
+    response = client_with_db.get(f"{API}/static/{path}")
+
+    assert response.status_code == 200
+    assert response.content == b""
+    assert response.headers["X-Accel-Redirect"] == f"/internal-static/{path}"
+    assert response.headers["content-type"] == "application/pdf"
+
+
+@pytest.mark.integration
+def test_x_accel_encodes_cyrillic_names(
+    client_with_db, as_role, uploaded_file, world, x_accel
+):
+    """В заголовок можно положить только latin-1, а имена бывают русскими."""
+    as_role(Role.CLIENT, company_id=world["company_mine"].id)
+    path = uploaded_file(f"objects/{world['own_lift'].id}/act_pto/акт.pdf")
+
+    response = client_with_db.get(f"{API}/static/{path}")
+
+    assert response.status_code == 200
+    header = response.headers["X-Accel-Redirect"]
+    assert header.startswith("/internal-static/")
+    assert header.endswith("%D0%B0%D0%BA%D1%82.pdf")
+
+
+@pytest.mark.integration
+def test_x_accel_does_not_bypass_the_access_check(
+    client_with_db, as_role, uploaded_file, world, x_accel
+):
+    """Заголовок выдаётся только после проверки: чужой файл — по-прежнему 403."""
+    as_role(Role.CLIENT, company_id=world["company_mine"].id)
+    path = uploaded_file(f"objects/{world['other_lift'].id}/act_pto/x.pdf")
+
+    response = client_with_db.get(f"{API}/static/{path}")
+
+    assert response.status_code == 403
+    assert "X-Accel-Redirect" not in response.headers

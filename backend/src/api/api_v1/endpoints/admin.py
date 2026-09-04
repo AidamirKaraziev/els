@@ -2,11 +2,13 @@ import logging
 from mimetypes import guess_type
 from os.path import isfile
 from typing import Optional
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
 from fastapi.params import Path
 
 from src.api import deps
+from src.config import settings
 from src.core.files import parse_owner, resolve_static_path
 from src.core.permissions import Permission
 from src.core.response import SingleEntityResponse
@@ -83,10 +85,28 @@ def get_static_file(
             path="$.path",
         )
 
+    content_type, _ = guess_type(str(resolved.path))
+
+    # На собранном стеке байты отдаёт nginx: бэкенд отвечает пустым телом с
+    # заголовком на внутренний `location`. Проверка доступа при этом уже
+    # позади — ровно этого не хватало, пока nginx читал каталог сам и до
+    # приложения запрос не доходил.
+    if settings.X_ACCEL_REDIRECT:
+        return Response(
+            b"",
+            media_type=content_type,
+            headers={
+                # Путь кодируется: в именах файлов встречается кириллица, а в
+                # заголовок можно положить только latin-1.
+                "X-Accel-Redirect": (
+                    f"{settings.X_ACCEL_LOCATION}/{quote(resolved.relative)}"
+                )
+            },
+        )
+
     with open(resolved.path, "rb") as f:
         content = f.read()
 
-    content_type, _ = guess_type(str(resolved.path))
     return Response(content, media_type=content_type)
 
 
