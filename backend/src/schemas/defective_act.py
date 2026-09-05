@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from src.schemas.defective_act_photo import DefectiveActPhotoGet
 from src.schemas.planned_to import PlannedTOGet
 from src.schemas.status import StatusGet
+from src.schemas.type_act import TypeActGet
 from src.schemas.universal_user import UniversalUserGet
 
 
@@ -74,6 +75,13 @@ class DefectiveActGet(BaseModel):
     act_fact_id: Optional[int]
     checklist_step_id: Optional[int]
     order_id: Optional[int]
+
+    #: Вид ТО той работы, на которой дефект замечен: `act_fact` → `act_base`
+    #: → `type_act`. Пуст у актов, заведённых по заявке или прямо с объекта —
+    #: там работы по ТО нет вовсе. Разворачивается здесь, а не вычисляется
+    #: клиентом: `act_fact_id` уходит наружу голым числом, и пройти цепочку
+    #: с фронта нечем.
+    type_act: Optional[TypeActGet]
 
     title: str
     description: Optional[str]

@@ -18,6 +18,7 @@ import pytest
 from src.config import settings
 from src.core.roles import Role
 from src.models import (
+    ActBase,
     ActFact,
     Company,
     DefectiveAct,
@@ -26,6 +27,7 @@ from src.models import (
     Object,
     Order,
     PlannedTO,
+    TypeAct,
 )
 
 API = settings.API_V1_STR
@@ -133,6 +135,73 @@ def test_act_from_the_order_carries_its_object(client_with_db, world, mechanic):
     data = response.json()["data"]
     assert data["order_id"] == world["own_order"].id
     assert data["object_id"] == world["own_lift"].id
+
+
+@pytest.fixture
+def work_of_a_known_kind(db_session, world):
+    """Работа по ТО, у которой шаблон и вид ТО заполнены.
+
+    В `world` работа заведена голой: `act_base_id` там пуст, и вид ТО у неё
+    взяться неоткуда. Здесь достраивается вторая — та, что видел бы прораб.
+    """
+    # id у `types_acts` не автоинкрементный — назначается руками.
+    kind = TypeAct(id=next_type_act_id(db_session), name=f"ТО-1 {uuid.uuid4().hex[:8]}")
+    db_session.add(kind)
+    db_session.flush()
+
+    base = ActBase(type_act_id=kind.id)
+    db_session.add(base)
+    db_session.flush()
+
+    work = ActFact(object_id=world["own_lift"].id, act_base_id=base.id)
+    db_session.add(work)
+    db_session.flush()
+    return {"kind": kind, "work": work}
+
+
+def next_type_act_id(db_session):
+    largest = db_session.query(TypeAct).order_by(TypeAct.id.desc()).first()
+    return (largest.id + 1) if largest is not None else 1
+
+
+@pytest.mark.integration
+def test_work_defect_carries_the_kind_of_maintenance(
+    client_with_db, world, mechanic, work_of_a_known_kind
+):
+    """Вид ТО разворачивается в ответе: цепочку с фронта пройти нечем."""
+    response = _create(client_with_db, act_fact_id=work_of_a_known_kind["work"].id)
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["type_act"] == {
+        "id": work_of_a_known_kind["kind"].id,
+        "name": work_of_a_known_kind["kind"].name,
+    }
+
+
+@pytest.mark.integration
+def test_order_defect_has_no_kind_of_maintenance(client_with_db, world, mechanic):
+    """У акта по заявке работы по ТО нет вовсе — поле пустое, а не выдумано."""
+    response = _create(client_with_db, order_id=world["own_order"].id)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["type_act"] is None
+
+
+@pytest.mark.integration
+def test_work_without_a_template_does_not_break_the_feed(
+    client_with_db, world, mechanic
+):
+    """`act_base_id` снимается по `SET NULL` — лента такую запись переживает."""
+    created = _create(client_with_db, act_fact_id=world["own_act_fact"].id)
+    assert created.status_code == 200, created.text
+
+    feed = client_with_db.get(
+        f"{API}/defective-act/by-object/{world['own_lift'].id}/?year=2026"
+    )
+
+    assert feed.status_code == 200, feed.text
+    assert [row["type_act"] for row in feed.json()["data"]] == [None]
 
 
 @pytest.mark.integration

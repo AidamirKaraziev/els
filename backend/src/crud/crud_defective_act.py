@@ -19,6 +19,8 @@ from src.crud.crud_status import crud_status
 from src.crud.users.crud_universal_user import crud_universal_users
 from src.models import (
     DEFECTIVE_ACT_STATES,
+    ActBase,
+    ActFact,
     DefectiveAct,
     DefectiveActClientPhoto,
     Object,
@@ -226,6 +228,14 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
             .filter(DefectiveAct.kind == "internal")
             .filter(extract("year", DefectiveAct.created_at) == year)
             .order_by(DefectiveAct.created_at.desc(), DefectiveAct.id.desc())
+            # Вид ТО и автор нужны каждой строке ленты: без этого на объект с
+            # два десятка дефектов уходит столько же лишних запросов.
+            .options(
+                joinedload(DefectiveAct.act_fact)
+                .joinedload(ActFact.act_base)
+                .joinedload(ActBase.type_act),
+                joinedload(DefectiveAct.created_by_user),
+            )
         )
         return q, 0, None
 
@@ -238,7 +248,14 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         )
         if code != 0:
             return None, code, None
-        total = q.with_entities(func.count(DefectiveAct.id)).order_by(None).scalar()
+        # Счётчику связи не нужны, а `with_entities` их всё равно бы отбросил
+        # с предупреждением — снимаем явно.
+        total = (
+            q.enable_eagerloads(False)
+            .with_entities(func.count(DefectiveAct.id))
+            .order_by(None)
+            .scalar()
+        )
         return int(total or 0), 0, None
 
     def update_state(

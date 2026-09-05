@@ -7,6 +7,7 @@ from src.getters.defective_act_photo import getting_defective_act_photo
 from src.getters.planned_to import get_planned_to
 from src.getters.static_url import static_base_url
 from src.getters.status import get_statuses
+from src.getters.type_act import get_type_acts
 from src.getters.universal_user import get_universal_user
 from src.models import DefectiveAct
 from src.schemas.defective_act import DefectiveActGet
@@ -26,6 +27,16 @@ def getting_defective_act(
     if request is not None and pdf_file is not None:
         pdf_file = static_base_url(request, config) + str(pdf_file)
 
+    # Вид ТО лежит через две связи, и каждая из них может быть пустой: акт по
+    # заявке работы по ТО не имеет вовсе, а у старой работы мог быть снят
+    # шаблон (`ondelete="SET NULL"` на `act_base_id`). Поэтому не цепочка
+    # атрибутов, а три проверки — иначе лента падает на первой такой записи.
+    type_act = None
+    act_fact = obj.act_fact
+    if act_fact is not None and act_fact.act_base is not None:
+        if act_fact.act_base.type_act is not None:
+            type_act = get_type_acts(act_fact.act_base.type_act)
+
     return DefectiveActGet(
         id=obj.id,
         object_id=obj.object_id,
@@ -36,6 +47,7 @@ def getting_defective_act(
         act_fact_id=obj.act_fact_id,
         checklist_step_id=obj.checklist_step_id,
         order_id=obj.order_id,
+        type_act=type_act,
         kind=obj.kind,
         state=obj.state,
         parent_id=obj.parent_id,
