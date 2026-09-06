@@ -6,8 +6,8 @@ import '../../../../../helper/class_colors.dart';
 import '../../widgets/object_block.dart';
 import '../models/schedule_wizard_data.dart';
 
-/// Шаг 2 — «Предпросмотр»: программа модели строкой и двенадцать клеток года
-/// под ней.
+/// Всё окно мастера: программа модели строкой и двенадцать клеток года под
+/// ней.
 ///
 /// Ровно то, ради чего мастер и нужен: до записи в базу видно, что добавится,
 /// что останется нетронутым и где не хватает шаблона. Клетки рисуются здесь,
@@ -24,6 +24,7 @@ class WizardPreviewStep extends StatelessWidget {
     required this.data,
     required this.year,
     required this.anchorMonth,
+    this.anchorUnknown = false,
     this.onEditProgram,
     this.onAnchorMoved,
     this.onCreateTemplate,
@@ -38,9 +39,15 @@ class WizardPreviewStep extends StatelessWidget {
   /// модели без программы `data` пуста, а год человек всё равно выбрал.
   final int year;
 
-  /// Месяц начала цикла — тот, что применён: с прошлого года, выбранный на
-  /// шаге «Точка отсчёта» или полученный перетаскиванием клетки.
+  /// Месяц начала цикла — тот, что применён: восстановленный по прошлому
+  /// году или полученный перетаскиванием клетки.
   final int anchorMonth;
+
+  /// Начало цикла неоткуда взять, и человек его ещё не двигал: месяц стоит по
+  /// умолчанию. Тогда над лентой висит предупреждение, а клетка старта
+  /// помечена тем же цветом — иначе январь читается как выбор системы, хотя
+  /// выбирать её никто не просил.
+  final bool anchorUnknown;
 
   /// Открыть окно правки программы. `null` — модель объекта неизвестна, и
   /// править нечего: кнопка выключена и говорит почему.
@@ -92,6 +99,7 @@ class WizardPreviewStep extends StatelessWidget {
                 : _Year(
                     data: preview,
                     anchorMonth: anchorMonth,
+                    anchorUnknown: anchorUnknown,
                     onAnchorMoved: onAnchorMoved,
                     onCreateTemplate: onCreateTemplate,
                   ),
@@ -108,12 +116,14 @@ class _Year extends StatelessWidget {
     Key? key,
     required this.data,
     required this.anchorMonth,
+    this.anchorUnknown = false,
     this.onAnchorMoved,
     this.onCreateTemplate,
   }) : super(key: key);
 
   final ScheduleWizardData data;
   final int anchorMonth;
+  final bool anchorUnknown;
   final ValueChanged<int>? onAnchorMoved;
   final VoidCallback? onCreateTemplate;
 
@@ -132,6 +142,9 @@ class _Year extends StatelessWidget {
         if (data.hasKnownAnchor) ...<Widget>[
           _KnownAnchorNote(anchorMonth: data.knownAnchor!),
           const SizedBox(height: 16.0),
+        ] else if (anchorUnknown) ...<Widget>[
+          _UnknownAnchorNote(year: data.year - 1),
+          const SizedBox(height: 16.0),
         ],
         Text(
           'Цикл начинается с ${kMonthsGenitive[anchorMonth - 1]}.',
@@ -148,6 +161,7 @@ class _Year extends StatelessWidget {
         const SizedBox(height: 16.0),
         _Cells(
           cells: data.cells,
+          highlightAnchor: anchorUnknown,
           onMoved: onAnchorMoved == null ? null : _moved,
         ),
         const SizedBox(height: 16.0),
@@ -316,15 +330,89 @@ class _KnownAnchorNote extends StatelessWidget {
   }
 }
 
+/// «Начало цикла назовите сами» — вместо шага «Точка отсчёта».
+///
+/// Шаг был отдельным окном и разъезжался с лентой: человек выбирал месяц там,
+/// а видел результат здесь. Теперь выбор и результат в одном месте, и от шага
+/// осталось только объяснение — почему у мастера вообще есть, что спрашивать.
+///
+/// Цвет предупреждения, а не подсказки: январь на клетке старта — умолчание,
+/// которое никто не выбирал, и молча принять его хуже, чем подвинуть.
+class _UnknownAnchorNote extends StatelessWidget {
+  const _UnknownAnchorNote({Key? key, required this.year}) : super(key: key);
+
+  /// Год, по графику которого якорь восстановить не удалось, — прошлый к
+  /// расставляемому.
+  final int year;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: ColorApp.myColorYellowLight,
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: ColorApp.myColorYellow),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Icon(
+            Icons.warning_amber_rounded,
+            size: 20.0,
+            color: ColorApp.myColorBlack,
+          ),
+          const SizedBox(width: 10.0),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Начало цикла не определилось по графику за $year год',
+                  style: const TextStyle(
+                    fontSize: 13.0,
+                    fontWeight: FontWeight.w600,
+                    color: ColorApp.myColorBlack,
+                  ),
+                ),
+                const SizedBox(height: 4.0),
+                const Text(
+                  'Перетащите клетку «СТАРТ» на месяц, с которого начинается '
+                  'цикл: цепочка сдвинется за ней целиком. Сейчас она стоит '
+                  'по умолчанию — проверьте, что месяц верный.',
+                  style: TextStyle(
+                    fontSize: 13.0,
+                    color: ColorApp.myColorBlack,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Двенадцать клеток года: месяц сверху, вид ТО внутри.
 ///
 /// В отличие от ленты на экране объекта клетки крупные: здесь их читают, а не
 /// сравнивают взглядом между объектами, и вид работы должен быть виден без
 /// тултипа.
 class _Cells extends StatelessWidget {
-  const _Cells({Key? key, required this.cells, this.onMoved}) : super(key: key);
+  const _Cells({
+    Key? key,
+    required this.cells,
+    this.highlightAnchor = false,
+    this.onMoved,
+  }) : super(key: key);
 
   final List<WizardPreviewCell> cells;
+
+  /// Клетку старта надо выделить: месяц ещё не выбран человеком, и плашка над
+  /// лентой просит его подвинуть именно её.
+  final bool highlightAnchor;
 
   /// Месяц-источник и месяц-цель. `null` — лента только показывает.
   final void Function(int, int)? onMoved;
@@ -357,8 +445,12 @@ class _Cells extends StatelessWidget {
               SizedBox(
                 width: width,
                 child: onMoved == null
-                    ? _Cell(cell: cell)
-                    : _DraggableCell(cell: cell, onMoved: onMoved!),
+                    ? _Cell(cell: cell, highlightAnchor: highlightAnchor)
+                    : _DraggableCell(
+                        cell: cell,
+                        highlightAnchor: highlightAnchor,
+                        onMoved: onMoved!,
+                      ),
               ),
           ],
         );
@@ -373,17 +465,24 @@ class _Cells extends StatelessWidget {
 /// каждое движение пальцем по ленте начинало бы перетаскивание вместо
 /// прокрутки.
 class _DraggableCell extends StatelessWidget {
-  const _DraggableCell({Key? key, required this.cell, required this.onMoved})
-      : super(key: key);
+  const _DraggableCell({
+    Key? key,
+    required this.cell,
+    required this.onMoved,
+    this.highlightAnchor = false,
+  }) : super(key: key);
 
   final WizardPreviewCell cell;
   final void Function(int, int) onMoved;
+  final bool highlightAnchor;
 
   @override
   Widget build(BuildContext context) {
     // Занятый месяц не двигается и не принимает: расстановка его не трогает,
     // и подменять чужой акт перетаскиванием нельзя.
-    if (cell.occupied) return _Cell(cell: cell);
+    if (cell.occupied) {
+      return _Cell(cell: cell, highlightAnchor: highlightAnchor);
+    }
 
     return DragTarget<int>(
       onWillAcceptWithDetails: (DragTargetDetails<int> details) =>
@@ -403,13 +502,23 @@ class _DraggableCell extends StatelessWidget {
             color: ColorApp.myColorTransparent,
             child: Opacity(
               opacity: 0.9,
-              child: SizedBox(width: 96.0, child: _Cell(cell: cell)),
+              child: SizedBox(
+                width: 96.0,
+                child: _Cell(cell: cell, highlightAnchor: highlightAnchor),
+              ),
             ),
           ),
-          childWhenDragging: Opacity(opacity: 0.3, child: _Cell(cell: cell)),
+          childWhenDragging: Opacity(
+            opacity: 0.3,
+            child: _Cell(cell: cell, highlightAnchor: highlightAnchor),
+          ),
           child: MouseRegion(
             cursor: SystemMouseCursors.grab,
-            child: _Cell(cell: cell, hovered: hovered),
+            child: _Cell(
+              cell: cell,
+              hovered: hovered,
+              highlightAnchor: highlightAnchor,
+            ),
           ),
         );
       },
@@ -418,10 +527,19 @@ class _DraggableCell extends StatelessWidget {
 }
 
 class _Cell extends StatelessWidget {
-  const _Cell({Key? key, required this.cell, this.hovered = false})
-      : super(key: key);
+  const _Cell({
+    Key? key,
+    required this.cell,
+    this.hovered = false,
+    this.highlightAnchor = false,
+  }) : super(key: key);
 
   final WizardPreviewCell cell;
+
+  /// Старт ещё не выбран человеком: рамку и тег красим в жёлтый — тот же
+  /// цвет, что у плашки над лентой, чтобы просьбу и клетку связывал глаз, а
+  /// не память.
+  final bool highlightAnchor;
 
   /// Над клеткой висит чужая: подсвечиваем зелёной рамкой, иначе непонятно,
   /// куда именно ляжет ТО.
@@ -459,8 +577,14 @@ class _Cell extends StatelessWidget {
           border: Border.all(
             color: hovered
                 ? ColorApp.myColorGreenAuth
-                : (_isAnchor ? ColorApp.myColorBlack : mark.border),
-            width: hovered || (_isAnchor && !_isDark) ? 2.0 : 1.0,
+                : (_isAnchor
+                    ? (highlightAnchor
+                        ? ColorApp.myColorYellow
+                        : ColorApp.myColorBlack)
+                    : mark.border),
+            width: hovered || (_isAnchor && (highlightAnchor || !_isDark))
+                ? 2.0
+                : 1.0,
           ),
           borderRadius: BorderRadius.circular(6.0),
         ),
@@ -471,7 +595,7 @@ class _Cell extends StatelessWidget {
             // иначе она одна становится выше соседей и ряд идёт волной.
             SizedBox(
               height: _AnchorTag.height,
-              child: _isAnchor ? const _AnchorTag() : null,
+              child: _isAnchor ? _AnchorTag(highlighted: highlightAnchor) : null,
             ),
             const SizedBox(height: 4.0),
             Text(
@@ -502,11 +626,14 @@ class _Cell extends StatelessWidget {
 /// Тег «СТАРТ» над месяцем. Словом, а не одним цветом: тёмная клетка сама по
 /// себе читается как «ещё один статус», и без подписи её пришлось бы угадывать.
 class _AnchorTag extends StatelessWidget {
-  const _AnchorTag({Key? key}) : super(key: key);
+  const _AnchorTag({Key? key, this.highlighted = false}) : super(key: key);
 
   /// Высота, которую тег занимает в клетке. Ею же резервируется место в
   /// клетках без тега — см. `_Cell`.
   static const double height = 14.0;
+
+  /// Месяц ещё не выбран человеком: тег жёлтый, как плашка над лентой.
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
@@ -519,16 +646,18 @@ class _AnchorTag extends StatelessWidget {
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
           decoration: BoxDecoration(
-            color: ColorApp.myColorGreenAuth,
+            color:
+                highlighted ? ColorApp.myColorYellow : ColorApp.myColorGreenAuth,
             borderRadius: BorderRadius.circular(3.0),
           ),
-          child: const Text(
+          child: Text(
             'СТАРТ',
             style: TextStyle(
               fontSize: 9.0,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.3,
-              color: ColorApp.myColorWhite,
+              color:
+                  highlighted ? ColorApp.myColorBlack : ColorApp.myColorWhite,
             ),
           ),
         ),

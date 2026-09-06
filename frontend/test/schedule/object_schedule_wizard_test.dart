@@ -1,12 +1,13 @@
-/// Мастер расстановки графика: проверяем вид и шаги, а не расстановку.
+/// Мастер расстановки графика: проверяем вид, а не расстановку.
 ///
 /// Заготовку и расстановку мастер берёт у репозитория — здесь фикстурного.
 /// Проверяем: что кнопка ведёт в мастер, а не раскладывает год сразу; что
-/// шаг листается туда и обратно; что «Утвердить» гаснет на исходе «нет
-/// шаблона», а на чистом годе создаёт график и закрывает мастер — ровно один
-/// раз, без второй расстановки с экрана объекта; что неудача создания
-/// оставляет мастер на месте; что шаг «Точка отсчёта» отпадает, когда цикл
-/// продолжается с прошлого года, — и как выделена клетка старта цикла.
+/// мастер живёт одним окном, без шагов; что «Утвердить» спрашивает
+/// подтверждение и гаснет на исходе «нет шаблона», а на чистом годе создаёт
+/// график и закрывает мастер — ровно один раз, без второй расстановки с
+/// экрана объекта; что неудача создания оставляет мастер на месте; что над
+/// лентой висит предупреждение, пока начало цикла не выбрано, — и как
+/// выделена клетка старта цикла.
 library;
 
 import 'package:els/helper/class_colors.dart';
@@ -22,7 +23,6 @@ import 'package:els/screns/schedule/object/wizard/repository/fixture_maintenance
 import 'package:els/screns/schedule/object/wizard/repository/fixture_schedule_wizard_repository.dart';
 import 'package:els/screns/schedule/object/wizard/repository/schedule_wizard_repository.dart';
 import 'package:els/screns/schedule/object/wizard/view/schedule_wizard_screen.dart';
-import 'package:els/screns/schedule/object/wizard/widgets/wizard_anchor_step.dart';
 import 'package:els/screns/schedule/object/wizard/widgets/wizard_preview_step.dart';
 import 'package:els/screns/schedule/repository/schedules_repository.dart';
 import 'package:flutter/material.dart';
@@ -126,6 +126,12 @@ Future<void> _tap(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
 }
 
+/// «Утвердить» и «Да» в окне подтверждения: путь до расстановки теперь такой.
+Future<void> _approve(WidgetTester tester) async {
+  await _tap(tester, 'Утвердить');
+  await _tap(tester, 'Да');
+}
+
 /// Кнопка нижней панели: включена или нет.
 bool _enabled(WidgetTester tester, String label) {
   final ElevatedButton button = tester.widget<ElevatedButton>(
@@ -162,44 +168,67 @@ void main() {
     await _tap(tester, 'Создать график на $_emptyYear');
 
     expect(find.byType(ScheduleWizardScreen), findsOneWidget);
-    expect(find.byType(WizardAnchorStep), findsOneWidget);
+    expect(find.byType(WizardPreviewStep), findsOneWidget);
   });
 
-  testWidgets('два шага листаются вперёд и назад',
+  testWidgets('мастер живёт одним окном: шагов и «Далее» нет',
       (WidgetTester tester) async {
+    // Шаги и были причиной перескока: перетащив клетку старта, человек
+    // оказывался на «Точке отсчёта» вместо ленты, которую сверял.
     await _pumpWizard(tester);
 
-    expect(find.byType(WizardAnchorStep), findsOneWidget);
-
-    await _tap(tester, 'Далее');
     expect(find.byType(WizardPreviewStep), findsOneWidget);
-    // На последнем шаге «Далее» уступает место «Утвердить».
     expect(find.widgetWithText(ElevatedButton, 'Далее'), findsNothing);
-
-    await tester.tap(find.widgetWithText(TextButton, 'Назад'));
-    await tester.pumpAndSettle();
-    expect(find.byType(WizardAnchorStep), findsOneWidget);
+    expect(find.text('Точка отсчёта'), findsNothing);
+    expect(find.text('Предпросмотр'), findsNothing);
   });
 
-  testWidgets('на первом шаге «Отмена» закрывает мастер',
-      (WidgetTester tester) async {
+  testWidgets('«Отмена» закрывает мастер', (WidgetTester tester) async {
     await _pumpWizard(tester);
 
     await tester.tap(find.widgetWithText(TextButton, 'Отмена'));
     await tester.pumpAndSettle();
 
     // Мастер был единственным маршрутом — после закрытия экрана нет.
-    expect(find.byType(WizardAnchorStep), findsNothing);
+    expect(find.byType(WizardPreviewStep), findsNothing);
   });
 
-  testWidgets('прошлогодний график оставляет один шаг — предпросмотр',
+  testWidgets('начало цикла неизвестно — над лентой предупреждение',
+      (WidgetTester tester) async {
+    await _pumpWizard(tester);
+
+    expect(
+      find.textContaining('Начало цикла не определилось'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Перетащите клетку «СТАРТ»'), findsOneWidget);
+  });
+
+  testWidgets('перетащили старт — предупреждение гаснет',
+      (WidgetTester tester) async {
+    // Месяц назван руками: предупреждать больше не о чем, и жёлтая плашка
+    // над лентой висеть не должна.
+    await _pumpWizard(tester);
+
+    final Finder from = find.byTooltip(_tooltipOf(tester, 'Март'));
+    final Finder to = find.byTooltip(_tooltipOf(tester, 'Май'));
+    await tester.timedDrag(
+      from,
+      tester.getCenter(to) - tester.getCenter(from),
+      const Duration(milliseconds: 300),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Начало цикла не определилось'), findsNothing);
+  });
+
+  testWidgets('прошлогодний график — вместо предупреждения зелёная плашка',
       (WidgetTester tester) async {
     await _pumpWizard(tester, withKnownAnchor: true);
 
-    expect(find.byType(WizardAnchorStep), findsNothing);
     expect(find.byType(WizardPreviewStep), findsOneWidget);
-    // Листать нечего: единственный шаг он же и последний.
-    expect(find.widgetWithText(ElevatedButton, 'Далее'), findsNothing);
+    expect(find.textContaining('Начало цикла не определилось'), findsNothing);
+    expect(find.textContaining('цикл продолжается без разрыва'), findsOneWidget);
   });
 
   testWidgets('предпросмотр называет месяц начала цикла',
@@ -229,8 +258,24 @@ void main() {
 
     expect(_enabled(tester, 'Утвердить'), isTrue);
 
-    await _tap(tester, 'Утвердить');
+    await _approve(tester);
     expect(find.byType(WizardPreviewStep), findsNothing);
+  });
+
+  testWidgets('«Назад» в окне подтверждения оставляет мастер на месте',
+      (WidgetTester tester) async {
+    // Подтверждение — та пауза, в которую человек сверяет ленту. Ответив
+    // «Назад», он должен вернуться к ней, а не к созданному графику.
+    await _pumpWizard(tester, withKnownAnchor: true);
+
+    await _tap(tester, 'Утвердить');
+    expect(find.text('Создать график на $_emptyYear год?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Назад'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(WizardPreviewStep), findsOneWidget);
+    expect(_enabled(tester, 'Утвердить'), isTrue);
   });
 
   testWidgets('«Утвердить» закрывает мастер и не расставляет год второй раз',
@@ -265,7 +310,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await _tap(tester, 'Создать график на $_emptyYear');
-    await _tap(tester, 'Утвердить');
+    await _approve(tester);
 
     // Мастер закрылся, вернулись на экран объекта.
     expect(find.byType(ScheduleWizardScreen), findsNothing);
@@ -299,7 +344,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await _tap(tester, 'Утвердить');
+    await _approve(tester);
 
     // Закрыть мастер по неудаче было бы негде показать причину.
     expect(find.byType(WizardPreviewStep), findsOneWidget);
@@ -345,8 +390,8 @@ void main() {
     expect(find.text('Создать программу'), findsOneWidget);
     expect(find.textContaining('а её у этой модели нет'), findsOneWidget);
     expect(_enabled(tester, 'Утвердить'), isFalse);
-    // Шаг «Точка отсчёта» без программы не нужен: выбирать месяц не для чего.
-    expect(find.byType(WizardAnchorStep), findsNothing);
+    // Раскладывать нечего — и предупреждать про начало цикла не о чем.
+    expect(find.textContaining('Начало цикла не определилось'), findsNothing);
   });
 
   testWidgets('программа есть — строка называет модель и правится',

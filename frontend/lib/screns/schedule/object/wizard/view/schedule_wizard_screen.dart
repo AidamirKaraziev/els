@@ -7,20 +7,20 @@ import '../models/maintenance_program.dart';
 import '../models/schedule_wizard_data.dart';
 import '../repository/maintenance_program_repository.dart';
 import '../repository/schedule_wizard_repository.dart';
-import '../widgets/wizard_anchor_step.dart';
+import '../widgets/wizard_approve_dialog.dart';
 import '../widgets/wizard_preview_step.dart';
 import '../widgets/wizard_program_dialog.dart';
-import '../widgets/wizard_steps_header.dart';
 
-/// Мастер расстановки годового графика — два шага вместо кнопки, которая
+/// Мастер расстановки годового графика — одно окно вместо кнопки, которая
 /// раскладывала весь год одним нажатием.
 ///
 /// Заготовку строит сервер: `GET /planned-to/preview/` отдаёт двенадцать
 /// клеток года по программе модели, ничего не записывая. Мастер её только
 /// показывает — своей арифметики цикла здесь нет.
 ///
-/// «Утвердить» расставляет год сам — `POST /planned-to/generate/` с тем
-/// месяцем начала цикла, который человек видел в предпросмотре. Мастер
+/// «Утвердить» спрашивает подтверждение и расставляет год сам —
+/// `POST /planned-to/generate/` с тем месяцем начала цикла, который человек
+/// видел в ленте. Мастер
 /// закрывается с `true`, а экран объекта по нему только перечитывает ленту
 /// года: создаёт график ровно один запрос.
 ///
@@ -82,11 +82,12 @@ class ScheduleWizardScreen extends StatelessWidget {
   }
 }
 
-/// Шаги мастера поверх готового состояния.
+/// Одно окно поверх готового состояния.
 ///
-/// Номер шага живёт здесь, а не в блоке: это перелистывание уже загруженного,
-/// без запросов и без ошибок. Якорь, наоборот, в блоке — от него зависит
-/// запрос к серверу.
+/// Шагов у мастера нет намеренно. Точка отсчёта была отдельным шагом и
+/// разъезжалась с предпросмотром: стоило перетащить клетку старта, как шаг
+/// появлялся заново и уводил человека со сверки ленты. Месяц выбирается там
+/// же, где виден результат, — перетаскиванием клетки.
 class _WizardView extends StatefulWidget {
   const _WizardView({
     Key? key,
@@ -108,35 +109,39 @@ class _WizardView extends StatefulWidget {
 }
 
 class _WizardViewState extends State<_WizardView> {
-  /// Индекс текущего шага в списке заголовков, с нуля.
-  int _step = 0;
+  /// Человек уже двигал клетку старта.
+  ///
+  /// Пока не двигал и якорь неоткуда взять — над лентой висит предупреждение:
+  /// месяц никто не выбирал, он просто январь по умолчанию. Подвинул — месяц
+  /// назван осознанно, и предупреждать больше не о чем.
+  bool _anchorMoved = false;
 
-  List<String> _titles(bool hasAnchorStep) => <String>[
-        if (hasAnchorStep) 'Точка отсчёта',
-        'Предпросмотр',
-      ];
+  void _cancel() => Navigator.of(context).pop(false);
 
-  /// «Назад» с первого шага закрывает мастер: отдельной кнопки «Отмена» в
-  /// нижней панели нет, а уходить из мастера человек должен уметь тем же
-  /// движением, каким он по нему шёл.
-  void _back() {
-    if (_step == 0) {
-      Navigator.of(context).pop(false);
-      return;
-    }
-    setState(() => _step--);
-  }
-
-  void _next(int last) {
-    if (_step >= last) return;
-    setState(() => _step++);
-  }
-
-  void _approve() {
+  /// «Утвердить» сначала спрашивает.
+  ///
+  /// Шага между лентой и записью в базу больше нет, а расстановка года — не
+  /// то действие, которое делают случайным нажатием: подтверждение и есть
+  /// та пауза, в которую человек сверяет ленту.
+  Future<void> _approve() async {
+    final ScheduleWizardBloc bloc = context.read<ScheduleWizardBloc>();
+    final bool approved = await showWizardApproveDialog(
+      context,
+      year: widget.year,
+    );
+    if (!approved || !mounted) return;
     // Закрываемся не здесь, а по ответу сервера: пока идёт запись, мастер
     // остаётся на экране с погашенными кнопками, а неудача показывается
     // прямо в нём — закрыв его раньше времени, показать её было бы негде.
-    context.read<ScheduleWizardBloc>().add(const WizardApproved());
+    bloc.add(const WizardApproved());
+  }
+
+  /// Человек перетащил клетку: месяц уходит в блок, а предупреждение над
+  /// лентой гаснет — выбор сделан руками.
+  void _moveAnchor(int month) {
+    context.read<ScheduleWizardBloc>().add(WizardAnchorChanged(month));
+    if (_anchorMoved) return;
+    setState(() => _anchorMoved = true);
   }
 
   /// Открыть окно правки программы и, если человек сохранил, отдать её блоку.
@@ -158,32 +163,21 @@ class _WizardViewState extends State<_WizardView> {
   }
 
   Widget _body(ScheduleWizardLoaded state) {
-    final String title = _titles(state.hasAnchorStep)[_step];
-    if (title == 'Точка отсчёта') {
-      // Шаг есть только при живой заготовке: `hasAnchorStep` без неё ложен.
-      return WizardAnchorStep(
-        data: state.data!,
-        anchorMonth: state.anchorMonth,
-        onChanged: (int month) => context
-            .read<ScheduleWizardBloc>()
-            .add(WizardAnchorChanged(month)),
-      );
-    }
     return WizardPreviewStep(
       data: state.data,
       year: widget.year,
       anchorMonth: state.anchorMonth,
+      // Якорь неоткуда взять и человек его ещё не двигал: над лентой висит
+      // предупреждение, а клетка старта помечена тем же цветом.
+      anchorUnknown: state.hasAnchorStep && !_anchorMoved,
       // Модели нет — править нечего: строка программы гасит кнопку и говорит
       // почему. Идти в окно с выдуманным `modelId` было бы хуже.
       onEditProgram: widget.modelId == null ? null : () => _editProgram(state),
-      // Перетаскивание — тот же выбор точки отсчёта, только по любой клетке.
+      // Перетаскивание — и есть выбор точки отсчёта, по любой клетке.
       // На время перезапроса лента замирает: две правки подряд разошлись бы
       // с тем, что считает сервер.
-      onAnchorMoved: state.data == null || state.isReloading
-          ? null
-          : (int month) => context
-              .read<ScheduleWizardBloc>()
-              .add(WizardAnchorChanged(month)),
+      onAnchorMoved:
+          state.data == null || state.isReloading ? null : _moveAnchor,
     );
   }
 
@@ -259,12 +253,6 @@ class _WizardViewState extends State<_WizardView> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final List<String> titles = _titles(state.hasAnchorStep);
-          // Шаг мог остаться за концом списка: с прошлогодним графиком шаг
-          // один, без него — два, и после перезапроса список короче.
-          final int step = _step >= titles.length ? titles.length - 1 : _step;
-          final bool isLast = step == titles.length - 1;
-
           return Column(
             children: <Widget>[
               Expanded(
@@ -273,8 +261,6 @@ class _WizardViewState extends State<_WizardView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      WizardStepsHeader(titles: titles, current: step),
-                      const SizedBox(height: 24.0),
                       if (state.error != null) ...<Widget>[
                         _ErrorNote(message: state.error!),
                         const SizedBox(height: 16.0),
@@ -285,8 +271,6 @@ class _WizardViewState extends State<_WizardView> {
                 ),
               ),
               _Bottom(
-                isLast: isLast,
-                isFirst: step == 0,
                 // «Утвердить» гаснет, пока у модели нет программы, пока в
                 // предпросмотре есть клетка «нет шаблона», когда добавлять
                 // нечего, и на время перезапроса: утверждать заготовку,
@@ -294,8 +278,7 @@ class _WizardViewState extends State<_WizardView> {
                 canApprove: state.canApprove && !state.isReloading,
                 disabledReason: _disabledReason(state),
                 isApproving: state.isApproving,
-                onBack: _back,
-                onNext: () => _next(titles.length - 1),
+                onCancel: _cancel,
                 onApprove: _approve,
               ),
             ],
@@ -385,22 +368,17 @@ class _ErrorNote extends StatelessWidget {
   }
 }
 
-/// Нижняя панель: «Назад» слева, «Далее» или «Утвердить» справа.
+/// Нижняя панель: «Отмена» слева, «Утвердить» справа.
 class _Bottom extends StatelessWidget {
   const _Bottom({
     Key? key,
-    required this.isLast,
-    required this.isFirst,
     required this.canApprove,
     this.disabledReason,
     this.isApproving = false,
-    required this.onBack,
-    required this.onNext,
+    required this.onCancel,
     required this.onApprove,
   }) : super(key: key);
 
-  final bool isLast;
-  final bool isFirst;
   final bool canApprove;
 
   /// Почему «Утвердить» не нажимается — текст тултипа. `null`, когда кнопка
@@ -411,16 +389,13 @@ class _Bottom extends StatelessWidget {
   /// Идёт создание графика: обе кнопки выключены, на правой крутилка. Уйти
   /// назад посреди записи нельзя — запрос уже ушёл.
   final bool isApproving;
-  final VoidCallback onBack;
-  final VoidCallback onNext;
+  final VoidCallback onCancel;
   final VoidCallback onApprove;
 
   @override
   Widget build(BuildContext context) {
     Widget primary = ElevatedButton(
-      onPressed: isApproving
-          ? null
-          : (isLast ? (canApprove ? onApprove : null) : onNext),
+      onPressed: isApproving || !canApprove ? null : onApprove,
       style: _primaryStyle(),
       child: isApproving
           ? const SizedBox(
@@ -432,9 +407,9 @@ class _Bottom extends StatelessWidget {
                     AlwaysStoppedAnimation<Color>(ColorApp.myColorWhite),
               ),
             )
-          : Text(isLast ? 'Утвердить' : 'Далее'),
+          : const Text('Утвердить'),
     );
-    if (isLast && !canApprove && !isApproving && disabledReason != null) {
+    if (!canApprove && !isApproving && disabledReason != null) {
       // Выключенная кнопка обязана объяснять себя: почему она серая, иначе
       // написано только в примечании под клетками. Обёртка только на
       // выключенной: с пустым текстом тултип всплывает пустой рамкой.
@@ -452,7 +427,7 @@ class _Bottom extends StatelessWidget {
         child: Row(
           children: <Widget>[
             TextButton(
-              onPressed: isApproving ? null : onBack,
+              onPressed: isApproving ? null : onCancel,
               style: TextButton.styleFrom(
                 foregroundColor: ColorApp.myColorGray,
                 padding: const EdgeInsets.symmetric(
@@ -460,7 +435,7 @@ class _Bottom extends StatelessWidget {
                   vertical: 14.0,
                 ),
               ),
-              child: Text(isFirst ? 'Отмена' : 'Назад'),
+              child: const Text('Отмена'),
             ),
             const Spacer(),
             primary,
