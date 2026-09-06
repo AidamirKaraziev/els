@@ -26,10 +26,13 @@ import 'api_config.dart';
 /// Раньше из пустого поля получался адрес вида `http://null`, и на экране
 /// возникала иконка битой картинки. Пустое место честнее: под аватаркой
 /// уже лежит серый кружок-заглушка, и он остаётся виден.
+/// Прежний пиксель был непрозрачным лишь наполовину и синим — `RGBA(0, 0,
+/// 255, 127)`, — и на месте отсутствующей фотографии проступало синее пятно
+/// поверх серой заглушки. Здесь ровно нули по всем четырём каналам.
 final ImageProvider _blank = MemoryImage(
   base64Decode(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAC'
-    'hwGA60e6kgAAAABJRU5ErkJggg==',
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUA'
+    'Aen63NgAAAAASUVORK5CYII=',
   ),
 );
 

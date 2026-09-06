@@ -52,6 +52,7 @@ class ScheduleObjectBloc extends Bloc<ScheduleObjectEvent, ScheduleObjectState> 
         isYearLoading: true,
       ));
       await _loadYear(emit, _year);
+      await _loadDefects(emit, _year);
     } on SchedulesException catch (error) {
       emit(ScheduleObjectFailure(error.message));
     } catch (_) {
@@ -68,13 +69,18 @@ class ScheduleObjectBloc extends Bloc<ScheduleObjectEvent, ScheduleObjectState> 
 
     _year = event.year;
     // Клетки прошлого года гасим сразу: показывать чужие цвета под новой
-    // подписью года нельзя — это прямая неправда о состоянии объекта.
-    emit(current.copyWith(
+    // подписью года нельзя — это прямая неправда о состоянии объекта. Число
+    // дефектов гасим по той же причине — оно тоже за год, и `copyWith` тут
+    // не годится: он умеет только оставить прошлое значение.
+    emit(ScheduleObjectLoaded(
+      card: current.card,
       year: event.year,
       cells: _emptyYear(),
       isYearLoading: true,
+      isGenerating: current.isGenerating,
     ));
     await _loadYear(emit, event.year);
+    await _loadDefects(emit, event.year);
   }
 
   Future<void> _onGenerateRequested(
@@ -123,6 +129,22 @@ class ScheduleObjectBloc extends Bloc<ScheduleObjectEvent, ScheduleObjectState> 
     } catch (_) {
       _emitYearError(emit, year, 'Не удалось загрузить график за $year год');
     }
+  }
+
+  /// Посчитать дефектные акты года и показать число.
+  ///
+  /// Неудача проходит молча: значок — не главное на экране, и ронять на него
+  /// плашку поверх загруженной ленты не за что. Число просто не появится.
+  Future<void> _loadDefects(Emitter<ScheduleObjectState> emit, int year) async {
+    int count;
+    try {
+      count = await _repository.fetchDefectsCount(objectId, year);
+    } catch (_) {
+      return;
+    }
+    final ScheduleObjectState current = state;
+    if (current is! ScheduleObjectLoaded || current.year != year) return;
+    emit(current.copyWith(defectsCount: count, yearError: current.yearError));
   }
 
   void _emitYearError(Emitter<ScheduleObjectState> emit, int year, String message) {

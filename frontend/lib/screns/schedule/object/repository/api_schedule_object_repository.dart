@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../../../foreman/defects/defects_repository.dart';
 import '../../../../helper/api_client.dart';
 import '../../../../helper/api_config.dart';
 import '../../models/month_cell.dart';
@@ -27,8 +28,10 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
     this.timeout = const Duration(seconds: 20),
     Future<http.Response> Function(Uri uri)? send,
     Future<http.Response> Function(Uri uri, String body)? sendPost,
+    DefectsRepository defects = const DefectsRepository(),
   })  : _send = send ?? _getViaApi,
-        _sendPost = sendPost ?? _postViaApi;
+        _sendPost = sendPost ?? _postViaApi,
+        _defects = defects;
 
   final Duration timeout;
 
@@ -37,6 +40,10 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
   /// ответ, нельзя.
   final Future<http.Response> Function(Uri uri) _send;
   final Future<http.Response> Function(Uri uri, String body) _sendPost;
+
+  /// Счётчик дефектных актов спрашиваем у репозитория дефектов, а не своим
+  /// запросом: адрес ручки должен быть записан в одном месте, и это оно.
+  final DefectsRepository _defects;
 
   static Future<http.Response> _getViaApi(Uri uri) =>
       Api.get(uri, headers: <String, String>{'Accept': 'application/json'});
@@ -108,6 +115,19 @@ class ApiScheduleObjectRepository implements ScheduleObjectRepository {
       throw const SchedulesException('Сервер вернул неожиданный ответ');
     }
     return _cells(first.cast<String, dynamic>()['cells']);
+  }
+
+  @override
+  Future<int> fetchDefectsCount(int objectId, int year) async {
+    try {
+      return await _defects
+          .countByObjectAndYear(objectId: objectId, year: year)
+          .timeout(timeout);
+    } catch (_) {
+      // Текст неудачи наружу не отдаём: значок — не главное на экране, и
+      // плашки об ошибке он не заслуживает. Блок просто не покажет число.
+      throw const SchedulesException('Не удалось посчитать дефектные акты');
+    }
   }
 
   @override

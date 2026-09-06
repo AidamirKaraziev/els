@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../foreman/defects/defects_badge.dart';
 import '../../../../helper/calendar/month_picker.dart' show kMonthsGenitive;
 import '../../../../helper/class_colors.dart';
 import '../../../../helper/hints/hint_icon.dart';
@@ -24,7 +25,9 @@ import 'object_block.dart';
 /// * **Цвета — насыщенные из палитры проекта**, а не бледные плашки кадра.
 ///   Те же пять состояний, что в ленте раздела «Графики» (решение 11): один
 ///   и тот же месяц не может быть в двух местах разного цвета.
-/// * **Иконок выгрузки и дефектных актов рядом с заголовком нет** — это S3.
+/// * **Иконки выгрузки рядом с заголовком нет** — она из другой задачи.
+///   Значок дефектных актов с кадра здесь уже есть, но с числом и серым
+///   нулевым состоянием: см. `foreman/defects/defects_badge.dart`.
 /// * **Срок справа от ленты считаем сами.** В кадре там «11 января –
 ///   17 января» — точный плановый интервал работы. Такого интервала в данных
 ///   нет вовсе: у работы есть только фактические `started_at` и
@@ -43,6 +46,8 @@ class ObjectScheduleCard extends StatelessWidget {
     this.isGenerating = false,
     this.error,
     this.onGenerate,
+    this.defectsCount,
+    this.onDefectsTap,
   }) : super(key: key);
 
   final int year;
@@ -62,6 +67,13 @@ class ObjectScheduleCard extends StatelessWidget {
   final String? error;
 
   final VoidCallback? onGenerate;
+
+  /// Сколько дефектных актов у объекта за [year]. `null` — ещё не посчитали
+  /// или посчитать не удалось; значка тогда нет вовсе.
+  final int? defectsCount;
+
+  /// Открыть список дефектов за показанный год.
+  final VoidCallback? onDefectsTap;
 
   /// Ширина, ниже которой подпись «Плановые ТО» встаёт над лентой.
   ///
@@ -99,7 +111,20 @@ class ObjectScheduleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return ObjectBlock(
       title: 'Техническое обслуживание',
-      titleTrailing: ScheduleYearPicker(year: year, onChanged: onYearChanged),
+      titleTrailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (defectsCount != null) ...<Widget>[
+            DefectsBadge(
+              count: defectsCount!,
+              year: year,
+              onTap: onDefectsTap,
+            ),
+            const SizedBox(width: 8.0),
+          ],
+          ScheduleYearPicker(year: year, onChanged: onYearChanged),
+        ],
+      ),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16.0),

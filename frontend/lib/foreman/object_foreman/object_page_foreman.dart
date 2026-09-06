@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../../screns/home_page/home_page.dart';
 import '../user_page_foreman.dart';
 import '../defects/defects_screen.dart';
+import '../defects/live_defects_badge.dart';
 import 'act_foreman.dart';
 import 'letter_of_appointment_foreman.dart';
 import 'object_screen_foreman.dart';
@@ -1235,23 +1236,31 @@ class _ObjectPageForemanState extends State<ObjectPageForeman> {
                                                         width: 1,
                                                         color: ColorApp
                                                             .myColorAvatar)),
-                                                child: const Row(
+                                                child: Row(
                                                   children: [
-                                                    Icon(
+                                                    const Icon(
                                                         Icons
                                                             .report_gmailerrorred_outlined,
                                                         color: ColorApp
                                                             .myColorGreen),
-                                                    SizedBox(width: 10.0),
-                                                    Text(
+                                                    const SizedBox(width: 10.0),
+                                                    const Text(
                                                       'Дефекты объекта',
                                                       style: TextStyle(
                                                           fontSize: 16,
                                                           fontWeight:
                                                               FontWeight.w600),
                                                     ),
-                                                    Spacer(),
-                                                    _OpenSquare(
+                                                    const Spacer(),
+                                                    // Своего нажатия у значка
+                                                    // нет: список открывает
+                                                    // вся строка целиком.
+                                                    LiveDefectsBadge(
+                                                      objectId: viewObjectPage[
+                                                          'id'] as int,
+                                                    ),
+                                                    const SizedBox(width: 8.0),
+                                                    const _OpenSquare(
                                                         icon: Icons
                                                             .open_in_full_outlined),
                                                   ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../foreman/defects/defects_screen.dart';
 import '../../../../helper/class_colors.dart';
 import '../../../in_progress_works/view/employee_card.dart';
 import '../../models/month_cell.dart';
@@ -218,6 +219,24 @@ class _Content extends StatelessWidget {
     );
   }
 
+  /// Значок дефектных актов ведёт в их список — за тот же год, что показан
+  /// в ленте. Год передаём явно: список открывается на текущем году, и без
+  /// этого число на значке и лента под ним разошлись бы.
+  void _openDefects(BuildContext context) {
+    // Объект берём до `push`: под маршрутом провайдера блока уже нет, и
+    // `context.read` внутри `builder` бросил бы «провайдер не найден».
+    final int objectId = context.read<ScheduleObjectBloc>().objectId;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => DefectsScreen(
+          objectId: objectId,
+          objectName: objectName,
+          initialYear: state.year,
+        ),
+      ),
+    );
+  }
+
   /// «Создать график на N» открывает мастер расстановки.
   ///
   /// Раньше кнопка слала `ScheduleObjectGenerateRequested` сразу и
@@ -279,6 +298,8 @@ class _Content extends StatelessWidget {
               .add(ScheduleObjectYearRequested(year)),
           onGenerate: () => _openWizard(context, state.year),
           onCellTap: (MonthCell cell) => _openWork(context, cell),
+          defectsCount: state.defectsCount,
+          onDefectsTap: () => _openDefects(context),
         ),
       ],
     );

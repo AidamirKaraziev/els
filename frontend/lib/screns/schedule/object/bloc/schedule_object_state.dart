@@ -26,6 +26,7 @@ class ScheduleObjectLoaded extends ScheduleObjectState {
     this.isYearLoading = false,
     this.isGenerating = false,
     this.yearError,
+    this.defectsCount,
   });
 
   final ScheduleObjectCard card;
@@ -43,6 +44,12 @@ class ScheduleObjectLoaded extends ScheduleObjectState {
   /// не вредит, но два запроса подряд из одного нажатия — это не то, что
   /// человек имел в виду.
   final bool isGenerating;
+
+  /// Сколько дефектных актов у объекта за [year]. `null` — ещё не посчитали
+  /// или посчитать не удалось: значок тогда не показываем вовсе. Ноль от
+  /// «неизвестно» отличается, и рисовать серый значок вместо неотвеченного
+  /// запроса значило бы соврать, что дефектов не было.
+  final int? defectsCount;
 
   /// Что пошло не так с лентой: не загрузился год, не создался график.
   ///
@@ -67,6 +74,7 @@ class ScheduleObjectLoaded extends ScheduleObjectState {
     bool? isYearLoading,
     bool? isGenerating,
     String? yearError,
+    int? defectsCount,
   }) {
     return ScheduleObjectLoaded(
       card: card,
@@ -75,6 +83,7 @@ class ScheduleObjectLoaded extends ScheduleObjectState {
       isYearLoading: isYearLoading ?? this.isYearLoading,
       isGenerating: isGenerating ?? this.isGenerating,
       yearError: yearError,
+      defectsCount: defectsCount ?? this.defectsCount,
     );
   }
 }

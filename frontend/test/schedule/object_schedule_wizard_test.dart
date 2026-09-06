@@ -48,6 +48,10 @@ class _CountingObjectRepository implements ScheduleObjectRepository {
       _inner.fetchYear(objectId, year);
 
   @override
+  Future<int> fetchDefectsCount(int objectId, int year) =>
+      _inner.fetchDefectsCount(objectId, year);
+
+  @override
   Future<void> generateYear(int objectId, int year) async {
     generateCalls++;
     // ignore: deprecated_member_use_from_same_package

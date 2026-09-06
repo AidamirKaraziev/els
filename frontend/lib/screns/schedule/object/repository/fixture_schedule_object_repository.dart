@@ -99,6 +99,14 @@ class FixtureScheduleObjectRepository implements ScheduleObjectRepository {
     return past ? MonthStatus.overdue : MonthStatus.pending;
   }
 
+  /// Дефекты на фикстуре есть только в заполненном году: так на наброске
+  /// видно оба состояния значка — красное с числом и серое.
+  @override
+  Future<int> fetchDefectsCount(int objectId, int year) async {
+    await _wait();
+    return year == _filledYear ? 3 : 0;
+  }
+
   @override
   @Deprecated(
     'График расставляет мастер: ScheduleWizardRepository.generate шлёт '

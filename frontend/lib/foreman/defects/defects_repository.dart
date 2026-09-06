@@ -50,6 +50,24 @@ class DefectsRepository {
         .toList();
   }
 
+  /// Сколько дефектных актов у объекта за год — для значка-счётчика.
+  ///
+  /// Отдельной ручкой, а не длиной ленты: считает она ровно тот же запрос
+  /// (`kind = internal`, год создания), но не тащит через сеть акты со
+  /// снимками ради одного числа.
+  Future<int> countByObjectAndYear({
+    required int objectId,
+    required int year,
+  }) async {
+    final Uri url = Uri.parse(
+      '${ApiConfig.base}/defective-act/by-object/$objectId/count/?year=$year',
+    );
+    final http.Response response = await Api.get(url);
+    final Object? data = _data(response);
+    if (data is! int) throw const FormatException('Ответ без числа');
+    return data;
+  }
+
   /// Полный акт: описание и снимки, которых в строке списка нет.
   Future<DefectEntry> byId(int id) async {
     final Uri url = Uri.parse('${ApiConfig.base}/defective-act/$id/');

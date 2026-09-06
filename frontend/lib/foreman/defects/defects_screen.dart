@@ -27,10 +27,16 @@ class DefectsScreen extends StatefulWidget {
     this.entries,
     this.repository,
     this.today,
+    this.initialYear,
   }) : super(key: key);
 
   final int objectId;
   final String? objectName;
+
+  /// Год, с которого открывается список. Задаётся, когда экран открыт со
+  /// значка-счётчика: значок посчитан за показанный год, и список обязан
+  /// открыться на том же — иначе число и лента расходятся.
+  final int? initialYear;
 
   /// Готовый список — для набросков и тестов. В приложении не задаётся:
   /// экран спрашивает сервер сам.
@@ -58,7 +64,7 @@ class _DefectsScreenState extends State<DefectsScreen> {
   @override
   void initState() {
     super.initState();
-    _year = (widget.today ?? DateTime.now()).year;
+    _year = widget.initialYear ?? (widget.today ?? DateTime.now()).year;
     _repository = widget.repository ?? const DefectsRepository();
     _load();
   }
