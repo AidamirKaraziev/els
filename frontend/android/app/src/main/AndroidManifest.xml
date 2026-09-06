@@ -1,15 +1,21 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.els">
-    <uses-permission android:name="android.permission.INTERNET"/>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- До Android 13 включительно доступ к галерее шёл через эти разрешения;
+         дальше их место занимает системный фотопикер image_picker. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Камера не обязательна: без неё приложение работает, только без фото. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
    <application
         android:label="els"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-       <uses-permission android:name="android.permission.INTERNET" />
-       <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-       <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-       <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-       <uses-feature android:name="android.hardware.camera" android:required="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
