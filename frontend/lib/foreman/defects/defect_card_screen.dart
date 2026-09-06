@@ -7,12 +7,14 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../helper/api_image.dart';
 import '../../helper/class_colors.dart';
 import 'defect_entry.dart';
 import 'defects_layout.dart';
 import 'defects_repository.dart';
+import 'issue_to_client_screen.dart';
 
 class DefectCardScreen extends StatefulWidget {
   const DefectCardScreen({
@@ -21,6 +23,7 @@ class DefectCardScreen extends StatefulWidget {
     this.objectName,
     this.repository,
     this.loadFull = true,
+    this.openLink,
   }) : super(key: key);
 
   /// То, что известно из списка. Показывается сразу.
@@ -39,6 +42,10 @@ class DefectCardScreen extends StatefulWidget {
   /// Набросок и тесты работают на готовой записи и в сеть не ходят.
   final bool loadFull;
 
+  /// Чем открыть готовую ссылку на PDF. По умолчанию — браузером; подменяется
+  /// в тестах, где `url_launcher` уходит в платформенный канал.
+  final Future<void> Function(String url)? openLink;
+
   @override
   State<DefectCardScreen> createState() => _DefectCardScreenState();
 }
@@ -53,6 +60,47 @@ class _DefectCardScreenState extends State<DefectCardScreen> {
     _entry = widget.entry;
     _repository = widget.repository ?? const DefectsRepository();
     if (widget.loadFull) _load();
+  }
+
+  /// Оформление клиенту: выпуск, следом сборка файла, потом перечитывание.
+  ///
+  /// Возврат назад делаем здесь, а не в экране оформления: пока запрос не
+  /// прошёл, черновик прораба — единственное место, где живут его правки, и
+  /// закрывать экран до ответа нельзя. Ошибку показываем и остаёмся там же.
+  Future<void> _issue(IssueDraft draft) async {
+    final DefectEntry child =
+        await _repository.issueToClient(_entry.id, draft.toBody());
+    // Файл собирается отдельным запросом. Если он не собрался, выпуск всё
+    // равно состоялся: акт клиенту оформлен, кнопка PDF в строке просто
+    // останется неактивной до следующего раза.
+    try {
+      await _repository.generatePdf(child.id);
+    } catch (_) {
+      // Молча: сам выпуск прошёл, и ронять его сообщением об ошибке незачем.
+    }
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    await _load();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Акт оформлен клиенту')),
+    );
+  }
+
+  Future<void> _openPdf(String path) async {
+    try {
+      final String url = await _repository.downloadLink(path);
+      final Future<void> Function(String url) open = widget.openLink ??
+          (String value) =>
+              launchUrl(Uri.parse(value), mode: LaunchMode.externalApplication);
+      // Ссылка живёт минуту, поэтому открываем сразу, а не кладём в состояние.
+      await open(url);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось открыть файл: $error')),
+      );
+    }
   }
 
   /// Дозагрузка молчаливая: если полный акт не приехал, на экране остаётся то,
@@ -137,6 +185,43 @@ class _DefectCardScreenState extends State<DefectCardScreen> {
                           )
                         : _Gallery(photos: _entry.photos),
                   ),
+                  if (_entry.clientActs.isNotEmpty)
+                    _Block(
+                      title: 'Оформлено клиенту',
+                      child: Column(
+                        children: <Widget>[
+                          for (final DefectClientAct act in _entry.clientActs)
+                            _ClientActRow(
+                              act: act,
+                              last: act == _entry.clientActs.last,
+                              onOpen: () => _openPdf(act.pdfPath!),
+                            ),
+                        ],
+                      ),
+                    ),
+                  // Кнопки нет только у самого клиентского акта: из
+                  // порождённой записи дальше не оформляют. Повторный выпуск
+                  // разрешён — на сервере это ещё одна запись.
+                  if (!_entry.isClient)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        DefectsLayout.screenPadding,
+                        DefectsLayout.cardGap,
+                        DefectsLayout.screenPadding,
+                        0.0,
+                      ),
+                      child: _IssueButton(
+                        again: _entry.clientActs.isNotEmpty,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => IssueToClientScreen(
+                              entry: _entry,
+                              onIssue: _issue,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -358,4 +443,96 @@ String _formatDate(DateTime date) {
   final String day = date.day.toString().padLeft(2, '0');
   final String month = date.month.toString().padLeft(2, '0');
   return '$day.$month.${date.year}';
+}
+
+
+/// Строка блока «Оформлено клиенту»: когда ушло, под каким заголовком и файл.
+///
+/// Пока PDF не собран, кнопка неактивна и говорит об этом словом: молчащая
+/// кнопка читалась бы как сломанная.
+class _ClientActRow extends StatelessWidget {
+  const _ClientActRow({
+    required this.act,
+    required this.onOpen,
+    this.last = false,
+  });
+
+  final DefectClientAct act;
+  final VoidCallback onOpen;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool ready = act.pdfPath != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    act.title ?? 'Без заголовка',
+                    style: DefectsLayout.rowValue,
+                  ),
+                  const SizedBox(height: 4.0),
+                  Text(
+                    act.createdAt == null
+                        ? 'Дата неизвестна'
+                        : _formatDate(act.createdAt!),
+                    style: DefectsLayout.rowLabel,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12.0),
+            TextButton.icon(
+              onPressed: ready ? onOpen : null,
+              icon: const Icon(Icons.picture_as_pdf_outlined, size: 18.0),
+              label: Text(ready ? 'Скачать PDF' : 'Файл не собран'),
+              style: TextButton.styleFrom(
+                foregroundColor: ColorApp.myColorGreenAuth,
+              ),
+            ),
+          ],
+        ),
+        if (!last) const Divider(height: 21.0, color: DefectsLayout.divider),
+      ],
+    );
+  }
+}
+
+/// Кнопка «Оформить клиенту» — вход на экран выпуска.
+class _IssueButton extends StatelessWidget {
+  const _IssueButton({required this.onTap, this.again = false});
+
+  /// Клиенту уже оформляли: подпись меняется, чтобы прораб не решил, что
+  /// первое нажатие не сработало.
+  final bool again;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: ColorApp.myColorGreenAuth,
+          foregroundColor: ColorApp.myColorWhite,
+          padding: const EdgeInsets.symmetric(vertical: 14.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DefectsLayout.cardRadius),
+          ),
+        ),
+        child: Text(
+          again ? 'Оформить клиенту ещё раз' : 'Оформить клиенту',
+          style: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w500),
+        ),
+      ),
+    );
+  }
 }

@@ -219,4 +219,66 @@ void main() {
       expect(withMonth(12).monthName, 'декабрь');
     });
   });
+
+  group('оформленное клиенту', () {
+    test('потомки приходят от родителя, а не отдельным запросом', () {
+      final DefectEntry entry = DefectEntry.fromJson(<String, dynamic>{
+        'id': 12,
+        'title': 'Износ каната',
+        'kind': 'internal',
+        'state': 'issued',
+        'client_acts': <dynamic>[
+          <String, dynamic>{
+            'id': 31,
+            'client_title': 'Требуется замена троса',
+            'created_at': 1757116800,
+            'pdf_file': 'h:8000/api/v1/static/defective_act/31/pdf/a.pdf',
+          },
+        ],
+      });
+
+      expect(entry.isClient, isFalse);
+      expect(entry.clientActs.single.id, 31);
+      expect(entry.clientActs.single.title, 'Требуется замена троса');
+      expect(entry.clientActs.single.createdAt, isNotNull);
+      expect(entry.clientActs.single.pdfPath, contains('defective_act/31'));
+    });
+
+    test('файла ещё нет: PDF собирается отдельным запросом', () {
+      final DefectEntry entry = DefectEntry.fromJson(<String, dynamic>{
+        'id': 12,
+        'title': 'Износ каната',
+        'client_acts': <dynamic>[
+          <String, dynamic>{'id': 31, 'pdf_file': null},
+        ],
+      });
+
+      expect(entry.clientActs.single.pdfPath, isNull);
+    });
+
+    test('запись без id пропускается: её нечем открыть', () {
+      final DefectEntry entry = DefectEntry.fromJson(<String, dynamic>{
+        'id': 12,
+        'title': 'Износ каната',
+        'client_acts': <dynamic>[
+          <String, dynamic>{'client_title': 'без id'},
+          <String, dynamic>{'id': 31},
+        ],
+      });
+
+      expect(entry.clientActs.map((DefectClientAct a) => a.id), <int>[31]);
+    });
+
+    test('у клиентского акта список пуст, и он помечен своим kind', () {
+      final DefectEntry entry = DefectEntry.fromJson(<String, dynamic>{
+        'id': 31,
+        'title': 'Износ каната',
+        'kind': 'client',
+        'client_acts': <dynamic>[],
+      });
+
+      expect(entry.isClient, isTrue);
+      expect(entry.clientActs, isEmpty);
+    });
+  });
 }

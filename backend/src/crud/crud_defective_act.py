@@ -235,6 +235,9 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
                 .joinedload(ActFact.act_base)
                 .joinedload(ActBase.type_act),
                 joinedload(DefectiveAct.created_by_user),
+                # Что ушло клиенту, показывает каждая строка ленты — значит и
+                # берётся тем же запросом, а не по одному на акт.
+                joinedload(DefectiveAct.client_acts),
             )
         )
         return q, 0, None

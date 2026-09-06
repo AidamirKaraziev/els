@@ -62,6 +62,22 @@ class DefectiveActIssueToClient(BaseModel):
     photo_ids: List[int] = []
 
 
+class DefectiveActChildGet(BaseModel):
+    """Клиентский акт в списке у своего первоисточника.
+
+    Узкая нарочно: полная `DefectiveActGet` внутри себя утянула бы рекурсию,
+    снимки и развёрнутое плановое ТО — в каждую строку ленты объекта. Здесь
+    ровно то, чем прораб отличает один выпуск от другого: когда оформлен, под
+    каким заголовком и есть ли готовый файл.
+    """
+
+    id: int
+    client_title: Optional[str]
+    state: Optional[str]
+    pdf_file: Optional[str]
+    created_at: Optional[int]
+
+
 class DefectiveActGet(BaseModel):
     id: int
 
@@ -105,3 +121,7 @@ class DefectiveActGet(BaseModel):
     photos: List[DefectiveActPhotoGet] = []
     #: Снимки, отобранные в клиентский акт. У внутреннего пусто.
     client_photos: List[DefectiveActPhotoGet] = []
+
+    #: Что из этого акта уже ушло клиенту. У самого клиентского пусто.
+    #: Выпусков может быть несколько: акт мог уйти дважды, с разным набором фото.
+    client_acts: List[DefectiveActChildGet] = []

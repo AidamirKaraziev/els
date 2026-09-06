@@ -14,6 +14,22 @@ import '../../helper/api_client.dart';
 import '../../helper/api_config.dart';
 import 'defect_entry.dart';
 
+/// Путь файла в том виде, в каком его ждёт `POST /files/link`.
+///
+/// Бэкенд отдаёт `pdf_file` адресом (`host:port/api/v1/static/defective_act/…`,
+/// см. `getters/static_url.py`), а ручка ссылки принимает путь относительно
+/// каталога загрузок и по нему же считает владельца файла
+/// (`core/files.parse_owner`). Отправить туда полный адрес значит получить
+/// «такого файла нет»: разбор увидит `host:port` вместо сущности.
+String staticPathOf(String raw) {
+  const String marker = '/api/v1/static/';
+  final int at = raw.indexOf(marker);
+  if (at >= 0) return raw.substring(at + marker.length);
+  // Уже относительный путь: так приходит от сервера без запроса и так удобнее
+  // в тестах. Ведущий слэш ручка срезает сама, но лишним не будет.
+  return raw.startsWith('/') ? raw.substring(1) : raw;
+}
+
 class DefectsRepository {
   const DefectsRepository();
 
@@ -39,6 +55,55 @@ class DefectsRepository {
     final Uri url = Uri.parse('${ApiConfig.base}/defective-act/$id/');
     final http.Response response = await Api.get(url);
     return DefectEntry.fromJson(_single(response));
+  }
+
+  /// Оформить акт клиенту. Возвращается **потомок**, а не первоисточник:
+  /// сервер заводит отдельную запись, а родителю только меняет состояние.
+  ///
+  /// Повторный вызов заводит ещё один клиентский акт — так и задумано: акт
+  /// мог уйти клиенту дважды, с разным набором фото.
+  Future<DefectEntry> issueToClient(int id, Map<String, dynamic> body) async {
+    final Uri url = Uri.parse(
+      '${ApiConfig.base}/defective-act/$id/issue-to-client/',
+    );
+    final http.Response response = await Api.post(
+      url,
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+    return DefectEntry.fromJson(_single(response));
+  }
+
+  /// Собрать PDF. Отдельным запросом, а не побочным действием выпуска: файл
+  /// пересобирается и для внутреннего акта, и для клиентского.
+  Future<DefectEntry> generatePdf(int id) async {
+    final Uri url = Uri.parse('${ApiConfig.base}/defective-act/$id/pdf/');
+    final http.Response response = await Api.post(url);
+    return DefectEntry.fromJson(_single(response));
+  }
+
+  /// Короткоживущая ссылка на файл — её можно открыть в новой вкладке.
+  ///
+  /// Прямо к `/api/v1/static/…` обратиться нельзя: статике нужен заголовок
+  /// `Authorization`, а новая вкладка его не отправит. Тот же приём, что у
+  /// выгрузки топа поломок (`screns/home/top_breakdowns`).
+  Future<String> downloadLink(String pdfPath) async {
+    final Uri url = Uri.parse('${ApiConfig.base}/files/link');
+    final http.Response response = await Api.post(
+      url,
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode(<String, String>{'path': staticPathOf(pdfPath)}),
+    );
+    final Map<String, dynamic> data = _single(response);
+    final Object? link = data['url'];
+    if (link == null) throw const FormatException('Ответ без ссылки');
+    return link.toString();
   }
 
   List<dynamic> _list(http.Response response) {

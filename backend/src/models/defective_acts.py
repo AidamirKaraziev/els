@@ -101,7 +101,21 @@ class DefectiveAct(Base):
     object = relationship("Object")
     act_fact = relationship("ActFact")
     order = relationship("Order")
-    parent = relationship("DefectiveAct", remote_side=[id])
+    parent = relationship(
+        "DefectiveAct", remote_side=[id], back_populates="client_acts"
+    )
+
+    #: Клиентские акты, выпущенные из этого. Пусто у самого клиентского.
+    #:
+    #: Без этой стороны потомка нельзя найти по родителю вовсе: лента объекта
+    #: отдаёт только `internal`, а `parent_id` ведёт вверх. Прораб открывал бы
+    #: акт, видел «Выдан клиенту» и не мог добраться до того, что ушло наружу.
+    client_acts = relationship(
+        "DefectiveAct",
+        back_populates="parent",
+        foreign_keys=[parent_id],
+        order_by="DefectiveAct.id",
+    )
     responsible_user = relationship("UniversalUser", foreign_keys=[responsible_user_id])
     created_by_user = relationship("UniversalUser", foreign_keys=[created_by_user_id])
     status = relationship(Status)

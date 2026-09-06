@@ -10,8 +10,19 @@ from src.getters.status import get_statuses
 from src.getters.type_act import get_type_acts
 from src.getters.universal_user import get_universal_user
 from src.models import DefectiveAct
-from src.schemas.defective_act import DefectiveActGet
+from src.schemas.defective_act import DefectiveActChildGet, DefectiveActGet
 from src.utils.time_stamp import to_timestamp
+
+
+def _absolute_pdf(
+    pdf_file, request: Optional[Request], config: Settings
+) -> Optional[str]:
+    """Путь к файлу — в адрес. Без запроса адреса нет, отдаём как лежит."""
+    if pdf_file is None:
+        return None
+    if request is None:
+        return str(pdf_file)
+    return static_base_url(request, config) + str(pdf_file)
 
 
 def getting_defective_act(
@@ -23,9 +34,7 @@ def getting_defective_act(
     created_at = to_timestamp(obj.created_at) if obj.created_at is not None else None
     updated_at = to_timestamp(obj.updated_at) if obj.updated_at is not None else None
 
-    pdf_file = obj.pdf_file
-    if request is not None and pdf_file is not None:
-        pdf_file = static_base_url(request, config) + str(pdf_file)
+    pdf_file = _absolute_pdf(obj.pdf_file, request, config)
 
     # Вид ТО лежит через две связи, и каждая из них может быть пустой: акт по
     # заявке работы по ТО не имеет вовсе, а у старой работы мог быть снят
@@ -74,5 +83,21 @@ def getting_defective_act(
             getting_defective_act_photo(link.photo, request=request)
             for link in (obj.client_photos or [])
             if link.photo is not None
+        ],
+        # Только у внутреннего: у клиентского акта потомков не бывает, и
+        # пустой список тут честнее ветки, разворачивающей акт сам в себя.
+        client_acts=[]
+        if obj.kind == "client"
+        else [
+            DefectiveActChildGet(
+                id=child.id,
+                client_title=child.client_title,
+                state=child.state,
+                pdf_file=_absolute_pdf(child.pdf_file, request, config),
+                created_at=to_timestamp(child.created_at)
+                if child.created_at is not None
+                else None,
+            )
+            for child in (obj.client_acts or [])
         ],
     )

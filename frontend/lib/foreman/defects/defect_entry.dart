@@ -112,6 +112,45 @@ class DefectPhoto {
   }
 }
 
+/// Клиентский акт, выпущенный из этого — строка блока «Оформлено клиенту».
+///
+/// Отдельным значением, а не `DefectEntry`: у потомка в ленте родителя есть
+/// только id, заголовок, дата и файл (`DefectiveActChildGet` на бэкенде).
+/// Разворачивать его в полный акт было бы враньём про то, что мы знаем.
+class DefectClientAct {
+  const DefectClientAct({
+    required this.id,
+    this.title,
+    this.pdfPath,
+    this.createdAt,
+  });
+
+  final int id;
+
+  /// Заголовок, ушедший клиенту. Пуст, если прораб не правил текст механика —
+  /// сервер в этом случае кладёт в акт исходный, так что пустым он не бывает,
+  /// но поле необязательное, и полагаться на это не станем.
+  final String? title;
+
+  /// Путь к файлу, как его отдал бэкенд (`host:port/api/v1/static/…`).
+  /// Пуст, пока PDF не собран: файл делается отдельным запросом.
+  final String? pdfPath;
+
+  final DateTime? createdAt;
+
+  static DefectClientAct? fromJson(Map<String, dynamic> json) {
+    final Object? id = json['id'];
+    // Без id строку не открыть и файл не запросить — показывать нечего.
+    if (id is! int) return null;
+    return DefectClientAct(
+      id: id,
+      title: DefectEntry._text(json['client_title']),
+      pdfPath: DefectEntry._text(json['pdf_file']),
+      createdAt: DefectEntry._dateFrom(json['created_at']),
+    );
+  }
+}
+
 /// Дефектный акт в том виде, в каком его показывают экраны прораба.
 class DefectEntry {
   const DefectEntry({
@@ -127,6 +166,9 @@ class DefectEntry {
     this.authorName,
     this.objectName,
     this.photos = const <DefectPhoto>[],
+    this.clientActs = const <DefectClientAct>[],
+    this.isClient = false,
+    this.pdfPath,
   });
 
   final int id;
@@ -160,6 +202,18 @@ class DefectEntry {
   final String? objectName;
 
   final List<DefectPhoto> photos;
+
+  /// Что из этого акта уже ушло клиенту. У самого клиентского пусто.
+  ///
+  /// Приходит от родителя (`client_acts`), а не собирается запросом: лента
+  /// объекта отдаёт только внутренние акты, и найти потомка иначе нечем.
+  final List<DefectClientAct> clientActs;
+
+  /// Клиентский акт — порождённая запись, из неё не оформляют дальше.
+  final bool isClient;
+
+  /// Путь к своему PDF, как его отдал бэкенд. Пуст, пока файл не собран.
+  final String? pdfPath;
 
   static const List<String> _months = <String>[
     'январь',
@@ -203,6 +257,9 @@ class DefectEntry {
           ? _text((plannedTo['object_id'] as Map)['name'])
           : null,
       photos: _photosFrom(json['photos']),
+      clientActs: _clientActsFrom(json['client_acts']),
+      isClient: json['kind'] == 'client',
+      pdfPath: _text(json['pdf_file']),
     );
   }
 
@@ -232,6 +289,18 @@ class DefectEntry {
       if (photo != null) photos.add(photo);
     }
     return photos;
+  }
+
+  static List<DefectClientAct> _clientActsFrom(Object? raw) {
+    if (raw is! List) return const <DefectClientAct>[];
+    final List<DefectClientAct> acts = <DefectClientAct>[];
+    for (final Object? item in raw) {
+      if (item is! Map) continue;
+      final DefectClientAct? act =
+          DefectClientAct.fromJson(Map<String, dynamic>.from(item));
+      if (act != null) acts.add(act);
+    }
+    return acts;
   }
 
   /// Пустая строка — то же самое, что отсутствие поля: экран рисует прочерк,

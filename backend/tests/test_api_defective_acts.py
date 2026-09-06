@@ -462,6 +462,62 @@ def test_client_acts_stay_out_of_the_feed(client_with_db, world, act_with_photos
     assert {item["id"] for item in response.json()["data"]} == {act.id}
 
 
+@pytest.mark.integration
+def test_parent_shows_what_went_to_the_client(client_with_db, act_with_photos):
+    """Из ленты потомок не виден — значит должен быть виден из первоисточника.
+
+    Иначе прораб открывает акт, читает «Выдан клиенту» и не может добраться до
+    того, что ушло наружу: `parent_id` ведёт вверх, а вниз ссылки нет вовсе.
+    """
+    act, photos = act_with_photos
+    issued = client_with_db.post(
+        f"{API}/defective-act/{act.id}/issue-to-client/",
+        json={"client_title": "Требуется замена троса", "photo_ids": [photos[0].id]},
+    ).json()["data"]
+
+    parent = client_with_db.get(f"{API}/defective-act/{act.id}/").json()["data"]
+    assert [child["id"] for child in parent["client_acts"]] == [issued["id"]]
+    assert parent["client_acts"][0]["client_title"] == "Требуется замена троса"
+    assert parent["client_acts"][0]["created_at"]
+    # Файла ещё нет: PDF собирается отдельным запросом.
+    assert parent["client_acts"][0]["pdf_file"] is None
+
+    child = client_with_db.get(f"{API}/defective-act/{issued['id']}/").json()["data"]
+    assert child["client_acts"] == []
+
+
+@pytest.mark.integration
+def test_second_issue_adds_a_second_child(client_with_db, act_with_photos):
+    """Акт мог уйти клиенту дважды — оба выпуска остаются видны из родителя."""
+    act, photos = act_with_photos
+    for photo in photos:
+        client_with_db.post(
+            f"{API}/defective-act/{act.id}/issue-to-client/",
+            json={"photo_ids": [photo.id]},
+        )
+
+    parent = client_with_db.get(f"{API}/defective-act/{act.id}/").json()["data"]
+    assert len(parent["client_acts"]) == 2
+
+
+@pytest.mark.integration
+def test_feed_carries_the_client_acts_too(client_with_db, world, act_with_photos):
+    """Строка ленты знает про выпуск: карточка рисуется по ней до дозагрузки."""
+    act, photos = act_with_photos
+    client_with_db.post(
+        f"{API}/defective-act/{act.id}/issue-to-client/",
+        json={"photo_ids": [photos[0].id]},
+    )
+
+    year = datetime.datetime.utcnow().year
+    response = client_with_db.get(
+        f"{API}/defective-act/by-object/{world['own_lift'].id}/?year={year}"
+    )
+
+    row = response.json()["data"][0]
+    assert len(row["client_acts"]) == 1
+
+
 # --- PDF -------------------------------------------------------------------
 
 
