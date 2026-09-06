@@ -63,6 +63,28 @@ class DefectsLayout {
     fontWeight: FontWeight.w600,
     color: ColorApp.myColorBlack,
   );
+
+  /// Подпись под полем на экране оформления: «оставьте пустым — возьмём…».
+  static const TextStyle fieldHint = TextStyle(
+    fontSize: 11.0,
+    height: 1.4,
+    color: ColorApp.myColorGrayText,
+  );
+
+  /// Серее серого: подсказка-пример и погашенная галочка. Текст механика в
+  /// подсказке поля стоит обычным серым — его читают, а этот цвет для того,
+  /// что читать не надо.
+  static const Color hintFaint = Color(0xffB9B9B9);
+
+  static const OutlineInputBorder fieldBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(cardRadius)),
+    borderSide: BorderSide(color: ColorApp.myColorGrayBorder),
+  );
+
+  static const OutlineInputBorder fieldBorderFocused = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(cardRadius)),
+    borderSide: BorderSide(color: ColorApp.myColorGreenAuth),
+  );
 }
 
 /// Цвета пилюли состояния.

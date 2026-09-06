@@ -156,6 +156,23 @@
       ],
       "cwd": "frontend",
       "port": 5606
+    },
+    {
+      "name": "issue-to-client-preview",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/dev/issue_to_client_preview.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5607",
+        "--web-hostname",
+        "127.0.0.1"
+      ],
+      "cwd": "frontend",
+      "port": 5607
     }
   ]
 }
