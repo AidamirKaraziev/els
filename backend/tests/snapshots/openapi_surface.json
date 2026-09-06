@@ -249,6 +249,12 @@
     "required_body": [],
     "required_params": []
   },
+  "GET /api/v1/defective-act/by-act-fact/{act_fact_id}/": {
+    "required_body": [],
+    "required_params": [
+      "act_fact_id"
+    ]
+  },
   "GET /api/v1/defective-act/by-object/{object_id}/": {
     "required_body": [],
     "required_params": [

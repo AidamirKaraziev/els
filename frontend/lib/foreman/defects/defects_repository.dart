@@ -50,6 +50,24 @@ class DefectsRepository {
         .toList();
   }
 
+  /// Дефекты, заведённые на одной работе по ТО, — для блока в её карточке.
+  ///
+  /// Отдельной ручкой, а не выборкой из ленты объекта: карточка работы не
+  /// знает ни года ленты, ни объекта, а тянуть все акты объекта ради двух
+  /// строк — лишний трафик.
+  Future<List<DefectEntry>> byActFact(int actFactId) async {
+    final Uri url = Uri.parse(
+      '${ApiConfig.base}/defective-act/by-act-fact/$actFactId/',
+    );
+    final http.Response response = await Api.get(url);
+    final List<dynamic> rows = _list(response);
+    return rows
+        .whereType<Map<dynamic, dynamic>>()
+        .map((Map<dynamic, dynamic> row) =>
+            DefectEntry.fromJson(Map<String, dynamic>.from(row)))
+        .toList();
+  }
+
   /// Сколько дефектных актов у объекта за год — для значка-счётчика.
   ///
   /// Отдельной ручкой, а не длиной ленты: считает она ровно тот же запрос

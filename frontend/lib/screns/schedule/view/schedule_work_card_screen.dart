@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../foreman/defects/defects_repository.dart';
+import '../../../foreman/defects/work_defects_section.dart';
 import '../../../helper/class_colors.dart';
 import '../../../helper/hints/hint_icon.dart';
 import '../../../helper/hints/hints.dart';
@@ -16,6 +18,7 @@ class ScheduleWorkCardScreen extends StatelessWidget {
     required this.workId,
     required this.objectName,
     this.repository,
+    this.defectsRepository,
     this.onToFinished,
     this.finishRequest,
   }) : super(key: key);
@@ -23,6 +26,10 @@ class ScheduleWorkCardScreen extends StatelessWidget {
   final int workId;
   final String objectName;
   final WorkDetailsRepository? repository;
+
+  /// Откуда карточка берёт дефекты работы. Подменяется в тестах, как и
+  /// [repository]; в бою — живой `DefectsRepository`.
+  final DefectsRepository? defectsRepository;
 
   /// Позвать после закрытия ТО: экрану, откуда пришли, нужно перечитать ленту.
   ///
@@ -49,6 +56,7 @@ class ScheduleWorkCardScreen extends StatelessWidget {
       child: _CardView(
         workId: workId,
         objectName: objectName,
+        defectsRepository: defectsRepository,
         onToFinished: onToFinished,
         finishRequest: finishRequest,
       ),
@@ -61,12 +69,14 @@ class _CardView extends StatelessWidget {
     Key? key,
     required this.workId,
     required this.objectName,
+    this.defectsRepository,
     this.onToFinished,
     this.finishRequest,
   }) : super(key: key);
 
   final int workId;
   final String objectName;
+  final DefectsRepository? defectsRepository;
   final VoidCallback? onToFinished;
   final Future<bool> Function(int actId)? finishRequest;
 
@@ -122,6 +132,14 @@ class _CardView extends StatelessWidget {
             WorkChecklistBlock(
               checklist: state.details.checklist,
               photos: state.photos,
+            ),
+            const SizedBox(height: 16),
+            // Между чек-листом и временами: дефект — это то, что механик
+            // нашёл, проходя чек-лист, и читается он следом за ним.
+            WorkDefectsSection(
+              workId: workId,
+              objectName: objectName,
+              repository: defectsRepository,
             ),
             const SizedBox(height: 16),
             WorkTimesBlock(

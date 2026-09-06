@@ -173,6 +173,23 @@
       ],
       "cwd": "frontend",
       "port": 5607
+    },
+    {
+      "name": "work-defects-preview",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/dev/work_defects_block_preview.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5608",
+        "--web-hostname",
+        "127.0.0.1"
+      ],
+      "cwd": "frontend",
+      "port": 5608
     }
   ]
 }

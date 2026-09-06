@@ -73,6 +73,31 @@ def get_defective_acts_by_planned_to(
 
 
 @router.get(
+    path="/defective-act/by-act-fact/{act_fact_id}/",
+    response_model=ListOfEntityResponse,
+    name="get_defective_acts_by_act_fact",
+    description="Дефектные акты, заведённые на одной работе по ТО",
+    tags=["Админ панель / Дефектные акты"],
+)
+def get_defective_acts_by_act_fact(
+    request: Request,
+    session=Depends(deps.get_db),
+    act_fact_id: int = Path(..., title="ID работы по ТО"),
+    current_user=Depends(deps.require(Permission.ACT_READ)),
+    scope=Depends(deps.get_read_scope),
+):
+    data_q, code, _ = crud_defective_act.get_by_act_fact_id(
+        db=session, act_fact_id=act_fact_id, scope=scope
+    )
+    get_raise(code=code)
+    return ListOfEntityResponse(
+        data=[
+            getting_defective_act(obj=datum, request=request) for datum in data_q.all()
+        ]
+    )
+
+
+@router.get(
     path="/defective-act/by-object/{object_id}/",
     response_model=ListOfEntityResponse,
     name="get_defective_acts_by_object",

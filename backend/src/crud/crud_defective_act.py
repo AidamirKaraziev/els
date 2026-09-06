@@ -96,6 +96,33 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
             q = q.filter(DefectiveAct.month == month)
         return q, 0, None
 
+    def get_by_act_fact_id(self, *, db: Session, act_fact_id: int, scope: AccessScope):
+        """Дефекты, заведённые на одной работе по ТО.
+
+        Отдельной ручкой, а не выборкой из ленты объекта: карточка работы не
+        знает ни года ленты, ни объекта в том виде, в каком его ждёт
+        `by-object`, а тянуть через сеть все акты объекта ради двух — лишнее.
+
+        Клиентские акты не показываем, как и в ленте объекта: это порождённые
+        записи, они видны из своего первоисточника.
+        """
+        act, code, _ = crud_acts_fact.get_act_fact_by_id(
+            db=db, id=act_fact_id, scope=scope
+        )
+        if code != 0:
+            return None, code, None
+
+        q = (
+            self.scoped_query(db, scope)
+            .filter(DefectiveAct.act_fact_id == act.id)
+            .filter(DefectiveAct.kind == "internal")
+            .order_by(DefectiveAct.created_at.desc(), DefectiveAct.id.desc())
+            # Что ушло клиенту, показывает каждая строка блока — значит и
+            # берётся тем же запросом, а не по одному на акт.
+            .options(joinedload(DefectiveAct.client_acts))
+        )
+        return q, 0, None
+
     def _validate_month(self, month: int) -> int:
         return 0 if 1 <= int(month) <= 12 else self.invalid_month
 

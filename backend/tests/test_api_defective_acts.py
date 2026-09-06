@@ -331,6 +331,87 @@ def test_counter_matches_the_feed(client_with_db, world, mechanic, acts_of_two_y
     assert response.json()["data"] == 2
 
 
+@pytest.fixture
+def acts_of_two_works(world, db_session):
+    """Два акта на своей работе по ТО, один — на соседней работе того же лифта.
+
+    Третьим лежит клиентский потомок: он порождён из первого акта и в блоке
+    работы делать ему нечего.
+    """
+    neighbour = ActFact(object_id=world["own_lift"].id)
+    db_session.add(neighbour)
+    db_session.flush()
+
+    made = []
+    for title in ("течь редуктора", "не горит освещение"):
+        act = DefectiveAct(
+            object_id=world["own_lift"].id,
+            act_fact_id=world["own_act_fact"].id,
+            title=title,
+            created_at=datetime.datetime(2026, 3, 1),
+            updated_at=datetime.datetime(2026, 3, 1),
+        )
+        db_session.add(act)
+        made.append(act)
+    db_session.flush()
+
+    alien = DefectiveAct(
+        object_id=world["own_lift"].id,
+        act_fact_id=neighbour.id,
+        title="акт соседней работы",
+        created_at=datetime.datetime(2026, 3, 1),
+        updated_at=datetime.datetime(2026, 3, 1),
+    )
+    child = DefectiveAct(
+        object_id=world["own_lift"].id,
+        act_fact_id=world["own_act_fact"].id,
+        parent_id=made[0].id,
+        kind="client",
+        title="то же самое клиенту",
+        created_at=datetime.datetime(2026, 3, 2),
+        updated_at=datetime.datetime(2026, 3, 2),
+    )
+    db_session.add_all([alien, child])
+    db_session.flush()
+    return {"own": made, "alien": alien, "child": child}
+
+
+@pytest.mark.integration
+def test_defects_of_the_work_are_listed(
+    client_with_db, world, mechanic, acts_of_two_works
+):
+    response = client_with_db.get(
+        f"{API}/defective-act/by-act-fact/{world['own_act_fact'].id}/"
+    )
+
+    assert response.status_code == 200, response.text
+    seen = {item["id"] for item in response.json()["data"]}
+    assert seen == {act.id for act in acts_of_two_works["own"]}
+
+
+@pytest.mark.integration
+def test_neighbour_work_and_client_act_stay_out(
+    client_with_db, world, mechanic, acts_of_two_works
+):
+    response = client_with_db.get(
+        f"{API}/defective-act/by-act-fact/{world['own_act_fact'].id}/"
+    )
+
+    assert response.status_code == 200, response.text
+    seen = {item["id"] for item in response.json()["data"]}
+    assert acts_of_two_works["alien"].id not in seen
+    assert acts_of_two_works["child"].id not in seen
+
+
+@pytest.mark.integration
+def test_defects_of_a_foreign_work_are_forbidden(client_with_db, world, mechanic):
+    response = client_with_db.get(
+        f"{API}/defective-act/by-act-fact/{world['other_act_fact'].id}/"
+    )
+
+    assert response.status_code == 403
+
+
 @pytest.mark.integration
 def test_feed_of_a_foreign_lift_is_forbidden(client_with_db, world, mechanic):
     response = client_with_db.get(
