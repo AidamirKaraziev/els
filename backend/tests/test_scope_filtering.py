@@ -132,6 +132,26 @@ def test_mechanic_sees_only_lifts_he_is_assigned_to(
 
 
 @pytest.mark.integration
+def test_mechanic_sees_a_lift_he_was_sent_to_by_an_order(
+    client_with_db, as_role, world, db_session
+):
+    """Выезд по заявке открывает и сам лифт, а не только заявку.
+
+    Заявка исполнителю видна всегда (`order_scope_filter`), а лифт под ней
+    раньше — нет. Из-за этой щели дефект «с объекта» упирался в 403.
+    """
+    user = _login_on_division_a(as_role, world, Role.MECHANIC, db_session)
+    world["other_order"].executor_id = user.id
+    db_session.flush()
+
+    seen = _ids(client_with_db.get(f"{API}/all-objects/"))
+    assert seen == {world["own_lift"].id, world["other_lift"].id}
+
+    one = client_with_db.get(f"{API}/object/{world['other_lift'].id}/")
+    assert one.status_code == 200, "лифт из списка не открывается по id"
+
+
+@pytest.mark.integration
 def test_engineer_sees_his_division_and_nothing_else(
     client_with_db, as_role, world, db_session
 ):

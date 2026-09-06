@@ -12,7 +12,6 @@
 /// не поднимая сети.
 library;
 
-import '../../helper/api_config.dart';
 
 /// Откуда дефект заведён. Четыре точки входа механика — четыре случая.
 ///
@@ -93,10 +92,13 @@ class DefectPhoto {
 
   final int id;
 
-  /// Готовый адрес со схемой. Бэкенд отдаёт путь без неё
-  /// (`host:port/api/v1/static/…`, см. `backend/src/getters/static_url.py`),
-  /// и дописывает её `ApiConfig`. Грузить такой адрес надо через
-  /// `helper/api_image.dart`: статика требует токена.
+  /// Путь без схемы, ровно как его отдал бэкенд
+  /// (`host:port/api/v1/static/…`, см. `backend/src/getters/static_url.py`).
+  ///
+  /// Схему дописывает `apiImage` из `helper/api_image.dart` — грузить снимок
+  /// надо только через него: статика требует токена. Дописать `http://` ещё
+  /// и здесь значило бы получить `http://http://…`: адрес битый, запрос за
+  /// снимком не уходит вовсе, а в галерее остаётся пустое место.
   final String url;
 
   static DefectPhoto? fromJson(Map<String, dynamic> json) {
@@ -106,7 +108,7 @@ class DefectPhoto {
     // за ней нет. Молча пропускаем — битая картинка в галерее хуже, чем
     // галерея на одну карточку короче.
     if (id is! int || photo == null || photo.toString().isEmpty) return null;
-    return DefectPhoto(id: id, url: '${ApiConfig.scheme}://$photo');
+    return DefectPhoto(id: id, url: photo.toString());
   }
 }
 

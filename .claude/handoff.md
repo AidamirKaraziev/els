@@ -5,53 +5,47 @@
 план: els-vault/00-home/план - окно график объекта.md
 ---
 
-# Передача: экраны прораба собраны и приняты глазами, но в оболочку не вставлены
+# Передача: экраны прораба собраны и приняты, но в оболочку не вставлены
 
-Ничего не закоммичено, всё лежит в рабочей копии поверх `420e751`. Вид
-списка и карточки пользователь принял на наброске; живых данных экраны ещё
-не видели.
+Закоммичено в `81f1924`, рабочая копия чистая. Вид списка и карточки принят
+на наброске; живых данных экраны ещё не видели.
 
 ## Сделано и проверено
 
 - **Вид ТО появился в ответе.** `DefectiveActGet.type_act` —
   необязательное поле, заполняется в `backend/src/getters/defective_act.py`
-  цепочкой `act_fact → act_base → type_act` через три отдельные проверки:
-  у работы мог быть снят шаблон по `SET NULL`. В ленте
+  цепочкой `act_fact → act_base → type_act` через три отдельные проверки: у
+  работы мог быть снят шаблон по `SET NULL`. В ленте
   (`crud_defective_act.get_by_object_and_year`) цепочка тянется
   `joinedload`, счётчику связи сняты через `enable_eagerloads(False)`.
-  `make lint` чистый, `make test` — **969 зелёных** (было 966, +3 новых).
-- **Модуль `frontend/lib/foreman/defects/`** — четыре файла:
-  `defect_entry.dart` (значение и разбор JSON), `defects_layout.dart`
-  (размеры, пилюля состояния), `defects_screen.dart` (лента за год со
-  стрелками), `defect_card_screen.dart` (текст, реквизиты, галерея),
-  `defects_repository.dart` (запросы через `helper/api_client.dart`).
-- **Набросок принят.** `lib/dev/defects_screen_preview.dart`, точка запуска
-  `defects-preview` (порт 5606). Пользователь посмотрел и сказал «нравится».
-- **Разбор проверен на живой форме ответа.** `test/foreman/defect_entry_test.dart`
-  — 16 тестов, формы сняты с ответа стека. `flutter test` — **453 зелёных**,
-  `flutter analyze lib/foreman/defects lib/dev/defects_screen_preview.dart
-  test/foreman` — без замечаний.
-- **Одна точка входа из четырёх пройдена руками** (пользователем, на `make up`):
-  дефект по заявке, механиком `m@mail.ru`. В базе акт `id=3`: `order_id=53`,
-  `object_id=80`, `act_fact_id` пуст, `kind=internal`, снимок `id=6` доехал.
-  Лента `GET /defective-act/by-object/80/?year=2026` отдаёт его с
-  `type_act: null` — верно, работы по ТО там не было.
+- **Модуль `frontend/lib/foreman/defects/`**: `defect_entry.dart` (разбор
+  JSON), `defects_layout.dart`, `defects_screen.dart` (лента за год, год
+  стрелками), `defect_card_screen.dart` (реквизиты и галерея),
+  `defects_repository.dart` (через `helper/api_client.dart`, не голым `http`).
+- **Набросок принят глазами**: `lib/dev/defects_screen_preview.dart`, точка
+  запуска `defects-preview` (порт 5606).
+- **Одна точка входа из четырёх пройдена руками** (пользователем, на
+  `make up`): дефект по заявке, механиком `m@mail.ru`. Акт `id=3`:
+  `order_id=53`, `object_id=80`, `act_fact_id` пуст, снимок `id=6` доехал.
+  `GET /defective-act/by-object/80/?year=2026` отдаёт его с `type_act: null`
+  — верно, работы по ТО там не было.
+- **Проверки**: `make lint` чисто, `make test` — **969 зелёных** (было 966);
+  `flutter test` — **453 зелёных** (+16 в `test/foreman/defect_entry_test.dart`,
+  формы сняты с ответа живого стека); `flutter analyze` по новым файлам чист.
 
 ## Не доделано
 
 - **Экраны не вставлены в оболочку прораба.** Секции «Дефекты» в
   `foreman/object_foreman/object_page_foreman.dart` нет — попасть на список
-  из приложения пока нельзя. Это был шаг B3 плана.
-- **Живых данных экраны не видели.** Репозиторий написан и разобран
-  тестами, но `DefectsScreen` с сервером ни разу не запускался.
+  из приложения нельзя.
+- **Живых данных экраны не видели.** Репозиторий разобран тестами, но
+  `DefectsScreen` с сервером ни разу не запускался.
 - **Три точки входа из четырёх руками не проверены**: пункт чек-листа,
   работа по ТО целиком, объект. Нужен вход механиком — пароль вводит только
   пользователь.
-- В `defective_acts` пропущен `id=2` — дырка в последовательности,
-  откатившаяся вставка. Не разбиралось.
-- Долги прошлых этапов живы: бэкфилл `object_id` (`d8a6c3f95b21`) на боевых
-  данных не смотрели; `screens/soon_screen.dart` не используется нигде,
-  решено оставить как есть.
+- В `defective_acts` пропущен `id=2` — откатившаяся вставка, не разбиралось.
+- Долг прошлых этапов: бэкфилл `object_id` (`d8a6c3f95b21`) на боевых
+  данных не смотрели.
 
 ## Следующий этап
 
@@ -65,8 +59,7 @@
 
 1. Секция «Дефекты» в `foreman/object_foreman/object_page_foreman.dart` —
    рядом с секцией «Акт» (около строки 1054), открывать обычным
-   `Navigator.push` на `DefectsScreen(objectId: …)`. Индексную навигацию
-   подрядчика (`IntTest.indexScreensForeman`) не трогать.
+   `Navigator.push` на `DefectsScreen(objectId: …)`.
 2. Объект брать из `listSelectedObjectForeman['data']['id']`.
 3. Проверять на объекте **80** — там лежит единственный живой дефект.
 
@@ -74,11 +67,10 @@
 
 - Ручку создания вида ТО — вопрос `types_acts.id` не решён.
 - `status_id` и `PUT /defective-act/{id}/status/` — устарели, но живы.
-- Легаси `els_mobile/`; заглушки `SizedBox.shrink()` в `_screens` и
-  `_screensForeman`; `screens/soon_screen.dart`.
+- Легаси `els_mobile/`; заглушки `SizedBox.shrink()`; `soon_screen.dart`.
 - Правила очереди в `mechanic/data/outbox.dart` и отложенный ключ.
-- Гигантский `build` в `object_page_foreman.dart` не переписывать — только
-  добавить секцию.
+- `IntTest.indexScreensForeman` и гигантский `build` в
+  `object_page_foreman.dart` — только добавить секцию, не переписывать.
 
 ## Уточнить перед стартом
 

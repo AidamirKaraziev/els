@@ -51,7 +51,7 @@ def can_download(
 
     if owner.entity == "objects":
         obj = db.query(Object).filter(Object.id == owner.record_id).first()
-        return can_access_object(scope, obj)
+        return can_access_object(scope, obj, db=db)
 
     if owner.entity == "order_photo":
         # Каталог называется по фотографии, но `id` в пути — это заявка:

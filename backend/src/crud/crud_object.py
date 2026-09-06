@@ -300,7 +300,10 @@ class CrudObject(CRUDBase[Object, ObjectCreate, ObjectUpdate]):
         obj = db.query(self.model).filter(self.model.id == object_id).first()
         if obj is None:
             return None, -116, None
-        if not can_access_object(scope, obj):
+        # Сессию передаём: без неё проверка строже списка — лифт, где у
+        # человека своя заявка или работа, в списке есть, а по id отвечал бы
+        # 403.
+        if not can_access_object(scope, obj, db=db):
             return None, self.out_of_scope, None
         return obj, 0, None
 

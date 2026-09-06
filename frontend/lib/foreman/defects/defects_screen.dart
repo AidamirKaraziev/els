@@ -153,6 +153,7 @@ class _DefectsScreenState extends State<DefectsScreen> {
               MaterialPageRoute<void>(
                 builder: (_) => DefectCardScreen(
                   entry: entry,
+                  objectName: widget.objectName,
                   repository: widget.repository,
                   // Набросок и тесты работают на готовом списке: дозагружать
                   // им нечего и негде.

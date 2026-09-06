@@ -243,6 +243,47 @@ def test_foreign_link_does_not_create_anything(client_with_db, world, mechanic):
     assert response.status_code == 403
 
 
+@pytest.mark.integration
+def test_visit_by_order_opens_the_lift_for_a_defect(
+    client_with_db, world, mechanic, db_session
+):
+    """Механика послали заявкой на чужой лифт — дефект «с объекта» проходит.
+
+    Список объектов у механика собирается из его работ и заявок, а не из
+    назначений на лифт. Пока объект не признавал личного участия, механик
+    видел лифт в списке, жал «Дефект» и получал 403.
+    """
+    visit = Order(
+        object_id=world["other_lift"].id,
+        creator_id=1,
+        executor_id=mechanic.id,
+        created_at=datetime.datetime(2026, 5, 12),
+        fault_category_id=2,
+        task_text="выезд на чужой лифт",
+    )
+    db_session.add(visit)
+    db_session.flush()
+
+    response = _create(client_with_db, object_id=world["other_lift"].id)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["object_id"] == world["other_lift"].id
+
+
+@pytest.mark.integration
+def test_work_on_a_foreign_lift_opens_it_for_a_defect(
+    client_with_db, world, mechanic, db_session
+):
+    """То же самое, но участие — работа по ТО, а не заявка."""
+    world["other_act_fact"].main_mechanic_id = mechanic.id
+    db_session.flush()
+
+    response = _create(client_with_db, object_id=world["other_lift"].id)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["object_id"] == world["other_lift"].id
+
+
 # --- лента и счётчик -------------------------------------------------------
 
 

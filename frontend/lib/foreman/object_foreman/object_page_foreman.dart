@@ -5,6 +5,7 @@ import '../../../../helper/class_colors.dart';
 import 'package:http/http.dart' as http;
 import '../../screns/home_page/home_page.dart';
 import '../user_page_foreman.dart';
+import '../defects/defects_screen.dart';
 import 'act_foreman.dart';
 import 'letter_of_appointment_foreman.dart';
 import 'object_screen_foreman.dart';
@@ -1180,6 +1181,86 @@ class _ObjectPageForemanState extends State<ObjectPageForeman> {
                                           ),
                                         ],
                                       ),
+                                      const SizedBox(height: 20.0),
+
+                                      /// Дефекты
+                                      Row(
+                                        children: [
+                                          const Expanded(
+                                            flex: 2,
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text('Журнал',
+                                                    style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w300,
+                                                        fontSize: 12)),
+                                                SizedBox(height: 5.0),
+                                                Text('Дефекты',
+                                                    style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 15)),
+                                              ],
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 8,
+                                            child: InkWell(
+                                              onTap: () {
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute<void>(
+                                                    builder: (_) =>
+                                                        DefectsScreen(
+                                                      objectId: viewObjectPage[
+                                                          'id'] as int,
+                                                      objectName:
+                                                          '${viewObjectPage['name']}',
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              child: Container(
+                                                padding: const EdgeInsets
+                                                    .symmetric(
+                                                    horizontal: 10.0),
+                                                height: 50.0,
+                                                decoration: BoxDecoration(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            5.0),
+                                                    border: Border.all(
+                                                        width: 1,
+                                                        color: ColorApp
+                                                            .myColorAvatar)),
+                                                child: const Row(
+                                                  children: [
+                                                    Icon(
+                                                        Icons
+                                                            .report_gmailerrorred_outlined,
+                                                        color: ColorApp
+                                                            .myColorGreen),
+                                                    SizedBox(width: 10.0),
+                                                    Text(
+                                                      'Дефекты объекта',
+                                                      style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.w600),
+                                                    ),
+                                                    Spacer(),
+                                                    _OpenSquare(
+                                                        icon: Icons
+                                                            .open_in_full_outlined),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -1195,6 +1276,26 @@ class _ObjectPageForemanState extends State<ObjectPageForeman> {
                 ),
               ));
         });
+  }
+}
+
+/// Зелёный квадрат-кнопка справа в строке документа — как у секции «Акт».
+class _OpenSquare extends StatelessWidget {
+  final IconData icon;
+
+  const _OpenSquare({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 30.0,
+      height: 30.0,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(5.0),
+        color: ColorApp.myColorGreen,
+      ),
+      child: Icon(icon, color: ColorApp.myColorWhite),
+    );
   }
 }
 

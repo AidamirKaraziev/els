@@ -143,10 +143,11 @@ void main() {
 
       expect(entry.photos, hasLength(1));
       expect(entry.photos.single.id, 6);
+      // Схему дописывает `apiImage`, а не разбор: адрес со схемой, пропущенный
+      // через него ещё раз, превращается в `http://http://…`.
       expect(
         entry.photos.single.url,
-        endsWith('://localhost:8080/api/v1/static/'
-            'defective_act/3/photo/65f36e1c.jpeg'),
+        'localhost:8080/api/v1/static/defective_act/3/photo/65f36e1c.jpeg',
       );
     });
 

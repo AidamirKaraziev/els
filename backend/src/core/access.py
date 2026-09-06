@@ -149,6 +149,38 @@ def _scope(user: UniversalUser, *, for_write: bool) -> AccessScope:
 # `total` считал бы все десять.
 
 
+def personal_work_object_ids(scope: AccessScope):
+    """Подзапрос с id лифтов, где у человека своя работа или своя заявка.
+
+    Заявка и работа по ТО давно видны исполнителю, даже если объект назначен
+    не ему (`order_scope_filter`, `act_fact_scope_filter`): механика послали
+    на чужой лифт — работу он видит. Сам лифт при этом не открывался, и
+    получалась щель: заявку видно, а объект под ней — нет. На дефекте «с
+    объекта» она вылезала наружу — объект в списке у механика есть, а
+    `POST /defective-act/` с его `object_id` отвечал 403.
+    """
+    return (
+        select(Order.object_id)
+        .where(
+            or_(
+                Order.executor_id == scope.user_id,
+                Order.creator_id == scope.user_id,
+            )
+        )
+        .correlate(None)
+        .union(
+            select(ActFact.object_id)
+            .where(
+                or_(
+                    ActFact.main_mechanic_id == scope.user_id,
+                    ActFact.foreman_id == scope.user_id,
+                )
+            )
+            .correlate(None)
+        )
+    )
+
+
 def object_scope_filter(scope: AccessScope):
     """SQL-условие «этот лифт человеку виден».
 
@@ -162,11 +194,13 @@ def object_scope_filter(scope: AccessScope):
             Object.division_id.in_(sorted(scope.division_ids)),
             Object.foreman_id == scope.user_id,
             Object.mechanic_id == scope.user_id,
+            Object.id.in_(personal_work_object_ids(scope)),
         )
     if scope.kind is ScopeKind.ASSIGNED:
         return or_(
             Object.mechanic_id == scope.user_id,
             Object.foreman_id == scope.user_id,
+            Object.id.in_(personal_work_object_ids(scope)),
         )
     if scope.kind is ScopeKind.COMPANY and scope.company_id is not None:
         # Компания клиента, а не `organization_id` — это наше юрлицо по
@@ -346,11 +380,33 @@ def apply_user_scope(query, scope: AccessScope):
 # ---------------------------------------------------------------------------
 
 
-def can_access_object(scope: AccessScope, obj) -> bool:
+def has_personal_work_on_object(db, scope: AccessScope, object_id) -> bool:
+    """Есть ли у человека на этом лифте своя работа или своя заявка.
+
+    Пара к `personal_work_object_ids`: тот режет список, эта отвечает про одну
+    запись. Условие у них общее — иначе объект из списка открывался бы с 403.
+    """
+    if db is None or object_id is None:
+        return False
+    return db.query(
+        select(Object.id)
+        .where(Object.id == object_id)
+        .where(Object.id.in_(personal_work_object_ids(scope)))
+        .exists()
+    ).scalar()
+
+
+def can_access_object(scope: AccessScope, obj, db=None) -> bool:
     """Доступен ли конкретный объект (лифт) в этой области.
 
     Для одиночной проверки по id. Списки фильтруются запросом, а не этой
     функцией.
+
+    `db` необязателен: без него «своя работа или заявка на этом лифте» не
+    проверяется, и ответ получается строже, чем у списка. Передавать его надо
+    везде, где сессия под рукой; там, где её нет, вызывающий уже проверил
+    личное участие по своей оси — так делают `can_access_order` и
+    `can_access_act_fact`.
     """
     if scope.kind is ScopeKind.ALL:
         return True
@@ -361,9 +417,14 @@ def can_access_object(scope: AccessScope, obj) -> bool:
             obj.division_id in scope.division_ids
             or obj.foreman_id == scope.user_id
             or obj.mechanic_id == scope.user_id
+            or has_personal_work_on_object(db, scope, getattr(obj, "id", None))
         )
     if scope.kind is ScopeKind.ASSIGNED:
-        return obj.mechanic_id == scope.user_id or obj.foreman_id == scope.user_id
+        return (
+            obj.mechanic_id == scope.user_id
+            or obj.foreman_id == scope.user_id
+            or has_personal_work_on_object(db, scope, getattr(obj, "id", None))
+        )
     if scope.kind is ScopeKind.COMPANY:
         return scope.company_id is not None and obj.company_id == scope.company_id
     return False

@@ -18,12 +18,21 @@ class DefectCardScreen extends StatefulWidget {
   const DefectCardScreen({
     Key? key,
     required this.entry,
+    this.objectName,
     this.repository,
     this.loadFull = true,
   }) : super(key: key);
 
   /// То, что известно из списка. Показывается сразу.
   final DefectEntry entry;
+
+  /// Имя объекта, на котором открыт список.
+  ///
+  /// В самом акте его нет: сервер отдаёт `object_id` числом, а имя
+  /// разворачивается только через плановое ТО — то есть у одной точки входа
+  /// из четырёх. Карточка всегда открывается из ленты объекта, и лента имя
+  /// знает, поэтому берём оттуда, а не расширяем ради этого контракт.
+  final String? objectName;
 
   final DefectsRepository? repository;
 
@@ -100,7 +109,10 @@ class _DefectCardScreenState extends State<DefectCardScreen> {
                               ? null
                               : _formatDate(_entry.createdAt!),
                         ),
-                        _Row(label: 'Объект', value: _entry.objectName),
+                        _Row(
+                          label: 'Объект',
+                          value: _entry.objectName ?? widget.objectName,
+                        ),
                         _Row(label: 'Вид ТО', value: _entry.typeActName),
                         _Row(label: 'Месяц ТО', value: _entry.monthName),
                         _Row(label: 'Год плана', value: _entry.year),
