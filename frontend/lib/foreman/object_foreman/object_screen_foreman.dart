@@ -381,21 +381,25 @@ class _ObjectScreenForemanState extends State<ObjectScreenForeman> {
                                             child: Row(
                                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               children: [
-                                                ///Название
-                                                if (size.width > 1150)
-                                                  Expanded(
-                                                    flex: 3,
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(dataObjectScreen['name'] ?? '',
-                                                            style: const TextStyle(
-                                                                fontWeight:
-                                                                FontWeight
-                                                                    .w400)),
-                                                      ],
-                                                    ),
+                                                ///Название — единственная колонка, которая не
+                                                ///прячется по ширине. Раньше она уходила первой,
+                                                ///на 1150, и в узком окне строки различались
+                                                ///только компанией и адресом: на одном адресе у
+                                                ///одной компании стоят три десятка лифтов, и
+                                                ///список переставал называть объект вовсе.
+                                                Expanded(
+                                                  flex: 3,
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(dataObjectScreen['name'] ?? '',
+                                                          style: const TextStyle(
+                                                              fontWeight:
+                                                              FontWeight
+                                                                  .w400)),
+                                                    ],
                                                   ),
+                                                ),
                                                 const SizedBox(width: 10.0),
 
                                                 ///Заводской номер

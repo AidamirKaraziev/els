@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime
 
-from sqlalchemy import extract, func
+from sqlalchemy import extract, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from src.core.access import (
@@ -14,7 +14,7 @@ from src.crud.base import CRUDBase
 from src.crud.crud_act_fact import crud_acts_fact
 from src.crud.crud_object import crud_objects
 from src.crud.crud_order import crud_orders
-from src.crud.crud_planned_to import crud_planned_to
+from src.crud.crud_planned_to import MONTH_PLANNED_COLUMN, crud_planned_to
 from src.crud.crud_status import crud_status
 from src.crud.users.crud_universal_user import crud_universal_users
 from src.models import (
@@ -24,6 +24,7 @@ from src.models import (
     DefectiveAct,
     DefectiveActClientPhoto,
     Object,
+    PlannedTO,
     UniversalUser,
 )
 from src.schemas.defective_act import (
@@ -182,6 +183,35 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
             return None, self.links_conflict, None
         return found[0], 0, None
 
+    def _plan_cell_of_work(self, *, db: Session, act_fact_id: int):
+        """Плановое ТО и месяц той клетки, в которой стоит эта работа.
+
+        Работа по ТО не помнит ни плана, ни месяца: связь односторонняя, план
+        держит двенадцать колонок `january_to_id … december_to_id`, и месяц —
+        это имя заполненной клетки, а не отдельный признак. Значит ищем
+        обратно: план, у которого хоть одна клетка указывает на эту работу.
+
+        Возвращает `(None, None)`, когда работа в план не входит: ТО могло
+        быть заведено вне ленты, и прочерк в карточке дефекта там честный.
+        """
+        plan = (
+            db.query(PlannedTO)
+            .filter(
+                or_(
+                    *[column == act_fact_id for column in MONTH_PLANNED_COLUMN.values()]
+                )
+            )
+            .order_by(PlannedTO.id.asc())
+            .first()
+        )
+        if plan is None:
+            return None, None
+
+        for month, column in MONTH_PLANNED_COLUMN.items():
+            if getattr(plan, column.key) == act_fact_id:
+                return plan.id, month
+        return None, None
+
     def create_defective_act(
         self,
         *,
@@ -193,6 +223,17 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
         object_id, code, _ = self._resolve_object(db=db, new_data=new_data, scope=scope)
         if code != 0:
             return None, code, None
+
+        # Механик заводит дефект с работы: в теле только `act_fact_id`, а
+        # план и месяц карточка дефекта показывает — и без них рисует
+        # прочерки. Выводим их сами, но только когда клиент их не прислал:
+        # присланное не перебиваем, старый контракт остаётся прежним.
+        planned_to_id = new_data.planned_to_id
+        month = new_data.month
+        if planned_to_id is None and month is None and new_data.act_fact_id is not None:
+            planned_to_id, month = self._plan_cell_of_work(
+                db=db, act_fact_id=new_data.act_fact_id
+            )
 
         # Месяц проверяем, только когда он прислан: три точки входа из четырёх
         # его не знают.
@@ -212,8 +253,8 @@ class CrudDefectiveAct(CRUDBase[DefectiveAct, DefectiveActCreate, DefectiveActUp
 
         db_obj = DefectiveAct(
             object_id=object_id,
-            planned_to_id=new_data.planned_to_id,
-            month=new_data.month,
+            planned_to_id=planned_to_id,
+            month=month,
             act_fact_id=new_data.act_fact_id,
             checklist_step_id=new_data.checklist_step_id,
             order_id=new_data.order_id,

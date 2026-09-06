@@ -25,7 +25,10 @@ from src.schemas.planned_to import (
 )
 from src.utils import pagination
 
-_MONTH_PLANNED_COLUMN = {
+#: Месяц → колонка плана, в которой стоит работа этого месяца. Имя без
+#: подчёркивания намеренно: тем же соответствием пользуется
+#: `crud_defective_act`, когда выводит план и месяц обратно по работе.
+MONTH_PLANNED_COLUMN = {
     1: PlannedTO.january_to_id,
     2: PlannedTO.february_to_id,
     3: PlannedTO.march_to_id,
@@ -309,7 +312,7 @@ class CrudPlannedTO(CRUDBase[PlannedTO, PlannedTOCreate, PlannedTOUpdate]):
     def get_schedule_execution_stats(
         self, *, db: Session, scope: AccessScope, year: int, month: int
     ) -> ScheduleExecutionStatsGet:
-        month_col = _MONTH_PLANNED_COLUMN[month]
+        month_col = MONTH_PLANNED_COLUMN[month]
         period_start, period_end = _reporting_month_bounds(year, month)
         year_str = str(year)
 

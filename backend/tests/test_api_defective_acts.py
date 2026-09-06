@@ -204,6 +204,61 @@ def test_work_without_a_template_does_not_break_the_feed(
     assert [row["type_act"] for row in feed.json()["data"]] == [None]
 
 
+@pytest.fixture
+def work_in_the_september_cell(world, db_session):
+    """Своя работа поставлена в сентябрьскую клетку своего плана."""
+    world["own_plan"].september_to_id = world["own_act_fact"].id
+    db_session.flush()
+    return world["own_act_fact"]
+
+
+@pytest.mark.integration
+def test_work_defect_takes_the_plan_and_month_of_its_cell(
+    client_with_db, world, mechanic, work_in_the_september_cell
+):
+    """Механик шлёт одну работу, а карточка показывает месяц ТО и год плана.
+
+    Работа плана не помнит: месяц — это имя заполненной клетки. Выводит его
+    сервер, иначе в карточке дефекта два прочерка.
+    """
+    response = _create(client_with_db, act_fact_id=work_in_the_september_cell.id)
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["month"] == 9
+    assert data["planned_to_id"]["id"] == world["own_plan"].id
+    assert data["planned_to_id"]["year"] == world["own_plan"].year
+
+
+@pytest.mark.integration
+def test_work_outside_the_plan_keeps_the_month_empty(
+    client_with_db, world, mechanic
+):
+    """ТО вне ленты плана не имеет — прочерк там правильный, а не потеря."""
+    response = _create(client_with_db, act_fact_id=world["own_act_fact"].id)
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["month"] is None
+    assert data["planned_to_id"] is None
+
+
+@pytest.mark.integration
+def test_sent_month_is_not_overridden_by_the_cell(
+    client_with_db, world, mechanic, work_in_the_september_cell
+):
+    """Присланное клиентом сильнее выведенного: старый контракт не меняется."""
+    response = _create(
+        client_with_db,
+        act_fact_id=work_in_the_september_cell.id,
+        planned_to_id=world["own_plan"].id,
+        month=5,
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["month"] == 5
+
+
 @pytest.mark.integration
 def test_old_body_still_works(client_with_db, world, mechanic):
     """Старый клиент шлёт плановое ТО и месяц — и получает прежний результат."""
