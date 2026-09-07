@@ -99,6 +99,14 @@
     "required_body": [],
     "required_params": []
   },
+  "GET /api/v1/app/download": {
+    "required_body": [],
+    "required_params": []
+  },
+  "GET /api/v1/app/release": {
+    "required_body": [],
+    "required_params": []
+  },
   "GET /api/v1/auth/me": {
     "required_body": [],
     "required_params": []
@@ -633,6 +641,10 @@
       "act_fact_id",
       "step_id"
     ]
+  },
+  "POST /api/v1/app/link": {
+    "required_body": [],
+    "required_params": []
   },
   "POST /api/v1/auth/login": {
     "required_body": [

@@ -1,3 +1,4 @@
+import 'package:els/app_download/app_download_screen.dart';
 import 'package:els/helper/api_client.dart';
 import 'package:els/helper/hints/hint_settings.dart';
 import 'package:els/helper/session.dart';
@@ -82,6 +83,18 @@ class RootGate extends StatefulWidget {
 class _RootGateState extends State<RootGate> {
   late final Future<bool> _restored = _restore();
 
+  /// Открыли ли систему по короткому адресу `els23.ru/app`.
+  ///
+  /// Разбирается один раз при запуске: заводить ради одной страницы
+  /// полноценный роутер значило бы переписать переходы во всех экранах
+  /// разом. Дальше человек попадает в обычное приложение — отсюда и выход
+  /// стрелкой назад.
+  ///
+  /// Эта ветка — для того, у кого сессия уже есть. Кто пришёл по тому же
+  /// адресу без сессии, попадает на вход, и страницу скачивания ему
+  /// открывает уже он ([openedAtDownloadPage] в `log_and_pass.dart`).
+  bool _atDownloadPage = openedAtDownloadPage;
+
   Future<bool> _restore() async {
     if (!await Api.restoreSession()) return false;
     if (!await loadProfile()) return false;
@@ -102,6 +115,19 @@ class _RootGateState extends State<RootGate> {
           return const SplashScreen();
         }
         if (snapshot.data == true) {
+          if (_atDownloadPage) {
+            return Scaffold(
+              backgroundColor: Colors.white,
+              body: SafeArea(
+                child: AppDownloadScreen(
+                  // Иначе человек, зашедший по прямому адресу, остался бы на
+                  // странице скачивания на всю сессию: адрес в браузере не
+                  // меняется, а роутера, который бы это заметил, нет.
+                  onBack: () => setState(() => _atDownloadPage = false),
+                ),
+              ),
+            );
+          }
           return homeScreenForRole(idUserTest);
         }
         return const Auth();
