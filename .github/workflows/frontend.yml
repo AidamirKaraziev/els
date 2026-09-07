@@ -106,6 +106,10 @@ jobs:
       #
       # release, а не debug: это тот самый файл, который поедет механикам.
       #
+      # API_ORIGIN обязателен: у телефона нет страницы, из origin которой веб
+      # берёт адрес бэкенда, и без этого флага сборка уходит на запасной адрес
+      # из api_config.dart.
+      #
       # Версия уезжает внутрь сборки через `--dart-define`: экран «Приложение»
       # сравнивает её с той, что лежит на сервере, и только так понимает, что
       # вышло обновление. Плагин ради двух значений в pubspec добавлять не
@@ -114,6 +118,7 @@ jobs:
         run: |
           version=$(awk '/^version:/{print $2}' pubspec.yaml)
           flutter build apk --release \
+            --dart-define=API_ORIGIN=https://els23.ru \
             --dart-define=APP_VERSION_NAME="${version%%+*}" \
             --dart-define=APP_VERSION_CODE="${version##*+}"
 
