@@ -59,7 +59,11 @@ android {
         // файлу роняет Gradle на этапе конфигурации, до всякой сборки.
         if (hasReleaseKey) {
             release {
-                storeFile file(keystoreProperties["storeFile"])
+                // rootProject, а не file(): путь берётся из key.properties, а
+                // тот лежит в android/ — рядом с самим ключом. Обычный file()
+                // считал бы от каталога модуля, android/app/, и Gradle падал
+                // бы на validateSigningRelease с «keystore not found».
+                storeFile rootProject.file(keystoreProperties["storeFile"])
                 storePassword keystoreProperties["storePassword"]
                 keyAlias keystoreProperties["keyAlias"]
                 keyPassword keystoreProperties["keyPassword"]
