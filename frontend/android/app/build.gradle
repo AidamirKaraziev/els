@@ -6,11 +6,27 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Ключ подписи релиза. Лежит вне репозитория: сам файл и три пароля к нему —
+// секреты, а `key.properties` собирает CI из GitHub Secrets перед сборкой.
+//
+// Файла может не быть — при локальной сборке или в прогоне без доступа к
+// секретам. Это не ошибка: ниже такая сборка подписывается debug-ключом и
+// проходит до конца. Красная джоба вместо APK не помогла бы никому.
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+def hasReleaseKey = keystoreProperties.containsKey("storeFile")
+
 android {
     // Пакет, в котором лежит app/src/main/java/com/example/els/MainActivity.java.
     // Под AGP 8 объявляется здесь: атрибут `package` в манифесте больше не
-    // читается. applicationId намеренно оставлен прежним — его смена означает
-    // другое приложение на телефонах механиков.
+    // читается.
+    //
+    // Отличается от applicationId намеренно: namespace — это пакет исходников,
+    // и его смена означала бы переименование каталогов и правку java-файлов
+    // ради нуля пользы. Android эти две вещи не путает.
     namespace "com.example.els"
     compileSdk flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
@@ -25,18 +41,39 @@ android {
     }
 
     defaultConfig {
-        // TODO: сменить плейсхолдер подрядчика на настоящий идентификатор.
-        applicationId "com.example.els"
+        // Постоянное имя приложения на телефоне. Менять его после того, как
+        // механики поставят APK, нельзя: Android посчитает это другим
+        // приложением и поставит вторым, рядом со старым.
+        applicationId "ru.els23.app"
         minSdk flutter.minSdkVersion
         targetSdk flutter.targetSdkVersion
+        // Растут из `version:` в pubspec.yaml: 1.0.0+1 → versionName 1.0.0,
+        // versionCode 1. Обновление не встанет поверх, пока versionCode не
+        // вырос, — поэтому перед каждой раздачей его поднимает человек.
         versionCode flutter.versionCode
         versionName flutter.versionName
     }
 
+    signingConfigs {
+        // Объявляется только когда ключ есть: обращение к отсутствующему
+        // файлу роняет Gradle на этапе конфигурации, до всякой сборки.
+        if (hasReleaseKey) {
+            release {
+                storeFile file(keystoreProperties["storeFile"])
+                storePassword keystoreProperties["storePassword"]
+                keyAlias keystoreProperties["keyAlias"]
+                keyPassword keystoreProperties["keyPassword"]
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Подписи релиза пока нет: механикам собирается debug-APK.
-            signingConfig signingConfigs.debug
+            // Свой ключ — если он есть. Иначе debug: такой APK ставится и
+            // работает, но обновление поверх него не встанет, потому что
+            // debug-ключ у каждой машины свой. Раздавать механикам можно
+            // только подписанный настоящим ключом.
+            signingConfig hasReleaseKey ? signingConfigs.release : signingConfigs.debug
         }
     }
 }

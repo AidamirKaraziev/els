@@ -9,7 +9,15 @@
   Код унаследован от прежнего подрядчика, качество низкое — см.
   `els-vault/archive/состояние/аудит фронта на 2026-08-11 - Flutter, 71 тысяча строк.md`
   (снимок на ту дату: там 71 тысяча строк, сейчас 82,8 — читать как историю).
-  Собирается ли он, пока неизвестно: локально Flutter SDK нет, проверяет CI.
+  **Flutter SDK стоит локально** — `~/development/flutter` (3.47.0). Проверять
+  правки можно, не дожидаясь CI: `dart analyze <путь>` и `flutter build web`
+  работают из кэша пакетов. **Android SDK и JDK 17 тоже стоят** (Temurin +
+  `/opt/homebrew/share/android-commandlinetools`), `flutter doctor` даёт
+  `[✓] Android toolchain` — релизный APK собирается локально, но подписан
+  debug-ключом: ключ релиза живёт только в секретах CI. Раздавать механикам
+  можно лишь APK из прогона CI. `flutter pub get` без нужды не запускать:
+  разрешённые пакеты лежат в `.dart_tool/`, а CI и локальная машина требуют
+  разных версий `intl`.
 - **Точка входа**: `backend/src/main.py`
 - **API**: префикс `settings.API_V1_STR` (см. `backend/src/config.py`), роутер `backend/src/api/api_v1/api.py`
 - **Локальный Python бэка**: 3.11 (`backend/.python-version`) — pydantic 1.10 несовместим с 3.12.

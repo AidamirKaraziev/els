@@ -5,6 +5,7 @@ from src.api.api_v1.endpoints import (
     act_fact,
     act_fact_step_photo,
     admin,
+    app_release,
     auth,
     client,
     company,
@@ -90,3 +91,4 @@ api_router.include_router(reports.router)
 api_router.include_router(schedules.router)
 api_router.include_router(maintenance_program.router)
 api_router.include_router(files.router)
+api_router.include_router(app_release.router)

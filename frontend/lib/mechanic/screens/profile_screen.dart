@@ -21,6 +21,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../app_download/app_download_screen.dart';
 import '../../helper/class_colors.dart';
 import '../../helper/session.dart';
 import '../../screns/user/user_contact.dart';
@@ -126,6 +127,33 @@ class MechanicProfileScreen extends StatelessWidget {
               label: 'ЦОК',
               value:
                   profile['qualification_file'] == null ? 'Не загружено' : 'Загружено',
+            ),
+          ],
+        ),
+        _Group(
+          label: 'Приложение',
+          rows: <Widget>[
+            // Единственная строка кабинета, которая куда-то ведёт: механик
+            // открывает систему в браузере телефона, а работать ему нужно в
+            // установленном приложении — и узнать об этом больше неоткуда.
+            InkWell(
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (BuildContext context) => Scaffold(
+                    backgroundColor: ColorApp.myColorWhite,
+                    body: SafeArea(
+                      child: AppDownloadScreen(
+                        onBack: () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              child: const _Row(
+                icon: Icons.download_outlined,
+                label: 'Приложение на телефон',
+                value: 'Скачать',
+              ),
             ),
           ],
         ),
