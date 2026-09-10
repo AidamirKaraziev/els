@@ -1,63 +1,63 @@
 ---
-этап: E01·S01 — макет раздела «Графики» крупнее, значок актов в строке
+этап: E01·S02 — число дефектных актов из API и тап на список за год
 статус: закрыт
 дата: 2026-09-10
 план: .claude/plan/E01-grafiki.md
 ---
 
-# Передача: макет S01 утверждён, дальше — число из API и тап (S02)
+# Передача: S02 закрыт и проверен на стенде, остался S03 — стек и чистка
 
 ## Сделано и проверено
 
-- Ряд раздела «Графики» крупнее: высота 112, кегль 14/12, лента с подписями
-  месяцев на ширине ≥ 1000 (`frontend/lib/screns/schedule/widgets/schedule_row_tile.dart`).
-- `DefectsBadge` стоит своей колонкой `_BadgeSlot` (44 px) сразу после
-  названия — значки в одной вертикали; ноль — серый без цифры;
-  `defectsCount == null` — пустая ячейка. Утверждено пользователем по скринам
-  1440 / 1100 / 390.
-- `ScheduleRow.defectsCount` читается из `defects_count` (`models/schedule_row.dart`).
-- Фикстура переехала: `frontend/lib/screns/schedule/repository/fixture_schedules_repository.dart`,
-  первый объект «создаю тест» с 5 актами; 9 тестов импортируют её из `lib`.
-- Превью: `frontend/lib/dev/schedules_preview.dart`; в `.claude/launch.json`
-  два конфига — `schedules-preview` (flutter run, в панели падает по DDS) и
-  `schedules-preview-static` (после `flutter build web -t lib/dev/schedules_preview.dart -o build/preview-schedules`).
-- `flutter test test/schedule/` — 155 зелёных; `dart analyze` по правкам чист. Закоммичено: `c2a7c2c`.
-  `make lint`/`make test` не гонялись — бэкенд не трогался.
-
-## Не доделано
-
-- Тап по значку не подключён и сервер `defects_count` не отдаёт — это S02.
+- `GET /schedules/rows` отдаёт `defects_count` — подзапрос в
+  `backend/src/crud/crud_schedules.py:_defects_count` (год создания, только
+  `kind == internal`, как в `crud_defective_act.get_by_object_and_year`).
+  Схема `ScheduleRow.defects_count: int = 0`, старый контракт цел.
+- В строке раздела «Графики» число от сервера; тап по значку открывает
+  `DefectsScreen(objectId, objectName, initialYear: row.year)` из
+  `schedules_screen.dart:_onDefectsTap`, по возвращении строка перечитывается
+  (`SchedulesRowRefreshed`).
+- Проверки: `make lint` чист, `make test` — 996 зелёных,
+  `flutter test test/schedule/` — 159 зелёных (4 новых: ручка, репозиторий,
+  тап значка в строке, открытие списка с экрана).
+- Живой стенд `make up` под админом: числа 3/2/серый ноль совпадают с
+  карточкой объекта, тап открывает список за 2026, строка перечитывается.
+- Коммит `c34e80b`.
 
 ## Следующий этап
 
-**Цель.** S02: в строке раздела число дефектных актов приходит из API, тап по
-значку открывает список дефектов объекта за год.
+**Цель.** S03: прораб проходит сценарий эпика на собранном стеке; код
+подрядчика, который новый ряд заменил, удалён.
 
-**Готово, когда.** На живых данных (`app-live` или `make up`) у объекта с актами
-в строке стоит верное число, тап открывает тот же список, что в карточке
-объекта; у объекта без актов значок серый.
+**Готово, когда.** На `make up` прораб (не админ) видит ряд крупно, число
+актов и список по тапу; удалённый старый код не оставил ссылок;
+`dart analyze lib/screns/schedule` чист (сейчас там одно чужое предупреждение
+`_statusFor` в `fixture_schedule_object_repository.dart:96`); `flutter test
+test/schedule/` зелёный.
 
 ## Первые шаги
 
-1. Как карточка объекта берёт число и открывает список: `frontend/lib/foreman/defects/live_defects_badge.dart`
-   и `frontend/lib/foreman/object_foreman/object_page_foreman.dart:1258` (`LiveDefectsBadge`, `onDefectsTap`).
-2. Ручка ленты — `grep -rn "schedules" backend/src/api/api_v1/endpoints/ | head`; добавить
-   `defects_count` за год в ответ строк (считать на сервере, не по строке с клиента).
-3. Разбор ответа: `frontend/lib/screns/schedule/repository/api_schedules_repository.dart`
-   и `test/schedule/api_schedules_repository_test.dart`; тап — в `_BadgeSlot`
-   через колбэк из `SchedulesScreen` (по образцу `onRowTap`).
+1. `git show c2a7c2c --stat` и `git show c34e80b --stat` — что новое заменило;
+   искать мёртвое: `grep -rn "kRowHeight\|_BadgeSlot\|DefectsBadge" frontend/lib`
+   и старые константы/виджеты ряда в `frontend/lib/screns/schedule/widgets/`.
+2. Стенд: `make up`, в панели браузера http://localhost:8080 — вход прорабом
+   делает пользователь (пароли не вводить), вкладка «Графики» вторая снизу.
+3. После чистки: `dart analyze lib/screns/schedule`, `flutter test test/schedule/`,
+   `flutter build web` — сборка должна собираться без удалённого.
 
 ## Не трогать
 
-- E02 (статистика, отчёты, PDF с двойным доменом) и E04–E09.
-- Старый код ряда удалять только в S03, после проверки на стеке.
+- E02 (статистика, отчёты, PDF) и E04–E09.
 - `flutter pub get` — не запускать.
+- Бэкенд — S03 фронт+infra; ручку ленты не менять.
 
 ## Уточнить перед стартом
 
-- Считать `defects_count` в той же ручке ленты или отдельной ручкой на страницу.
+- Что именно считается «старым кодом окна» в S03: только остатки в
+  `screns/schedule/widgets/`, или и `LiveDefectsBadge` в карточке объекта
+  подрядчика (`foreman/object_foreman/object_page_foreman.dart:1258`).
 
 ## Ссылки
 
-- `.claude/plan/E01-grafiki.md` — критерии S02/S03.
-- `els-vault/inbox/иконка дефектных актов в окне графика - документ с бейджем количества.md` — что просил заказчик.
+- `.claude/plan/E01-grafiki.md` — критерий S03 и цель эпика.
+- `els-vault/knowledge/decisions/код подрядчика удаляем, а не обходим.md` — правило чистки.

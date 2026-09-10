@@ -91,14 +91,6 @@ class FixtureScheduleObjectRepository implements ScheduleObjectRepository {
     });
   }
 
-  /// Назначено или просрочено — по тому, кончился ли месяц. Ровно так же
-  /// считает сервер, и перенесённое ТО обязано слушаться того же правила.
-  MonthStatus _statusFor(int year, int month) {
-    final DateTime now = DateTime.now();
-    final bool past = year < now.year || (year == now.year && month < now.month);
-    return past ? MonthStatus.overdue : MonthStatus.pending;
-  }
-
   /// Дефекты на фикстуре есть только в заполненном году: так на наброске
   /// видно оба состояния значка — красное с числом и серое.
   @override

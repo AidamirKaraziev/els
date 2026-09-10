@@ -1,2 +1,3 @@
 {"date":"2026-09-10","epic":"—","stage":"0 проект подключён к скиллам, план на сдачу","area":"docs","status":"закрыт","session":"abedf74a","commits":[]}
 {"date": "2026-09-10", "epic": "E01", "stage": "S01 сверстать макет: окно больше, DefectsBadge в строке объекта", "area": "front", "status": "закрыт", "session": "d18b4792", "commits": ["c2a7c2c"]}
+{"date":"2026-09-10","epic":"E01","stage":"S02 подключить число дефектов и тап на список за год","area":"front","status":"закрыт","session":"02b77127","commits":["c34e80b"]}
