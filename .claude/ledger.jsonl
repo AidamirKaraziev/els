@@ -2,3 +2,5 @@
 {"date": "2026-09-10", "epic": "E01", "stage": "S01 сверстать макет: окно больше, DefectsBadge в строке объекта", "area": "front", "status": "закрыт", "session": "d18b4792", "commits": ["c2a7c2c"]}
 {"date":"2026-09-10","epic":"E01","stage":"S02 подключить число дефектов и тап на список за год","area":"front","status":"закрыт","session":"02b77127","commits":["c34e80b"]}
 {"date":"2026-09-10","epic":"E01","stage":"S03 проверить на собранном стеке и убрать старый код окна","area":"front+infra","status":"закрыт","session":"749738f4","commits":["37bb0b3"]}
+{"date":"2026-09-10","epic":"E02","stage":"S01 починить двойной домен в ссылке на PDF на проде","area":"front+infra+debug","status":"закрыт","session":"0c059038","commits":["334b4a6"]}
+{"date":"2026-09-10","epic":"E02","stage":"S02 сверстать блок дефектных актов в статистике объекта","area":"front","status":"закрыт","session":"c1026aac","commits":[]}

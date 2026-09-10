@@ -12,6 +12,7 @@ import 'bloc/works_report_bloc.dart';
 import 'models/works_report.dart';
 import 'repository/report_dictionaries.dart';
 import 'repository/works_report_repository.dart';
+import 'widgets/defect_acts_sheet.dart';
 import 'widgets/month_cell.dart';
 import 'widgets/object_works_sheet.dart';
 import 'widgets/report_summary_view.dart';
@@ -23,8 +24,15 @@ import 'widgets/report_summary_view.dart';
 /// графиками»: строка объекта и цветные ячейки месяцев. Панель фильтров —
 /// белая полоса с чипами, как на «Компаниях».
 class ReportScreen extends StatelessWidget {
-  const ReportScreen({Key? key, this.drawer = const MyDrawer()})
-      : super(key: key);
+  const ReportScreen({
+    Key? key,
+    this.drawer = const MyDrawer(),
+    this.repository = const WorksReportRepository(),
+  }) : super(key: key);
+
+  /// Источник данных. Подменяется фикстурой в наброске
+  /// `dev/report_preview.dart` и в тестах; в приложении — живой.
+  final WorksReportRepository repository;
 
   /// Боковое меню экрана. Раздел общий для админа и прораба, а меню у них
   /// разные: своё жёстко прошитое `MyDrawer` подменяло прорабу бургер на
@@ -36,6 +44,7 @@ class ReportScreen extends StatelessWidget {
     final DateTime now = DateTime.now();
     return BlocProvider<WorksReportBloc>(
       create: (_) => WorksReportBloc(
+        repository: repository,
         initialFilters: ReportFilters(
           dateFrom: DateTime(now.year, 1, 1),
           dateTo: DateTime(now.year, 12, 31),
@@ -43,15 +52,20 @@ class ReportScreen extends StatelessWidget {
         // Год целиком — то, зачем раздел и заводили: показать клиенту, что
         // делалось на объектах за год.
       )..add(const WorksReportRequested()),
-      child: _ReportView(drawer: drawer),
+      child: _ReportView(drawer: drawer, repository: repository),
     );
   }
 }
 
 class _ReportView extends StatefulWidget {
-  const _ReportView({Key? key, required this.drawer}) : super(key: key);
+  const _ReportView({
+    Key? key,
+    required this.drawer,
+    required this.repository,
+  }) : super(key: key);
 
   final Widget drawer;
+  final WorksReportRepository repository;
 
   @override
   State<_ReportView> createState() => _ReportViewState();
@@ -163,6 +177,13 @@ class _ReportViewState extends State<_ReportView> {
                 year,
                 month,
               ),
+              onDefectsTap: () => DefectActsSheet.show(
+                context,
+                filters: state.filters,
+                period: report.period,
+                expected: report.summary.counts.defects,
+                repository: widget.repository,
+              ),
             ),
             const SizedBox(height: 20.0),
             if (report.isEmpty)
@@ -174,7 +195,11 @@ class _ReportViewState extends State<_ReportView> {
                     'что на объектах отбора не заведён график ТО.',
               )
             else
-              _Matrix(report: report, filters: state.filters),
+              _Matrix(
+                report: report,
+                filters: state.filters,
+                repository: widget.repository,
+              ),
             if (!report.isEmpty) ...<Widget>[
               const SizedBox(height: 12.0),
               const MonthCellLegend(),
@@ -596,10 +621,15 @@ class _ExportButton extends StatelessWidget {
 /// месяцев. Прокрутка по горизонтали нужна на узких экранах — двенадцать
 /// месяцев в телефон не влезают, а резать их было бы враньём.
 class _Matrix extends StatelessWidget {
-  const _Matrix({Key? key, required this.report, required this.filters})
-      : super(key: key);
+  const _Matrix({
+    Key? key,
+    required this.report,
+    required this.filters,
+    required this.repository,
+  }) : super(key: key);
 
   final WorksReport report;
+  final WorksReportRepository repository;
 
   /// Тот же отбор уходит в шторку: раскрытая строка обязана показывать работы
   /// за тот же период, что и ячейки рядом с ней.
@@ -607,6 +637,14 @@ class _Matrix extends StatelessWidget {
 
   static const double _monthWidth = 34.0;
   static const double _objectWidth = 260.0;
+
+  /// Две узкие колонки справа: «ТО» и «Акты».
+  static const double _maintenanceWidth = 60.0;
+  static const double _defectsWidth = 50.0;
+
+  /// Боковые отступы строки; без них в ширине последняя колонка выезжала
+  /// за край и Flutter рисовал полосу переполнения.
+  static const double _rowPadding = 12.0;
 
   @override
   Widget build(BuildContext context) {
@@ -620,13 +658,20 @@ class _Matrix extends StatelessWidget {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SizedBox(
-          width: _objectWidth + _monthWidth * monthCount + 60.0,
+          width: _objectWidth +
+              _monthWidth * monthCount +
+              _maintenanceWidth +
+              _defectsWidth +
+              _rowPadding * 2,
           child: Column(
             children: <Widget>[
               _HeaderRow(report: report),
               ...report.items.map(
-                (ReportObjectRow row) =>
-                    _ObjectRow(row: row, filters: filters),
+                (ReportObjectRow row) => _ObjectRow(
+                  row: row,
+                  filters: filters,
+                  repository: repository,
+                ),
               ),
             ],
           ),
@@ -644,7 +689,10 @@ class _HeaderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+      padding: const EdgeInsets.symmetric(
+        horizontal: _Matrix._rowPadding,
+        vertical: 10.0,
+      ),
       decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(color: ColorApp.myColorGrayBorder),
@@ -677,9 +725,20 @@ class _HeaderRow extends StatelessWidget {
             ),
           ),
           const SizedBox(
-            width: 60.0,
+            width: _Matrix._maintenanceWidth,
             child: Text(
               'ТО',
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 12.0,
+                color: ColorApp.myColorGrayText,
+              ),
+            ),
+          ),
+          const SizedBox(
+            width: _Matrix._defectsWidth,
+            child: Text(
+              'Акты',
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontSize: 12.0,
@@ -694,16 +753,22 @@ class _HeaderRow extends StatelessWidget {
 }
 
 class _ObjectRow extends StatelessWidget {
-  const _ObjectRow({Key? key, required this.row, required this.filters})
-      : super(key: key);
+  const _ObjectRow({
+    Key? key,
+    required this.row,
+    required this.filters,
+    required this.repository,
+  }) : super(key: key);
 
   final ReportObjectRow row;
   final ReportFilters filters;
+  final WorksReportRepository repository;
 
   void _open(BuildContext context) => ObjectWorksSheet.show(
         context,
         row: row,
         filters: filters,
+        repository: repository,
       );
 
   @override
@@ -711,7 +776,10 @@ class _ObjectRow extends StatelessWidget {
     return InkWell(
       onTap: () => _open(context),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+        padding: const EdgeInsets.symmetric(
+          horizontal: _Matrix._rowPadding,
+          vertical: 6.0,
+        ),
         decoration: const BoxDecoration(
           border: Border(
             bottom: BorderSide(color: ColorApp.myColorGrayShadow),
@@ -756,11 +824,29 @@ class _ObjectRow extends StatelessWidget {
               ),
             ),
             SizedBox(
-              width: 60.0,
+              width: _Matrix._maintenanceWidth,
               child: Text(
                 row.maintenanceSummary,
                 textAlign: TextAlign.right,
                 style: const TextStyle(fontSize: 12.0),
+              ),
+            ),
+            // Число актов за период: красным при ненуле, серым при нуле —
+            // как плитка сводки и значок в ленте графиков.
+            SizedBox(
+              width: _Matrix._defectsWidth,
+              child: Text(
+                '${row.counts.defects}',
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontSize: 12.0,
+                  fontWeight: row.counts.defects > 0
+                      ? FontWeight.w600
+                      : FontWeight.w400,
+                  color: row.counts.defects > 0
+                      ? ColorApp.myColorRed
+                      : ColorApp.myColorGrayText,
+                ),
               ),
             ),
           ],

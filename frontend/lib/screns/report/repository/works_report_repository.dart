@@ -4,6 +4,7 @@ import 'package:els/helper/api_client.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../helper/api_config.dart';
+import '../models/defect_row.dart';
 import '../models/object_works.dart';
 import '../models/works_report.dart';
 
@@ -65,14 +66,15 @@ class ReportFilters {
     );
   }
 
-  static String _date(DateTime value) =>
+  /// Дата в виде `ГГГГ-ММ-ДД` — так её ждут ручки отчёта.
+  static String dateLabel(DateTime value) =>
       '${value.year.toString().padLeft(4, '0')}-'
       '${value.month.toString().padLeft(2, '0')}-'
       '${value.day.toString().padLeft(2, '0')}';
 
   Map<String, String> toQuery() => <String, String>{
-        'date_from': _date(dateFrom),
-        'date_to': _date(dateTo),
+        'date_from': dateLabel(dateFrom),
+        'date_to': dateLabel(dateTo),
         if (divisionId != null) 'division_id': '$divisionId',
         if (organizationId != null) 'organization_id': '$organizationId',
         if (companyId != null) 'company_id': '$companyId',
@@ -119,6 +121,19 @@ class WorksReportRepository {
 
     final http.Response response = await _get(uri);
     return ObjectWorksReport.fromJson(_decode(response));
+  }
+
+  /// Дефектные акты всего отбора за период — список с плитки сводки.
+  ///
+  /// Ручки на сервере ещё нет: она подключается в S03 эпика «Дефектные акты
+  /// видны везде». До тех пор шторка честно говорит, что списка нет, а не
+  /// показывает пустоту — пустой список читался бы как «актов не было».
+  Future<List<ReportDefectRow>> fetchDefects({
+    required ReportFilters filters,
+  }) async {
+    throw const WorksReportException(
+      'Список актов за период ещё не подключён к серверу',
+    );
   }
 
   /// Адрес выгрузки, который можно открыть в новой вкладке.

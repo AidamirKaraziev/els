@@ -110,7 +110,7 @@ class MonthCellTile extends StatelessWidget {
       parts.add('прочих работ: ${cell.counts.otherRequests}');
     }
     if (cell.counts.defects > 0) {
-      parts.add('дефектных ведомостей: ${cell.counts.defects}');
+      parts.add('дефектных актов: ${cell.counts.defects}');
     }
     return parts.join('\n');
   }
@@ -149,7 +149,7 @@ class MonthCellLegend extends StatelessWidget {
         _LegendDot(color: ColorApp.myColorRed, label: 'авария'),
         _LegendDot(color: ColorApp.myColorBlue, label: 'заявка заказчика'),
         _LegendDot(color: ColorApp.myColorGray, label: 'прочая работа'),
-        _LegendDot(color: ColorApp.myColorYellow, label: 'дефектная ведомость'),
+        _LegendDot(color: ColorApp.myColorYellow, label: 'дефектный акт'),
       ],
     );
   }

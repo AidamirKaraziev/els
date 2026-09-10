@@ -222,6 +222,23 @@
       ],
       "cwd": "frontend",
       "port": 5611
+    },
+    {
+      "name": "report-preview",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/dev/report_preview.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5612",
+        "--web-hostname",
+        "127.0.0.1"
+      ],
+      "cwd": "frontend",
+      "port": 5612
     }
   ]
 }

@@ -12,9 +12,14 @@ class ReportSummaryView extends StatelessWidget {
     Key? key,
     required this.report,
     required this.onMonthTap,
+    this.onDefectsTap,
   }) : super(key: key);
 
   final WorksReport report;
+
+  /// Тап по плитке актов открывает их список за тот же период и отбор.
+  /// При нуле плитка не нажимается: открывать пустой список незачем.
+  final VoidCallback? onDefectsTap;
 
   /// Клик по столбику сужает период до этого месяца — тот же отбор, что и
   /// счётчик, на который нажали.
@@ -72,9 +77,22 @@ class ReportSummaryView extends StatelessWidget {
               value: '${summary.objectsTotal}',
               hint: '${summary.objectsWithoutBreakdowns} без аварий',
             ),
+            // Ноль — серый, а не красный: красное число на ровном месте
+            // читается как тревога. Тот же приём, что у значка в ленте
+            // графиков (`DefectsBadge`).
             _Tile(
-              label: 'Дефектных ведомостей',
+              label: 'Дефектных актов',
               value: '${summary.counts.defects}',
+              valueColor: summary.counts.defects > 0
+                  ? ColorApp.myColorRed
+                  : ColorApp.myColorGrayText,
+              hint: summary.counts.defects > 0
+                  ? 'открыть список'
+                  : 'за период не составлялись',
+              hintColor: summary.counts.defects > 0
+                  ? ColorApp.myColorBlue
+                  : ColorApp.myColorGrayText,
+              onTap: summary.counts.defects > 0 ? onDefectsTap : null,
             ),
           ],
         ),
@@ -97,16 +115,20 @@ class _Tile extends StatelessWidget {
     required this.value,
     this.hint,
     this.hintColor,
+    this.valueColor,
+    this.onTap,
   }) : super(key: key);
 
   final String label;
   final String value;
   final String? hint;
   final Color? hintColor;
+  final Color? valueColor;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final Widget tile = Container(
       width: 190.0,
       padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
       decoration: BoxDecoration(
@@ -128,7 +150,11 @@ class _Tile extends StatelessWidget {
           const SizedBox(height: 4.0),
           Text(
             value,
-            style: const TextStyle(fontSize: 24.0, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 24.0,
+              fontWeight: FontWeight.w600,
+              color: valueColor,
+            ),
           ),
           if (hint != null) ...<Widget>[
             const SizedBox(height: 2.0),
@@ -142,6 +168,12 @@ class _Tile extends StatelessWidget {
           ],
         ],
       ),
+    );
+    if (onTap == null) return tile;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10.0),
+      child: tile,
     );
   }
 }
@@ -218,7 +250,8 @@ class _MonthBar extends StatelessWidget {
       child: Tooltip(
         message: '${monthFullNames[month.month - 1]} ${month.year}\n'
             'ТО: ${month.maintenanceCompleted} из ${month.maintenancePlanned}\n'
-            'прочих работ: $works',
+            'прочих работ: $works\n'
+            'дефектных актов: ${month.counts.defects}',
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 3.0),
           child: Column(

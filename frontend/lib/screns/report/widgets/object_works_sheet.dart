@@ -4,11 +4,12 @@ import '../../../helper/class_colors.dart';
 import '../models/object_works.dart';
 import '../models/works_report.dart';
 import '../repository/works_report_repository.dart';
+import 'report_cards.dart';
 
 /// Все работы на объекте за период — то, что открывается кликом по строке.
 ///
 /// Уровень 2 — лента работ по датам, уровень 3 — что именно сделано: чек-лист
-/// акта, дефектная ведомость, детали заявки. Собирается слиянием двух списков
+/// акта, дефектный акт, детали заявки. Собирается слиянием двух списков
 /// по времени: у ТО и у заявки нет общего набора полей, поэтому бэкенд отдаёт
 /// их раздельно, а лента — дело показа.
 class ObjectWorksSheet extends StatefulWidget {
@@ -28,12 +29,17 @@ class ObjectWorksSheet extends StatefulWidget {
     BuildContext context, {
     required ReportObjectRow row,
     required ReportFilters filters,
+    WorksReportRepository repository = const WorksReportRepository(),
   }) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => ObjectWorksSheet(row: row, filters: filters),
+      builder: (_) => ObjectWorksSheet(
+        row: row,
+        filters: filters,
+        repository: repository,
+      ),
     );
   }
 
@@ -83,7 +89,7 @@ class _ObjectWorksSheetState extends State<ObjectWorksSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _handle(),
+          const ReportSheetHandle(),
           _header(),
           const Divider(height: 1.0),
           Flexible(child: _content()),
@@ -91,16 +97,6 @@ class _ObjectWorksSheetState extends State<ObjectWorksSheet> {
       ),
     );
   }
-
-  Widget _handle() => Container(
-        width: 40.0,
-        height: 4.0,
-        margin: const EdgeInsets.symmetric(vertical: 10.0),
-        decoration: BoxDecoration(
-          color: ColorApp.myColorGrayBorder,
-          borderRadius: BorderRadius.circular(2.0),
-        ),
-      );
 
   Widget _header() {
     final ReportObjectRow row = widget.row;
@@ -132,6 +128,13 @@ class _ObjectWorksSheetState extends State<ObjectWorksSheet> {
                     color: ColorApp.myColorRed),
               _fact('аварий', '${row.counts.breakdowns}'),
               _fact('заявок заказчика', '${row.counts.clientRequests}'),
+              // Число актов рядом с авариями, красным при ненуле — тот же
+              // ряд, что бейдж в ленте графиков и колонка матрицы.
+              _fact(
+                'дефектных актов',
+                '${row.counts.defects}',
+                color: row.counts.defects > 0 ? ColorApp.myColorRed : null,
+              ),
               if (row.division != null) _fact('участок', row.division!),
               if (row.responsibleMechanic != null)
                 _fact('механик', row.responsibleMechanic!),
@@ -162,7 +165,7 @@ class _ObjectWorksSheetState extends State<ObjectWorksSheet> {
 
   Widget _content() {
     if (_error != null) {
-      return _centered(
+      return ReportCentered(
         icon: Icons.cloud_off_outlined,
         title: _error!,
         action: 'Повторить',
@@ -177,7 +180,7 @@ class _ObjectWorksSheetState extends State<ObjectWorksSheet> {
       );
     }
     if (report.isEmpty) {
-      return _centered(
+      return const ReportCentered(
         icon: Icons.inbox_outlined,
         title: 'За этот период работ на объекте не было',
         subtitle: 'Ни планового ТО, ни заявок. Если ТО положено — значит '
@@ -197,41 +200,6 @@ class _ObjectWorksSheetState extends State<ObjectWorksSheet> {
       itemCount: entries.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10.0),
       itemBuilder: (BuildContext context, int index) => entries[index].build(),
-    );
-  }
-
-  Widget _centered({
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    String? action,
-    VoidCallback? onAction,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 50.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(icon, size: 34.0, color: ColorApp.myColorGrayText),
-          const SizedBox(height: 12.0),
-          Text(title, textAlign: TextAlign.center),
-          if (subtitle != null) ...<Widget>[
-            const SizedBox(height: 6.0),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12.0,
-                color: ColorApp.myColorGrayText,
-              ),
-            ),
-          ],
-          if (action != null) ...<Widget>[
-            const SizedBox(height: 16.0),
-            OutlinedButton(onPressed: onAction, child: Text(action)),
-          ],
-        ],
-      ),
     );
   }
 }
@@ -282,7 +250,7 @@ class _MaintenanceCardState extends State<_MaintenanceCard> {
   Widget build(BuildContext context) {
     final MaintenanceWork work = widget.work;
 
-    return _Card(
+    return ReportCard(
       accent: maintenanceColor(work.status),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,7 +267,7 @@ class _MaintenanceCardState extends State<_MaintenanceCard> {
                   ),
                 ),
               ),
-              _StatusBadge(
+              ReportStatusBadge(
                 label: maintenanceLabel(work.status),
                 color: maintenanceColor(work.status),
               ),
@@ -413,7 +381,7 @@ class _RequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Card(
+    return ReportCard(
       accent: _accent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,7 +397,7 @@ class _RequestCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _StatusBadge(label: workKindLabel(work.kind), color: _accent),
+              ReportStatusBadge(label: workKindLabel(work.kind), color: _accent),
             ],
           ),
           const SizedBox(height: 4.0),
@@ -493,7 +461,7 @@ class _DefectLine extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'Дефектная ведомость: ${defect.title}',
+                  'Дефектный акт: ${defect.title}',
                   style: const TextStyle(fontSize: 12.0),
                 ),
                 if (defect.description != null)
@@ -517,63 +485,6 @@ class _DefectLine extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _Card extends StatelessWidget {
-  const _Card({Key? key, required this.accent, required this.child})
-      : super(key: key);
-
-  final Color accent;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12.0, 10.0, 12.0, 10.0),
-      decoration: BoxDecoration(
-        color: ColorApp.myColorWhite,
-        borderRadius: BorderRadius.circular(8.0),
-        border: Border.all(color: ColorApp.myColorGrayBorder),
-      ),
-      // Цветная полоса слева, а не заливка карточки: сплошной цвет кричит, а
-      // нужен спокойный признак вида работы. Тот же приём, что в строке
-      // просроченных ТО, где заливку заменили бейджем.
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Container(
-            width: 3.0,
-            decoration: BoxDecoration(
-              color: accent,
-              borderRadius: BorderRadius.circular(2.0),
-            ),
-          ),
-          const SizedBox(width: 10.0),
-          Expanded(child: child),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({Key? key, required this.label, required this.color})
-      : super(key: key);
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.18),
-        borderRadius: BorderRadius.circular(10.0),
-      ),
-      child: Text(label, style: const TextStyle(fontSize: 11.0)),
     );
   }
 }
