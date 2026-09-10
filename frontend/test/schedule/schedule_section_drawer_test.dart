@@ -5,7 +5,7 @@
 /// человек с телефона провалится в «Графики» и останется там без навигации.
 library;
 
-import 'fixture_schedules_repository.dart';
+import 'package:els/screns/schedule/repository/fixture_schedules_repository.dart';
 import 'package:els/screns/schedule/view/schedule_section.dart';
 import 'package:els/screns/schedule/view/schedules_screen.dart';
 import 'package:flutter/material.dart';

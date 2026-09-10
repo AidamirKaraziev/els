@@ -190,6 +190,38 @@
       ],
       "cwd": "frontend",
       "port": 5608
+    },
+    {
+      "name": "schedules-preview",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/dev/schedules_preview.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5609",
+        "--web-hostname",
+        "127.0.0.1"
+      ],
+      "cwd": "frontend",
+      "port": 5609
+    },
+    {
+      "name": "schedules-preview-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5611",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "build/preview-schedules"
+      ],
+      "cwd": "frontend",
+      "port": 5611
     }
   ]
 }

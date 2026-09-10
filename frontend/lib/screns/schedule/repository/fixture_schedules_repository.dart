@@ -1,13 +1,16 @@
-import 'package:els/screns/schedule/models/month_cell.dart';
-import 'package:els/screns/schedule/models/schedule_filters.dart';
-import 'package:els/screns/schedule/models/schedule_row.dart';
-import 'package:els/screns/schedule/repository/schedules_repository.dart';
+import '../models/month_cell.dart';
+import '../models/schedule_filters.dart';
+import '../models/schedule_row.dart';
+import 'schedules_repository.dart';
 
-/// Раздел «Графики» в памяти — подстава для тестов экрана.
+/// Раздел «Графики» в памяти — подстава для тестов экрана и для точки входа
+/// `dev/schedules_preview.dart`.
 ///
-/// Живёт в `test/`, а не в `lib/`: боевой раздел ходит в сеть через
-/// `ApiSchedulesRepository`, и второй реализации в самом приложении быть не
-/// должно — с ней экран однажды собрался бы с выдуманными данными.
+/// Раньше жила в `test/`, чтобы приложение не собралось с выдуманными
+/// данными. Переехала в `lib/` по той же причине, что и фикстуры экрана
+/// объекта: макет показывают в браузере без сервера. В прод-сборку не
+/// попадает — боевой раздел получает `ApiSchedulesRepository`, и из
+/// `main.dart` на неё ссылок нет.
 ///
 /// Повторяет поведение ручек: страницы по тридцать строк, фильтры и поиск
 /// складываются, состояние клеток разное. Тесты экрана держатся за неё
@@ -164,6 +167,7 @@ class FixtureSchedulesRepository implements SchedulesRepository {
       division: row.division,
       foreman: row.foreman,
       typeName: row.typeName,
+      defectsCount: row.defectsCount,
       cells: row.cells
           .map((MonthCell cell) => cell.status == MonthStatus.none
               ? cell
@@ -261,6 +265,7 @@ List<ScheduleRow> _generate(int count) {
       foreman: _foremen[index % _foremen.length],
       typeName: _types[index % _types.length],
       cells: cells,
+      defectsCount: _defectsCount(index),
     );
   }, growable: false);
 }
@@ -284,7 +289,26 @@ MonthStatus _status(int index, int month, int currentMonth) {
   }
 }
 
+/// Число дефектных актов: у первого объекта пять — как на скрине заказчика,
+/// дальше вперемешку ноль, единицы и одно двузначное, чтобы значок был виден
+/// во всех своих видах.
+int _defectsCount(int index) {
+  if (index == 0) return 5;
+  if (index == 3) return 12;
+  switch (index % 4) {
+    case 1:
+      return 1;
+    case 2:
+      return 3;
+    default:
+      return 0;
+  }
+}
+
 String _name(int index) {
+  // Первый объект — «создаю тест», как на стенде заказчика: по нему
+  // сверяют значок дефектных актов.
+  if (index == 0) return 'создаю тест';
   const List<String> names = <String>[
     'ТЦ Карнавал 3 этаж',
     'Красный дом на Северной',

@@ -16,7 +16,7 @@ import 'package:els/screns/schedule/view/schedules_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'fixture_schedules_repository.dart';
+import 'package:els/screns/schedule/repository/fixture_schedules_repository.dart';
 
 /// Фикстура, которая запоминает, с чем её попросили ленту.
 class _SpyRepository implements SchedulesRepository {

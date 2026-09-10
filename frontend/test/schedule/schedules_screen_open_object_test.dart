@@ -16,7 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'fixture_schedules_repository.dart';
+import 'package:els/screns/schedule/repository/fixture_schedules_repository.dart';
 
 /// Подставной вход в экран графика: помнит, кого просили открыть, и
 /// отвечает тогда, когда решит тест.

@@ -18,6 +18,7 @@ class ScheduleRow {
     this.division,
     this.foreman,
     this.typeName,
+    this.defectsCount,
   });
 
   final int objectId;
@@ -36,6 +37,12 @@ class ScheduleRow {
   final String? division;
   final String? foreman;
   final String? typeName;
+
+  /// Сколько дефектных актов у объекта за [year]. `null` — сервер числа не
+  /// прислал, и значок в строке не рисуется вовсе; ноль — значок серый.
+  /// Считает сервер вместе с лентой: клиенту для этого пришлось бы ходить за
+  /// актами каждой строки отдельно.
+  final int? defectsCount;
 
   String get nameLabel => name.trim().isEmpty ? 'Без названия' : name.trim();
   String get factoryNumberLabel => factoryNumber ?? '—';
@@ -62,6 +69,7 @@ class ScheduleRow {
       division: _asString(json['division']),
       foreman: _asString(json['foreman']),
       typeName: _asString(json['type_name']),
+      defectsCount: _asInt(json['defects_count']),
     );
   }
 }
