@@ -23,7 +23,7 @@
 import datetime
 from typing import Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, literal, not_, select
+from sqlalchemy import and_, extract, func, literal, not_, select
 from sqlalchemy.orm import Session, aliased
 
 from src.core.access import AccessScope
@@ -31,6 +31,7 @@ from src.crud.crud_reports import CrudReports, ReportRange, report_range
 from src.models import (
     ActBase,
     ActFact,
+    DefectiveAct,
     Division,
     FactoryModel,
     Object,
@@ -253,6 +254,7 @@ class CrudSchedules(CrudReports):
         бесконечной подгрузке одна из них пропала бы совсем.
         """
         foreman = aliased(UniversalUser)
+        defects = self._defects_count(period)
 
         query = (
             self._objects_query(db=db, scope=scope, **filters)
@@ -268,6 +270,7 @@ class CrudSchedules(CrudReports):
                 Division.title.label("division"),
                 TypeObject.name.label("type_name"),
                 foreman.name.label("foreman"),
+                defects.label("defects_count"),
             )
             .order_by(Object.address.asc(), Object.name.asc(), Object.id.asc())
         )
@@ -282,6 +285,30 @@ class CrudSchedules(CrudReports):
                 query = query.filter(condition)
 
         return pagination.get_page(query, page)
+
+    def _defects_count(self, period: ReportRange):
+        """Сколько дефектных актов у объекта за год ленты — подзапросом к строке.
+
+        Считаем здесь, а не значком с клиента по ручке `count` на каждый
+        объект: страница ленты — это полсотни строк, и полсотни запросов ради
+        полсотни чисел клали бы сервер зря. Условия те же, что у ленты актов
+        объекта (`crud_defective_act.get_by_object_and_year`): год создания и
+        только внутренние акты — клиентские порождены из них и своего счёта
+        не заслуживают. Иначе число в ленте и в карточке объекта разошлось бы.
+
+        Область видимости не режется: объект строки человеку уже виден, а
+        для видимого объекта `defective_act_scope_filter` пропускает все его
+        акты.
+        """
+        count = (
+            select(func.count(DefectiveAct.id))
+            .where(DefectiveAct.object_id == Object.id)
+            .where(DefectiveAct.kind == "internal")
+            .where(extract("year", DefectiveAct.created_at) == period.date_from.year)
+            .correlate(Object)
+            .scalar_subquery()
+        )
+        return func.coalesce(count, 0)
 
     def cells(
         self,

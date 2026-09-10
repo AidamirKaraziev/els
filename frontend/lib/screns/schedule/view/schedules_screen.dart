@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../foreman/defects/defects_screen.dart';
 import '../../../helper/class_colors.dart';
 import '../../../helper/my_drawer/my_drawer.dart';
 import '../bloc/schedules_bloc.dart';
@@ -120,6 +121,26 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     );
   }
 
+  /// Значок дефектных актов ведёт в их список — за тот же год, что показан
+  /// в ленте, иначе число на значке и список под ним разошлись бы.
+  ///
+  /// По возвращении строка перечитывается: в списке акт можно завести или
+  /// выпустить клиенту, и число на значке обязано это догнать. Одна строка,
+  /// не лента — по той же причине, что и после закрытия ТО.
+  Future<void> _onDefectsTap(ScheduleRow row) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => DefectsScreen(
+          objectId: row.objectId,
+          objectName: row.nameLabel,
+          initialYear: row.year,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    _bloc.add(SchedulesRowRefreshed(row.objectId));
+  }
+
   /// Клик мимо клеток открывает экран «График» этого объекта.
   ///
   /// Год не теряется: строка знает свой, и вход передаёт его экрану — график
@@ -189,7 +210,10 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                     // на месте, и после ошибки человек видит то же, что и до
                     // клика.
                     if (_opening) ...<Widget>[
-                      const ModalBarrier(dismissible: false, color: Colors.black12),
+                      const ModalBarrier(
+                        dismissible: false,
+                        color: Colors.black12,
+                      ),
                       const Center(child: CircularProgressIndicator()),
                     ],
                   ],
@@ -253,10 +277,10 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
               itemCount: state.rows.length + (footer == null ? 0 : 1),
               separatorBuilder: (BuildContext context, int index) =>
                   const Divider(
-                height: 1,
-                thickness: 1,
-                color: ColorApp.myColorGrayBorder,
-              ),
+                    height: 1,
+                    thickness: 1,
+                    color: ColorApp.myColorGrayBorder,
+                  ),
               itemBuilder: (BuildContext context, int index) {
                 if (index == state.rows.length) return footer!;
 
@@ -266,6 +290,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                   row: row,
                   onCellTap: _onCellTap,
                   onRowTap: widget.opener == null ? null : () => _onRowTap(row),
+                  onDefectsTap: () => _onDefectsTap(row),
                 );
               },
             );
@@ -297,10 +322,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
         child: Center(
           child: Text(
             'Это все объекты',
-            style: TextStyle(
-              fontSize: 13,
-              color: ColorApp.myColorGrayText,
-            ),
+            style: TextStyle(fontSize: 13, color: ColorApp.myColorGrayText),
           ),
         ),
       );
@@ -317,11 +339,8 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
 /// Раньше в обоих случаях висело одинаковое «Объектов не найдено», и виноватым
 /// выглядела система.
 class _EmptyView extends StatelessWidget {
-  const _EmptyView({
-    Key? key,
-    required this.filters,
-    required this.onReset,
-  }) : super(key: key);
+  const _EmptyView({Key? key, required this.filters, required this.onReset})
+    : super(key: key);
 
   final ScheduleFilters filters;
   final VoidCallback onReset;

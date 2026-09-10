@@ -8,17 +8,19 @@
 /// за которым ничего не происходит, — это обещание, которого экран не держит.
 library;
 
+import 'package:els/foreman/defects/defects_badge.dart';
 import 'package:els/screns/schedule/models/month_cell.dart';
 import 'package:els/screns/schedule/models/schedule_row.dart';
 import 'package:els/screns/schedule/widgets/schedule_row_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-ScheduleRow _row() {
+ScheduleRow _row({int? defectsCount = 5}) {
   return ScheduleRow(
     objectId: 7,
     name: 'ТЦ Карнавал 3 этаж 1',
     year: 2026,
+    defectsCount: defectsCount,
     factoryNumber: 'B7NS 3400',
     address: 'г. Краснодар, ул. Северная, 356',
     foreman: 'Н.В. Гоголевский',
@@ -46,6 +48,8 @@ Future<List<Object?>> _pump(
   WidgetTester tester, {
   required void Function(ScheduleRow, MonthCell) onCellTap,
   VoidCallback? onRowTap,
+  VoidCallback? onDefectsTap,
+  int? defectsCount = 5,
   double width = 400,
 }) async {
   tester.view.physicalSize = Size(width, 900.0);
@@ -56,9 +60,10 @@ Future<List<Object?>> _pump(
     MaterialApp(
       home: Scaffold(
         body: ScheduleRowTile(
-          row: _row(),
+          row: _row(defectsCount: defectsCount),
           onCellTap: onCellTap,
           onRowTap: onRowTap,
+          onDefectsTap: onDefectsTap,
         ),
       ),
     ),
@@ -68,15 +73,19 @@ Future<List<Object?>> _pump(
 }
 
 void main() {
-  testWidgets('клик по занятой клетке отдаёт наверх и строку, и клетку',
-      (WidgetTester tester) async {
+  testWidgets('клик по занятой клетке отдаёт наверх и строку, и клетку', (
+    WidgetTester tester,
+  ) async {
     ScheduleRow? gotRow;
     MonthCell? gotCell;
 
-    await _pump(tester, onCellTap: (ScheduleRow row, MonthCell cell) {
-      gotRow = row;
-      gotCell = cell;
-    });
+    await _pump(
+      tester,
+      onCellTap: (ScheduleRow row, MonthCell cell) {
+        gotRow = row;
+        gotCell = cell;
+      },
+    );
 
     await tester.tap(find.byTooltip('Январь · ТО 1 · выполнено'));
     await tester.pump();
@@ -87,8 +96,9 @@ void main() {
     expect(gotCell?.actId, 101);
   });
 
-  testWidgets('клик по пустому месяцу не открывает ничего',
-      (WidgetTester tester) async {
+  testWidgets('клик по пустому месяцу не открывает ничего', (
+    WidgetTester tester,
+  ) async {
     int taps = 0;
 
     await _pump(tester, onCellTap: (ScheduleRow _, MonthCell __) => taps++);
@@ -99,8 +109,9 @@ void main() {
     expect(taps, 0);
   });
 
-  testWidgets('клик по занятой клетке не считается кликом в строку',
-      (WidgetTester tester) async {
+  testWidgets('клик по занятой клетке не считается кликом в строку', (
+    WidgetTester tester,
+  ) async {
     int rowTaps = 0;
 
     await _pump(
@@ -117,8 +128,9 @@ void main() {
     expect(rowTaps, 0);
   });
 
-  testWidgets('клик по пустому месяцу открывает строку',
-      (WidgetTester tester) async {
+  testWidgets('клик по пустому месяцу открывает строку', (
+    WidgetTester tester,
+  ) async {
     int rowTaps = 0;
 
     await _pump(
@@ -150,8 +162,41 @@ void main() {
     expect(rowTaps, 1);
   });
 
-  testWidgets('в тултипе есть и месяц, и вид работы, и состояние',
-      (WidgetTester tester) async {
+  testWidgets('тап по значку актов открывает список, а не строку', (
+    WidgetTester tester,
+  ) async {
+    int rowTaps = 0;
+    int defectsTaps = 0;
+
+    await _pump(
+      tester,
+      onCellTap: (ScheduleRow _, MonthCell __) {},
+      onRowTap: () => rowTaps++,
+      onDefectsTap: () => defectsTaps++,
+    );
+
+    await tester.tap(find.byTooltip('Дефектных актов за 2026 год: 5'));
+    await tester.pump();
+
+    // Значок обещает список актов; провались тап в строку — открылся бы ещё
+    // и график объекта.
+    expect(defectsTaps, 1);
+    expect(rowTaps, 0);
+  });
+
+  testWidgets('без числа от сервера значка нет', (WidgetTester tester) async {
+    await _pump(
+      tester,
+      onCellTap: (ScheduleRow _, MonthCell __) {},
+      defectsCount: null,
+    );
+
+    expect(find.byType(DefectsBadge), findsNothing);
+  });
+
+  testWidgets('в тултипе есть и месяц, и вид работы, и состояние', (
+    WidgetTester tester,
+  ) async {
     await _pump(tester, onCellTap: (ScheduleRow _, MonthCell __) {});
 
     // Без месяца лента без подписей не читается вовсе: клетки одинаковые.

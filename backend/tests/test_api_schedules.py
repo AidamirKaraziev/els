@@ -16,7 +16,7 @@ import pytest
 from src.config import settings
 from src.core.roles import ADMIN, CLIENT_ID, DISPATCHER, FOREMAN, MECHANIC
 from src.crud.crud_statistics import _PLANNED_MONTH_COLUMN
-from src.models import ActBase, ActFact, Division, Object, PlannedTO
+from src.models import ActBase, ActFact, DefectiveAct, Division, Object, PlannedTO
 
 URL = f"{settings.API_V1_STR}/schedules/rows"
 
@@ -69,9 +69,7 @@ def plan_to(db_session):
             db_session.flush()
             columns[_PLANNED_MONTH_COLUMN[month].key] = act.id
 
-        planned = PlannedTO(
-            year=str(year or today().year), object_id=obj.id, **columns
-        )
+        planned = PlannedTO(year=str(year or today().year), object_id=obj.id, **columns)
         db_session.add(planned)
         db_session.flush()
         return planned
@@ -144,9 +142,7 @@ class TestRowShape:
         assert cells[today().month]["act_id"] is not None
 
     @pytest.mark.integration
-    def test_month_without_plan_is_none(
-        self, client_with_db, as_role, make_object
-    ):
+    def test_month_without_plan_is_none(self, client_with_db, as_role, make_object):
         # График не заводили. Объект остаётся в ленте с двенадцатью пустыми
         # клетками, а не пропадает из неё.
         make_object()
@@ -158,9 +154,7 @@ class TestRowShape:
         assert all(cell["act_id"] is None for cell in row["cells"])
 
     @pytest.mark.integration
-    def test_other_year_is_empty(
-        self, client_with_db, as_role, make_object, plan_to
-    ):
+    def test_other_year_is_empty(self, client_with_db, as_role, make_object, plan_to):
         obj = make_object()
         plan_to(obj, months={3: None}, year=today().year)
         as_role(ADMIN)
@@ -170,12 +164,60 @@ class TestRowShape:
         assert row["year"] == today().year - 1
         assert {cell["status"] for cell in row["cells"]} == {"none"}
 
+    @pytest.mark.integration
+    def test_defects_count_is_the_object_card_number(
+        self, client_with_db, as_role, make_object, db_session
+    ):
+        """То же число, что у значка в карточке объекта: год создания акта,
+        только внутренние. Клиентский акт — порождённая запись, в счёт не идёт;
+        объект без актов приходит с нулём, а не без поля."""
+        with_acts = make_object(address="а")
+        without_acts = make_object(address="б")
+        year = today().year
+        internal = []
+        for created_at in (
+            datetime.datetime(year, 3, 1),
+            datetime.datetime(year, 7, 1),
+            datetime.datetime(year - 1, 7, 1),
+        ):
+            act = DefectiveAct(
+                object_id=with_acts.id,
+                title=f"акт {created_at:%Y-%m}",
+                created_at=created_at,
+                updated_at=created_at,
+            )
+            db_session.add(act)
+            internal.append(act)
+        db_session.flush()
+        # Клиентский акт живёт только при родителе — такова проверка в БД.
+        issued = datetime.datetime(year, 8, 1)
+        db_session.add(
+            DefectiveAct(
+                object_id=with_acts.id,
+                title="клиенту",
+                kind="client",
+                parent_id=internal[0].id,
+                created_at=issued,
+                updated_at=issued,
+            )
+        )
+        db_session.flush()
+        as_role(ADMIN)
+
+        by_object = {row["object_id"]: row for row in _data(client_with_db.get(URL))}
+
+        assert by_object[with_acts.id]["defects_count"] == 2
+        assert by_object[without_acts.id]["defects_count"] == 0
+
+        last_year = _data(client_with_db.get(URL, params={"year": year - 1}))
+        assert {row["object_id"]: row["defects_count"] for row in last_year}[
+            with_acts.id
+        ] == 1
+
 
 class TestFiltersAndSearch:
     @pytest.mark.integration
-    def test_search_narrows_the_feed(
-        self, client_with_db, as_role, make_object
-    ):
+    def test_search_narrows_the_feed(self, client_with_db, as_role, make_object):
         mark = uuid.uuid4().hex[:8]
         wanted = make_object(name=f"Спортмастер {mark}")
         make_object()
@@ -216,17 +258,13 @@ class TestFiltersAndSearch:
         assert data == []
 
     @pytest.mark.integration
-    def test_schedule_state_filter(
-        self, client_with_db, as_role, make_object, plan_to
-    ):
+    def test_schedule_state_filter(self, client_with_db, as_role, make_object, plan_to):
         done = make_object()
         plan_to(done, months={today().month: datetime.datetime.now()})
         empty = make_object()
         as_role(ADMIN)
 
-        data = _data(
-            client_with_db.get(URL, params={"schedule_state": "all_done"})
-        )
+        data = _data(client_with_db.get(URL, params={"schedule_state": "all_done"}))
 
         ids = [row["object_id"] for row in data]
         assert done.id in ids
@@ -248,9 +286,7 @@ class TestFiltersAndSearch:
 
 class TestPagination:
     @pytest.mark.integration
-    def test_has_next_tells_the_truth(
-        self, client_with_db, as_role, make_object
-    ):
+    def test_has_next_tells_the_truth(self, client_with_db, as_role, make_object):
         # Фронт догружает ленту по `has_next`, а не по «список непуст»:
         # на признаке «непуст» экран уезжал за последнюю страницу.
         for _ in range(31):
@@ -266,9 +302,7 @@ class TestPagination:
         assert second["meta"]["paginator"]["has_next"] is False
 
     @pytest.mark.integration
-    def test_without_page_the_feed_is_whole(
-        self, client_with_db, as_role, make_object
-    ):
+    def test_without_page_the_feed_is_whole(self, client_with_db, as_role, make_object):
         for _ in range(3):
             make_object()
         as_role(ADMIN)
@@ -321,9 +355,7 @@ class TestFilterOptionsShape:
     """Форма ответа фильтров: её разбирает `ScheduleFilterOptions`."""
 
     @pytest.mark.integration
-    def test_four_lists_of_pairs(
-        self, client_with_db, as_role, make_object, division
-    ):
+    def test_four_lists_of_pairs(self, client_with_db, as_role, make_object, division):
         obj = make_object(division_id=division.id)
         as_role(ADMIN)
 
@@ -333,9 +365,7 @@ class TestFilterOptionsShape:
         assert {"id", "title"} == set(data["divisions"][0])
         assert division.id in {item["id"] for item in data["divisions"]}
         assert obj.name in {item["title"] for item in data["names"]}
-        assert obj.factory_number in {
-            item["title"] for item in data["factory_numbers"]
-        }
+        assert obj.factory_number in {item["title"] for item in data["factory_numbers"]}
 
     @pytest.mark.integration
     def test_chosen_value_narrows_the_feed(
@@ -348,12 +378,8 @@ class TestFilterOptionsShape:
         as_role(ADMIN)
 
         data = _data(client_with_db.get(FILTERS_URL))
-        option = next(
-            item for item in data["divisions"] if item["id"] == division.id
-        )
-        rows = _data(
-            client_with_db.get(URL, params={"division_id": option["id"]})
-        )
+        option = next(item for item in data["divisions"] if item["id"] == division.id)
+        rows = _data(client_with_db.get(URL, params={"division_id": option["id"]}))
 
         assert {row["object_id"] for row in rows} == {wanted.id}
 
@@ -407,4 +433,3 @@ class TestWithoutDivision:
         )
 
         assert rows == []
-

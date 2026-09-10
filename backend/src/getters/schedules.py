@@ -57,6 +57,7 @@ def get_schedule_rows(
                 division=row.division,
                 foreman=row.foreman,
                 type_name=row.type_name,
+                defects_count=row.defects_count,
             )
         )
 

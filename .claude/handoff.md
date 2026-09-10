@@ -21,8 +21,8 @@
 - Превью: `frontend/lib/dev/schedules_preview.dart`; в `.claude/launch.json`
   два конфига — `schedules-preview` (flutter run, в панели падает по DDS) и
   `schedules-preview-static` (после `flutter build web -t lib/dev/schedules_preview.dart -o build/preview-schedules`).
-- `flutter test test/schedule/` — 155 зелёных; `dart analyze` по правкам чист.
-  `make lint`/`make test` не гонялись — бэкенд не трогался. Ничего не закоммичено.
+- `flutter test test/schedule/` — 155 зелёных; `dart analyze` по правкам чист. Закоммичено: `c2a7c2c`.
+  `make lint`/`make test` не гонялись — бэкенд не трогался.
 
 ## Не доделано
 

@@ -17,7 +17,8 @@ import 'month_strip.dart';
 ///
 /// Рядом с названием — значок дефектных актов, тот же `DefectsBadge`, что в
 /// карточке объекта. Число даёт сервер вместе с лентой (`defects_count`);
-/// нет числа — нет значка.
+/// нет числа — нет значка. Тап по значку — свой, наверх через [onDefectsTap]:
+/// он открывает список актов, а не график объекта, как клик по строке.
 ///
 /// На узком экране ряд складывается в колонку: пять колонок макета рассчитаны
 /// на 1440, и на телефоне из них получается каша. Порог — [kWideLayout].
@@ -27,6 +28,7 @@ class ScheduleRowTile extends StatelessWidget {
     required this.row,
     required this.onCellTap,
     this.onRowTap,
+    this.onDefectsTap,
   }) : super(key: key);
 
   final ScheduleRow row;
@@ -38,6 +40,12 @@ class ScheduleRowTile extends StatelessWidget {
   /// перехватывает, и клик по нему считается кликом в строку: за ним нет
   /// работы, зато есть объект, которому график только предстоит завести.
   final VoidCallback? onRowTap;
+
+  /// Тап по значку дефектных актов: открыть их список за год ленты.
+  ///
+  /// Не сливается с [onRowTap]: значок обещает список актов, а строка —
+  /// график объекта. Пусто — значок только показывает число.
+  final VoidCallback? onDefectsTap;
 
   /// Наверх уходит и строка, и клетка: карточке работы нужно название объекта
   /// для шапки, а по одной клетке его не восстановить.
@@ -93,7 +101,7 @@ class ScheduleRowTile extends StatelessWidget {
         children: <Widget>[
           Expanded(flex: 18, child: _PlainText(text: row.nameLabel)),
           const SizedBox(width: 8),
-          _BadgeSlot(row: row),
+          _BadgeSlot(row: row, onTap: onDefectsTap),
           const SizedBox(width: 16),
           Expanded(flex: 14, child: _PlainText(text: row.factoryNumberLabel)),
           const SizedBox(width: 16),
@@ -133,7 +141,7 @@ class ScheduleRowTile extends StatelessWidget {
           children: <Widget>[
             Expanded(child: _PlainText(text: row.nameLabel)),
             const SizedBox(width: 8),
-            _BadgeSlot(row: row),
+            _BadgeSlot(row: row, onTap: onDefectsTap),
             const SizedBox(width: 8),
             _TypePill(row: row),
           ],
@@ -157,12 +165,13 @@ class ScheduleRowTile extends StatelessWidget {
 /// «12» не двигало соседнюю колонку. Нет числа от сервера — пустое место
 /// той же ширины, колонки не съезжают.
 ///
-/// Значок без нажатия: список актов по тапу подключается вместе с числом от
-/// сервера (этап S02 плана E01). Пока число даёт только фикстура.
+/// Нажатие у значка своё: `DefectsBadge` забирает его себе, и в строку
+/// под ним оно не проваливается — иначе тап открывал бы и список, и график.
 class _BadgeSlot extends StatelessWidget {
-  const _BadgeSlot({Key? key, required this.row}) : super(key: key);
+  const _BadgeSlot({Key? key, required this.row, this.onTap}) : super(key: key);
 
   final ScheduleRow row;
+  final VoidCallback? onTap;
 
   static const double _width = 44;
 
@@ -176,7 +185,7 @@ class _BadgeSlot extends StatelessWidget {
           ? null
           : Align(
               alignment: Alignment.centerLeft,
-              child: DefectsBadge(count: count, year: row.year),
+              child: DefectsBadge(count: count, year: row.year, onTap: onTap),
             ),
     );
   }
@@ -236,7 +245,7 @@ class _PlaceBlock extends StatelessWidget {
 
 class _IconLine extends StatelessWidget {
   const _IconLine({Key? key, required this.icon, required this.text})
-      : super(key: key);
+    : super(key: key);
 
   final IconData icon;
   final String text;
@@ -252,10 +261,7 @@ class _IconLine extends StatelessWidget {
         Flexible(
           child: Text(
             text,
-            style: const TextStyle(
-              fontSize: 12,
-              color: ColorApp.myColorBlack,
-            ),
+            style: const TextStyle(fontSize: 12, color: ColorApp.myColorBlack),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
