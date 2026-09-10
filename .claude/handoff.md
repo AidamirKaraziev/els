@@ -1,63 +1,54 @@
 ---
-этап: E01·S02 — число дефектных актов из API и тап на список за год
+этап: E01·S03 — проверка на собранном стеке и чистка раздела «Графики»
 статус: закрыт
 дата: 2026-09-10
+знание: не записано · эпик E01 закрыт
 план: .claude/plan/E01-grafiki.md
 ---
 
-# Передача: S02 закрыт и проверен на стенде, остался S03 — стек и чистка
+# Передача: E01 закрыт целиком (3/3), следующего этапа в плане нет
 
 ## Сделано и проверено
 
-- `GET /schedules/rows` отдаёт `defects_count` — подзапрос в
-  `backend/src/crud/crud_schedules.py:_defects_count` (год создания, только
-  `kind == internal`, как в `crud_defective_act.get_by_object_and_year`).
-  Схема `ScheduleRow.defects_count: int = 0`, старый контракт цел.
-- В строке раздела «Графики» число от сервера; тап по значку открывает
-  `DefectsScreen(objectId, objectName, initialYear: row.year)` из
-  `schedules_screen.dart:_onDefectsTap`, по возвращении строка перечитывается
-  (`SchedulesRowRefreshed`).
-- Проверки: `make lint` чист, `make test` — 996 зелёных,
-  `flutter test test/schedule/` — 159 зелёных (4 новых: ручка, репозиторий,
-  тап значка в строке, открытие списка с экрана).
-- Живой стенд `make up` под админом: числа 3/2/серый ноль совпадают с
-  карточкой объекта, тап открывает список за 2026, строка перечитывается.
-- Коммит `c34e80b`.
+- Прораб на `make up` (http://localhost:8080, вкладка «График»): ряд крупный,
+  у объекта «AAAAAAAAAAAA» красный значок «3»; тап по значку открывает
+  «Дефекты» за 2026 с тремя актами; назад — строка перечитана
+  (`GET /schedules/rows?object_id=80&year=2026`).
+- Удалён `frontend/lib/screns/schedule/widgets/schedule_year_dialog.dart`
+  (`pickScheduleYear` никто не вызывал) и `_statusFor` из
+  `object/repository/fixture_schedule_object_repository.dart`. Ссылок нет.
+- `dart analyze lib/screns/schedule` — 0 issues; `flutter test test/schedule/`
+  — 159 зелёных; `flutter build web` собрана; `make lint` чист.
+  `make test` в этой сессии не гонялся — бэкенд не менялся.
+- Фронт-образ пересобран `--no-cache` (кэшированная сборка давала тот же
+  image id: удалённый код был мёртвым и в `build/web` не попадал).
+- Коммит `37bb0b3` (вместе с handoff/планом/ledger по S02).
 
 ## Следующий этап
 
-**Цель.** S03: прораб проходит сценарий эпика на собранном стеке; код
-подрядчика, который новый ряд заменил, удалён.
+**Цель.** В плане открытых этапов нет: E02–E09 без подпланов. Следующий
+шаг — `/plan E02` (статистика, отчёты, PDF) или то, что назовёт заказчик.
 
-**Готово, когда.** На `make up` прораб (не админ) видит ряд крупно, число
-актов и список по тапу; удалённый старый код не оставил ссылок;
-`dart analyze lib/screns/schedule` чист (сейчас там одно чужое предупреждение
-`_statusFor` в `fixture_schedule_object_repository.dart:96`); `flutter test
-test/schedule/` зелёный.
+**Готово, когда.** Определяется при нарезке следующего эпика.
 
 ## Первые шаги
 
-1. `git show c2a7c2c --stat` и `git show c34e80b --stat` — что новое заменило;
-   искать мёртвое: `grep -rn "kRowHeight\|_BadgeSlot\|DefectsBadge" frontend/lib`
-   и старые константы/виджеты ряда в `frontend/lib/screns/schedule/widgets/`.
-2. Стенд: `make up`, в панели браузера http://localhost:8080 — вход прорабом
-   делает пользователь (пароли не вводить), вкладка «Графики» вторая снизу.
-3. После чистки: `dart analyze lib/screns/schedule`, `flutter test test/schedule/`,
-   `flutter build web` — сборка должна собираться без удалённого.
+1. `python3 ~/.claude/skills/lib/counters.py` — убедиться, что E01 3/3.
+2. `/plan E02` — нарезать подплан; критерии брать из `.claude/plan/roadmap.md`.
 
 ## Не трогать
 
-- E02 (статистика, отчёты, PDF) и E04–E09.
+- `LiveDefectsBadge` в `frontend/lib/foreman/object_foreman/object_page_foreman.dart:1258`
+  — чужая карточка объекта, в E01 сознательно не входила.
+- Dev-точки `frontend/lib/dev/*_preview.dart` — в сборку не попадают, это
+  конвенция модуля, не мусор.
 - `flutter pub get` — не запускать.
-- Бэкенд — S03 фронт+infra; ручку ленты не менять.
 
 ## Уточнить перед стартом
 
-- Что именно считается «старым кодом окна» в S03: только остатки в
-  `screns/schedule/widgets/`, или и `LiveDefectsBadge` в карточке объекта
-  подрядчика (`foreman/object_foreman/object_page_foreman.dart:1258`).
+- Какой эпик следующий: E02 по roadmap или срочное от заказчика после сдачи.
 
 ## Ссылки
 
-- `.claude/plan/E01-grafiki.md` — критерий S03 и цель эпика.
-- `els-vault/knowledge/decisions/код подрядчика удаляем, а не обходим.md` — правило чистки.
+- `.claude/plan/roadmap.md` — порядок эпиков E02–E09.
+- `els-vault/00-home/текущие приоритеты.md` — открытое вне плана.
