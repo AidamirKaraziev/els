@@ -161,15 +161,8 @@ class WorksReportRepository {
       throw const WorksReportException('Сервер не вернул ссылку на файл');
     }
 
-    // Бэкенд отдаёт адрес **без схемы** — `els23.ru/api/v1/…`, ровно как
-    // ссылки на фото и сканы. Схему дописывает клиент: на вебе берётся схема
-    // открытой страницы, см. `ApiConfig.scheme` и `helper/api_image.dart`.
-    //
-    // Без этого браузер считает адрес относительным и приклеивает его к
-    // текущему пути: получается `https://els23.ru/els23.ru/api/v1/…`, и
-    // скачивание молча не работает.
-    if (url.contains('://')) return url;
-    return '${ApiConfig.scheme}://$url';
+    // Адрес приходит без схемы, см. `ApiConfig.withScheme`.
+    return ApiConfig.withScheme(url);
   }
 
   Future<http.Response> _get(Uri uri) async {

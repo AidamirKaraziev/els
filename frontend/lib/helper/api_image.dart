@@ -55,7 +55,7 @@ ImageProvider apiImage(Object? path) {
   // путь подставляется прямо в строку, без проверки на null.
   if (value.isEmpty || value == 'null') return _blank;
 
-  return NetworkImage('${ApiConfig.scheme}://$value', headers: _headers());
+  return NetworkImage(ApiConfig.withScheme(value), headers: _headers());
 }
 
 /// То же самое, но виджетом — на замену `Image.network`.

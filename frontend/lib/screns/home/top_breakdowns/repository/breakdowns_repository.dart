@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../../helper/api_config.dart';
-import '../../../../helper/class_colors.dart';
 import '../models/breakdowns_report.dart';
 import 'package:els/helper/api_client.dart';
 
@@ -168,12 +167,8 @@ class BreakdownsRepository {
       throw const BreakdownsException('Сервер не вернул ссылку на файл');
     }
 
-    // Бэкенд отдаёт адрес **без схемы** — как ссылки на фото и сканы. Схему
-    // дописывает клиент, см. `ApiConfig.scheme`. Без этого браузер считает
-    // адрес относительным и приклеивает его к текущему пути: получается
-    // `https://домен/домен/api/v1/…`, и скачивание молча не работает.
-    if (url.contains('://')) return url;
-    return '${ApiConfig.scheme}://$url';
+    // Адрес приходит без схемы, см. `ApiConfig.withScheme`.
+    return ApiConfig.withScheme(url);
   }
 
   /// Справочник участков для фильтра.

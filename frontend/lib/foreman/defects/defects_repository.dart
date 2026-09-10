@@ -126,6 +126,9 @@ class DefectsRepository {
   /// Прямо к `/api/v1/static/…` обратиться нельзя: статике нужен заголовок
   /// `Authorization`, а новая вкладка его не отправит. Тот же приём, что у
   /// выгрузки топа поломок (`screns/home/top_breakdowns`).
+  ///
+  /// Адрес приходит без схемы, см. [ApiConfig.withScheme]: без неё браузер
+  /// открывал `els23.ru/els23.ru/api/v1/…`.
   Future<String> downloadLink(String pdfPath) async {
     final Uri url = Uri.parse('${ApiConfig.base}/files/link');
     final http.Response response = await Api.post(
@@ -139,7 +142,7 @@ class DefectsRepository {
     final Map<String, dynamic> data = _single(response);
     final Object? link = data['url'];
     if (link == null) throw const FormatException('Ответ без ссылки');
-    return link.toString();
+    return ApiConfig.withScheme(link.toString());
   }
 
   List<dynamic> _list(http.Response response) {

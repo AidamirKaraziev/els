@@ -135,10 +135,8 @@ class AppReleaseApi {
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final String url =
           (body['data'] as Map<String, dynamic>)['url'] as String;
-      // Бэкенд отдаёт адрес без схемы — так же, как ссылки на файлы
-      // (`getters/static_url.py`). Дописываем ту же схему, что у страницы:
-      // под HTTPS ссылка на http браузером блокируется.
-      return url.startsWith('http') ? url : '${ApiConfig.scheme}://$url';
+      // Адрес приходит без схемы, см. `ApiConfig.withScheme`.
+      return ApiConfig.withScheme(url);
     } catch (_) {
       return null;
     }

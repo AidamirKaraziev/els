@@ -57,4 +57,19 @@ class ApiConfig {
     final String value = kIsWeb ? Uri.base.scheme : Uri.parse(origin).scheme;
     return value.isEmpty ? 'http' : value;
   }
+
+  /// Адрес из ответа сервера, пригодный для `launchUrl` и `NetworkImage`.
+  ///
+  /// Бэкенд отдаёт адреса файлов и ссылок на скачивание **без схемы** —
+  /// `els23.ru/api/v1/static/…?token=…` (см. `getters/static_url.py` и
+  /// `POST /files/link`). Строка без схемы для браузера — относительный путь:
+  /// он приклеивается к текущей странице, и получается
+  /// `https://els23.ru/els23.ru/api/v1/…` — файл молча не открывается.
+  /// На проде так пропала ссылка на PDF дефектного акта: три соседние
+  /// выгрузки схему дописывали каждая у себя, четвёртая — нет.
+  ///
+  /// Через эту функцию проходит любой `url`, пришедший с сервера. Уже
+  /// абсолютный адрес остаётся как есть.
+  static String withScheme(String url) =>
+      url.contains('://') ? url : '$scheme://$url';
 }
