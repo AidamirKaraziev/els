@@ -155,6 +155,7 @@ class WorksReportRepository {
     required ReportFilters filters,
     required String format,
     bool withPhotos = false,
+    List<int>? objectIds,
   }) async {
     final Uri uri = Uri.parse('${ApiConfig.base}/files/export-link');
 
@@ -168,10 +169,13 @@ class WorksReportRepository {
         },
         body: jsonEncode(<String, dynamic>{
           'export': 'works',
-          'params': <String, String>{
+          'params': <String, dynamic>{
             ...filters.toQuery(),
             'format': format,
             if (withPhotos) 'with_photos': 'true',
+            // Список сервер разворачивает в `object_ids=1&object_ids=2`.
+            if (objectIds != null)
+              'object_ids': objectIds.map((int id) => '$id').toList(),
           },
         }),
       ).timeout(timeout);

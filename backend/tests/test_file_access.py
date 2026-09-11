@@ -323,6 +323,24 @@ def test_export_link_only_signs_known_exports(client_with_db, as_role):
 
 
 @pytest.mark.integration
+def test_export_link_repeats_list_params(client_with_db, as_role):
+    """Отмеченные лифты уходят как `object_ids=1&object_ids=2`."""
+    as_role(Role.ADMIN)
+
+    response = client_with_db.post(
+        f"{API}/files/export-link",
+        json={
+            "export": "works",
+            "params": {"format": "pdf", "object_ids": ["1", "2"]},
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    url = response.json()["data"]["url"]
+    assert "format=pdf&object_ids=1&object_ids=2&token=" in url
+
+
+@pytest.mark.integration
 def test_export_link_actually_downloads_the_report(client_with_db, real_admin):
     """Кнопка «Скачать» на экране статистики держится ровно на этом."""
     token = create_file_token(

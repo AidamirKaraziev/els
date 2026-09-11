@@ -17,6 +17,7 @@
 
 import datetime
 from io import BytesIO
+from typing import List
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -146,6 +147,15 @@ def get_works_report_endpoint(
     organization_id: int = Query(None, title="Только объекты этой организации"),
     company_id: int = Query(None, title="Только объекты этой компании"),
     object_id: int = Query(None, title="Только этот объект"),
+    object_ids: List[int] = Query(
+        None,
+        title="Только эти объекты",
+        description=(
+            "Лифты, отмеченные галочками на экране: `?object_ids=1&object_ids=2`. "
+            "Сочетается с остальными фильтрами; `object_id` остаётся ради "
+            "старых клиентов."
+        ),
+    ),
     scope=Depends(deps.get_read_scope),
 ):
     return SingleEntityResponse(
@@ -159,6 +169,7 @@ def get_works_report_endpoint(
             organization_id=organization_id,
             company_id=company_id,
             object_id=object_id,
+            selected_ids=object_ids,
         )
     )
 
@@ -210,6 +221,15 @@ def export_works_report(
     organization_id: int = Query(None, title="Только объекты этой организации"),
     company_id: int = Query(None, title="Только объекты этой компании"),
     object_id: int = Query(None, title="Только этот объект"),
+    object_ids: List[int] = Query(
+        None,
+        title="Только эти объекты",
+        description=(
+            "Лифты, отмеченные галочками на экране: `?object_ids=1&object_ids=2`. "
+            "Сочетается с остальными фильтрами; `object_id` остаётся ради "
+            "старых клиентов."
+        ),
+    ),
     scope=Depends(deps.get_link_scope),
 ):
     if Permission.STATISTICS_READ not in permissions_for(current_user.role_id):
@@ -224,6 +244,7 @@ def export_works_report(
         "organization_id": organization_id,
         "company_id": company_id,
         "object_id": object_id,
+        "selected_ids": object_ids,
     }
 
     report = _collect(
@@ -311,6 +332,15 @@ def get_works_defects_endpoint(
     organization_id: int = Query(None, title="Только объекты этой организации"),
     company_id: int = Query(None, title="Только объекты этой компании"),
     object_id: int = Query(None, title="Только этот объект"),
+    object_ids: List[int] = Query(
+        None,
+        title="Только эти объекты",
+        description=(
+            "Лифты, отмеченные галочками на экране: `?object_ids=1&object_ids=2`. "
+            "Сочетается с остальными фильтрами; `object_id` остаётся ради "
+            "старых клиентов."
+        ),
+    ),
     scope=Depends(deps.get_read_scope),
 ):
     period = _period(date_from, date_to)
@@ -326,6 +356,7 @@ def get_works_defects_endpoint(
                 organization_id=organization_id,
                 company_id=company_id,
                 object_id=object_id,
+                selected_ids=object_ids,
             ),
         )
     )

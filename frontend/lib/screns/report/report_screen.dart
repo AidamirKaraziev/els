@@ -78,6 +78,23 @@ class _ReportViewState extends State<_ReportView> {
   /// объектов запрашивался бесконечно, потому что запрос жил в перерисовке.
   ReportDictionaries _dictionaries = const ReportDictionaries();
 
+  /// Отмеченные лифты: id объектов по всем страницам отбора.
+  ///
+  /// Живёт на экране, а не в bloc: это не данные отчёта, а то, что человек
+  /// собрался выгрузить. Смена отбора сбрасывает выбор — иначе в PDF уедут
+  /// лифты, которых на экране уже нет.
+  final Set<int> _selected = <int>{};
+
+  /// «Выбрать все» — весь отбор целиком, включая страницы, которых не
+  /// листали. Тогда выгрузка идёт без списка id, как раньше.
+  bool _allSelected = false;
+
+  /// Галочка «с фотографиями» для PDF. По умолчанию выключена: годовой
+  /// отчёт с фото весит сотни мегабайт.
+  bool _withPhotos = false;
+
+  ReportFilters? _selectionFilters;
+
   @override
   void initState() {
     super.initState();
@@ -101,6 +118,12 @@ class _ReportViewState extends State<_ReportView> {
       backgroundColor: ColorApp.myColorTransparent,
       body: BlocConsumer<WorksReportBloc, WorksReportState>(
         listener: (BuildContext context, WorksReportState state) {
+          if (_selectionFilters != null &&
+              _selectionFilters != state.filters &&
+              (_selected.isNotEmpty || _allSelected)) {
+            setState(_clearSelection);
+          }
+          _selectionFilters = state.filters;
           if (state is WorksReportExportReady) {
             // Ссылка живёт минуту и открывается в новой вкладке: боевой токен
             // в адрес не попадает, а nginx не пишет его в журнал доступа.
@@ -126,6 +149,9 @@ class _ReportViewState extends State<_ReportView> {
                     _FiltersBar(
                       state: state,
                       dictionaries: _dictionaries,
+                      withPhotos: _withPhotos,
+                      onWithPhotosChanged: (bool value) =>
+                          setState(() => _withPhotos = value),
                     ),
                     const SizedBox(height: 16.0),
                     ..._body(context, state),
@@ -194,12 +220,29 @@ class _ReportViewState extends State<_ReportView> {
                     'Проверьте период и фильтры. Пустой отчёт также значит, '
                     'что на объектах отбора не заведён график ТО.',
               )
-            else
+            else ...<Widget>[
+              _SelectionBar(
+                selectedCount: _allSelected
+                    ? report.totalObjects
+                    : _selected.length,
+                total: report.totalObjects,
+                withPhotos: _withPhotos,
+                onClear: () => setState(_clearSelection),
+                onExport: (String format) => _exportSelected(
+                  context,
+                  format,
+                ),
+              ),
               _Matrix(
                 report: report,
                 filters: state.filters,
                 repository: widget.repository,
+                selected: _selected,
+                allSelected: _allSelected,
+                onToggle: (int objectId) => setState(() => _toggle(objectId)),
+                onToggleAll: () => setState(_toggleAll),
               ),
+            ],
             if (!report.isEmpty) ...<Widget>[
               const SizedBox(height: 12.0),
               const MonthCellLegend(),
@@ -210,6 +253,46 @@ class _ReportViewState extends State<_ReportView> {
         ),
       ),
     ];
+  }
+
+  void _clearSelection() {
+    _selected.clear();
+    _allSelected = false;
+  }
+
+  void _toggle(int objectId) {
+    if (_allSelected) {
+      // Снятая галочка при «всех» превращает выбор в явный список видимых
+      // строк без этой — так человек видит ровно то, что уедет в файл.
+      _allSelected = false;
+      final WorksReport? report =
+          context.read<WorksReportBloc>().state.report;
+      _selected.addAll(
+        (report?.items ?? const <ReportObjectRow>[])
+            .map((ReportObjectRow row) => row.objectId),
+      );
+    }
+    if (!_selected.remove(objectId)) _selected.add(objectId);
+  }
+
+  void _toggleAll() {
+    if (_allSelected || _selected.isNotEmpty) {
+      _clearSelection();
+    } else {
+      _allSelected = true;
+    }
+  }
+
+  /// Выгрузка по отмеченным. «Все» уходит без списка — это тот же файл по
+  /// всему отбору, что и кнопка в панели фильтров.
+  void _exportSelected(BuildContext context, String format) {
+    context.read<WorksReportBloc>().add(
+          WorksReportExportRequested(
+            format: format,
+            withPhotos: format == 'pdf' && _withPhotos,
+            objectIds: _allSelected ? null : (_selected.toList()..sort()),
+          ),
+        );
   }
 
   /// Клик по столбику полосы сужает период до этого месяца.
@@ -284,10 +367,14 @@ class _FiltersBar extends StatelessWidget {
     Key? key,
     required this.state,
     required this.dictionaries,
+    required this.withPhotos,
+    required this.onWithPhotosChanged,
   }) : super(key: key);
 
   final WorksReportState state;
   final ReportDictionaries dictionaries;
+  final bool withPhotos;
+  final ValueChanged<bool> onWithPhotosChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -388,10 +475,14 @@ class _FiltersBar extends StatelessWidget {
               _ExportButton(
                 icon: Icons.picture_as_pdf_outlined,
                 label: 'PDF',
-                onTap: () => context
-                    .read<WorksReportBloc>()
-                    .add(const WorksReportExportRequested(format: 'pdf')),
+                onTap: () => context.read<WorksReportBloc>().add(
+                      WorksReportExportRequested(
+                        format: 'pdf',
+                        withPhotos: withPhotos,
+                      ),
+                    ),
               ),
+              _PhotosToggle(value: withPhotos, onChanged: onWithPhotosChanged),
               const HintIcon(id: HintIds.reportExport),
             ],
           ),
@@ -615,6 +706,122 @@ class _ExportButton extends StatelessWidget {
   }
 }
 
+/// Галочка «с фотографиями» рядом с кнопкой PDF.
+///
+/// Компактная, в одну строку с кнопками: `CheckboxListTile` растянулся бы
+/// на всю ширину панели и разорвал ряд.
+class _PhotosToggle extends StatelessWidget {
+  const _PhotosToggle({
+    Key? key,
+    required this.value,
+    required this.onChanged,
+  }) : super(key: key);
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(6.0),
+      child: Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            SizedBox(
+              width: 32.0,
+              height: 32.0,
+              child: Checkbox(
+                value: value,
+                activeColor: ColorApp.myColorGreenAuth,
+                onChanged: (bool? checked) => onChanged(checked ?? false),
+              ),
+            ),
+            const Text(
+              'С фотографиями',
+              style: TextStyle(fontSize: 13.0),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Полоса над матрицей: сколько лифтов отмечено и выгрузка по ним.
+///
+/// Появляется только при непустом выборе — пока галочек нет, кнопки в панели
+/// фильтров выгружают весь отбор, и вторая пара кнопок только путала бы.
+class _SelectionBar extends StatelessWidget {
+  const _SelectionBar({
+    Key? key,
+    required this.selectedCount,
+    required this.total,
+    required this.withPhotos,
+    required this.onClear,
+    required this.onExport,
+  }) : super(key: key);
+
+  final int selectedCount;
+  final int total;
+  final bool withPhotos;
+  final VoidCallback onClear;
+  final ValueChanged<String> onExport;
+
+  @override
+  Widget build(BuildContext context) {
+    if (selectedCount == 0) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+      decoration: BoxDecoration(
+        color: ColorApp.myColorGreenAuth.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10.0),
+        border: Border.all(
+          color: ColorApp.myColorGreenAuth.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Wrap(
+        spacing: 8.0,
+        runSpacing: 8.0,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: <Widget>[
+          Text(
+            selectedCount == total
+                ? 'Выбраны все $total'
+                : 'Выбрано $selectedCount из $total',
+            style: const TextStyle(
+              fontSize: 13.0,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          TextButton(
+            onPressed: onClear,
+            style: TextButton.styleFrom(
+              foregroundColor: ColorApp.myColorGrayText,
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            ),
+            child: const Text('Снять'),
+          ),
+          _ExportButton(
+            icon: Icons.table_view_outlined,
+            label: 'Excel по выбранным',
+            onTap: () => onExport('xlsx'),
+          ),
+          _ExportButton(
+            icon: Icons.picture_as_pdf_outlined,
+            label: withPhotos ? 'PDF по выбранным, с фото' : 'PDF по выбранным',
+            onTap: () => onExport('pdf'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Матрица «объект × месяц».
 ///
 /// Повторяет кадр «Окно с графиками»: слева объект и адрес, справа ячейки
@@ -626,10 +833,18 @@ class _Matrix extends StatelessWidget {
     required this.report,
     required this.filters,
     required this.repository,
+    required this.selected,
+    required this.allSelected,
+    required this.onToggle,
+    required this.onToggleAll,
   }) : super(key: key);
 
   final WorksReport report;
   final WorksReportRepository repository;
+  final Set<int> selected;
+  final bool allSelected;
+  final ValueChanged<int> onToggle;
+  final VoidCallback onToggleAll;
 
   /// Тот же отбор уходит в шторку: раскрытая строка обязана показывать работы
   /// за тот же период, что и ячейки рядом с ней.
@@ -637,6 +852,9 @@ class _Matrix extends StatelessWidget {
 
   static const double _monthWidth = 34.0;
   static const double _objectWidth = 260.0;
+
+  /// Колонка галочек слева от объекта.
+  static const double _checkWidth = 36.0;
 
   /// Две узкие колонки справа: «ТО» и «Акты».
   static const double _maintenanceWidth = 60.0;
@@ -658,19 +876,30 @@ class _Matrix extends StatelessWidget {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SizedBox(
-          width: _objectWidth +
+          width: _checkWidth +
+              _objectWidth +
               _monthWidth * monthCount +
               _maintenanceWidth +
               _defectsWidth +
               _rowPadding * 2,
           child: Column(
             children: <Widget>[
-              _HeaderRow(report: report),
+              _HeaderRow(
+                report: report,
+                checked: allSelected
+                    ? true
+                    : selected.isEmpty
+                        ? false
+                        : null,
+                onToggleAll: onToggleAll,
+              ),
               ...report.items.map(
                 (ReportObjectRow row) => _ObjectRow(
                   row: row,
                   filters: filters,
                   repository: repository,
+                  checked: allSelected || selected.contains(row.objectId),
+                  onToggle: () => onToggle(row.objectId),
                 ),
               ),
             ],
@@ -682,9 +911,18 @@ class _Matrix extends StatelessWidget {
 }
 
 class _HeaderRow extends StatelessWidget {
-  const _HeaderRow({Key? key, required this.report}) : super(key: key);
+  const _HeaderRow({
+    Key? key,
+    required this.report,
+    required this.checked,
+    required this.onToggleAll,
+  }) : super(key: key);
 
   final WorksReport report;
+
+  /// `true` — выбран весь отбор, `null` — часть, `false` — никто.
+  final bool? checked;
+  final VoidCallback onToggleAll;
 
   @override
   Widget build(BuildContext context) {
@@ -700,6 +938,12 @@ class _HeaderRow extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
+          _RowCheckbox(
+            value: checked,
+            tristate: true,
+            tooltip: checked == true ? 'Снять выбор' : 'Выбрать весь отбор',
+            onTap: onToggleAll,
+          ),
           const SizedBox(
             width: _Matrix._objectWidth,
             child: Text(
@@ -758,11 +1002,15 @@ class _ObjectRow extends StatelessWidget {
     required this.row,
     required this.filters,
     required this.repository,
+    required this.checked,
+    required this.onToggle,
   }) : super(key: key);
 
   final ReportObjectRow row;
   final ReportFilters filters;
   final WorksReportRepository repository;
+  final bool checked;
+  final VoidCallback onToggle;
 
   void _open(BuildContext context) => ObjectWorksSheet.show(
         context,
@@ -780,13 +1028,19 @@ class _ObjectRow extends StatelessWidget {
           horizontal: _Matrix._rowPadding,
           vertical: 6.0,
         ),
-        decoration: const BoxDecoration(
-          border: Border(
+        decoration: BoxDecoration(
+          // Отмеченная строка подсвечена: галочка слева одна на 36 пикселей,
+          // а строка с двенадцатью ячейками длинная — иначе выбор теряется.
+          color: checked
+              ? ColorApp.myColorGreenAuth.withValues(alpha: 0.06)
+              : null,
+          border: const Border(
             bottom: BorderSide(color: ColorApp.myColorGrayShadow),
           ),
         ),
         child: Row(
           children: <Widget>[
+            _RowCheckbox(value: checked, onTap: onToggle),
             SizedBox(
               width: _Matrix._objectWidth,
               child: Column(
@@ -856,6 +1110,58 @@ class _ObjectRow extends StatelessWidget {
   }
 }
 
+/// Галочка в строке матрицы.
+///
+/// Свой виджет, а не голый `Checkbox`: у того область нажатия 48 пикселей и
+/// он раздувает строку; здесь квадрат 36 и своя зона тапа, а нажатие не
+/// уходит в `InkWell` строки — иначе галочка ещё и открывала бы шторку.
+class _RowCheckbox extends StatelessWidget {
+  const _RowCheckbox({
+    Key? key,
+    required this.value,
+    required this.onTap,
+    this.tristate = false,
+    this.tooltip,
+  }) : super(key: key);
+
+  final bool? value;
+  final bool tristate;
+  final String? tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget box = SizedBox(
+      width: _Matrix._checkWidth,
+      height: 32.0,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: 24.0,
+          height: 24.0,
+          child: Checkbox(
+            value: value,
+            tristate: tristate,
+            activeColor: ColorApp.myColorGreenAuth,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+            onChanged: (_) => onTap(),
+          ),
+        ),
+      ),
+    );
+    if (tooltip == null) return box;
+    return Tooltip(message: tooltip!, child: box);
+  }
+}
+
+/// Размеры страницы, которые можно выбрать в пейджере.
+const List<int> _pageSizes = <int>[25, 50, 100];
+
+/// Листание: «Показаны 26–50 из 62», размер страницы и стрелки.
+///
+/// Стрелки крупнее стандартной `IconButton` и с рамкой: на телефоне в
+/// серую стрелку 22 пикселя не попасть, а недоступная и доступная сливались.
 class _Pager extends StatelessWidget {
   const _Pager({Key? key, required this.state}) : super(key: key);
 
@@ -865,40 +1171,130 @@ class _Pager extends StatelessWidget {
   Widget build(BuildContext context) {
     if (state is! WorksReportLoaded) return const SizedBox.shrink();
     final WorksReportLoaded loaded = state as WorksReportLoaded;
+    final int total = loaded.report!.totalObjects;
+    final int pageCount = (total / loaded.limit).ceil().clamp(1, 1 << 30);
+    final int page = loaded.offset ~/ loaded.limit + 1;
 
-    return Row(
-      children: <Widget>[
-        Text(
-          loaded.pageLabel,
-          style: const TextStyle(
-            fontSize: 12.0,
-            color: ColorApp.myColorGrayText,
+    void go(int offset, {int? limit}) => context.read<WorksReportBloc>().add(
+          WorksReportRequested(offset: offset, limit: limit ?? loaded.limit),
+        );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+      decoration: BoxDecoration(
+        color: ColorApp.myColorWhite,
+        borderRadius: BorderRadius.circular(10.0),
+      ),
+      child: Wrap(
+        spacing: 12.0,
+        runSpacing: 8.0,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        alignment: WrapAlignment.spaceBetween,
+        children: <Widget>[
+          Text(
+            loaded.pageLabel,
+            style: const TextStyle(
+              fontSize: 12.0,
+              color: ColorApp.myColorGrayText,
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                'На странице',
+                style: TextStyle(
+                  fontSize: 12.0,
+                  color: ColorApp.myColorGrayText,
+                ),
+              ),
+              const SizedBox(width: 6.0),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: _pageSizes.contains(loaded.limit)
+                      ? loaded.limit
+                      : _pageSizes.first,
+                  isDense: true,
+                  style: const TextStyle(
+                    fontSize: 13.0,
+                    color: ColorApp.myColorBlack,
+                  ),
+                  items: _pageSizes
+                      .map(
+                        (int size) => DropdownMenuItem<int>(
+                          value: size,
+                          child: Text('$size'),
+                        ),
+                      )
+                      .toList(growable: false),
+                  // Новый размер — с первой страницы: смещение 26 при
+                  // странице в 100 показало бы кусок без начала.
+                  onChanged: (int? size) =>
+                      size == null ? null : go(0, limit: size),
+                ),
+              ),
+              const SizedBox(width: 16.0),
+              _PagerArrow(
+                icon: Icons.chevron_left,
+                onTap: loaded.hasPrevious
+                    ? () => go(loaded.offset - loaded.limit)
+                    : null,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                child: Text(
+                  '$page / $pageCount',
+                  style: const TextStyle(fontSize: 13.0),
+                ),
+              ),
+              _PagerArrow(
+                icon: Icons.chevron_right,
+                onTap: loaded.hasNext
+                    ? () => go(loaded.offset + loaded.limit)
+                    : null,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PagerArrow extends StatelessWidget {
+  const _PagerArrow({Key? key, required this.icon, required this.onTap})
+      : super(key: key);
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool enabled = onTap != null;
+    return SizedBox(
+      width: 40.0,
+      height: 40.0,
+      child: OutlinedButton(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          foregroundColor: ColorApp.myColorGreenAuth,
+          side: BorderSide(
+            color: enabled
+                ? ColorApp.myColorGreenAuth
+                : ColorApp.myColorGrayBorder,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6.0),
           ),
         ),
-        const Spacer(),
-        IconButton(
-          onPressed: loaded.hasPrevious
-              ? () => context.read<WorksReportBloc>().add(
-                    WorksReportRequested(
-                      offset: loaded.offset - loaded.limit,
-                      limit: loaded.limit,
-                    ),
-                  )
-              : null,
-          icon: const Icon(Icons.chevron_left, size: 22.0),
+        child: Icon(
+          icon,
+          size: 24.0,
+          color: enabled ? ColorApp.myColorGreenAuth : ColorApp.myColorGrayBorder,
         ),
-        IconButton(
-          onPressed: loaded.hasNext
-              ? () => context.read<WorksReportBloc>().add(
-                    WorksReportRequested(
-                      offset: loaded.offset + loaded.limit,
-                      limit: loaded.limit,
-                    ),
-                  )
-              : null,
-          icon: const Icon(Icons.chevron_right, size: 22.0),
-        ),
-      ],
+      ),
     );
   }
 }

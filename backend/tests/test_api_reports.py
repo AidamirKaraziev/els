@@ -281,6 +281,127 @@ class TestMatrix:
         assert data["summary"]["objects_total"] == 3
 
 
+class TestSelectedObjects:
+    """`object_ids` — лифты, отмеченные галочками: файл только по ним."""
+
+    def _three(self, db_session, make_object):
+        organization = Organization(title=f"Орг {uuid.uuid4().hex[:6]}")
+        db_session.add(organization)
+        db_session.flush()
+        return organization, [
+            make_object(organization_id=organization.id) for _ in range(3)
+        ]
+
+    @pytest.mark.integration
+    def test_screen_narrows_to_selected(
+        self, client_with_db, as_role, db_session, make_object
+    ):
+        as_role(ADMIN)
+        organization, objects = self._three(db_session, make_object)
+        chosen = [objects[0].id, objects[2].id]
+
+        data = _data(
+            client_with_db.get(
+                URL,
+                params=_params(organization_id=organization.id, object_ids=chosen),
+            )
+        )
+
+        assert sorted(item["object_id"] for item in data["items"]) == sorted(chosen)
+        assert data["total_objects"] == 2
+        assert data["summary"]["objects_total"] == 2
+
+    @pytest.mark.integration
+    def test_excel_takes_only_selected(
+        self, client_with_db, as_role, db_session, make_object, plan_to
+    ):
+        as_role(ADMIN)
+        organization, objects = self._three(db_session, make_object)
+        for obj in objects:
+            plan_to(obj, months={3: datetime.datetime(this_year(), 3, 20)})
+        chosen = [objects[0].id, objects[1].id]
+
+        book = load_workbook(
+            BytesIO(
+                client_with_db.get(
+                    EXPORT_URL,
+                    params=_params(
+                        organization_id=organization.id, object_ids=chosen
+                    ),
+                ).content
+            )
+        )
+
+        assert book["ТО"].max_row == 3  # шапка плюс два ТО, третий лифт не выбран
+
+    @pytest.mark.integration
+    def test_pdf_by_two_selected(
+        self, client_with_db, as_role, db_session, make_object, plan_to
+    ):
+        as_role(ADMIN)
+        organization, objects = self._three(db_session, make_object)
+        for obj in objects:
+            plan_to(obj, months={3: datetime.datetime(this_year(), 3, 20)})
+        chosen = [objects[0].id, objects[1].id]
+
+        response = client_with_db.get(
+            EXPORT_URL,
+            params=_params(
+                format="pdf", organization_id=organization.id, object_ids=chosen
+            ),
+        )
+        screen = _data(
+            client_with_db.get(
+                URL,
+                params=_params(organization_id=organization.id, object_ids=chosen),
+            )
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.content[:5] == b"%PDF-"
+        # Файл считает тот же отбор, что и экран: два лифта, два ТО.
+        assert screen["summary"]["objects_total"] == 2
+        assert screen["summary"]["maintenance_planned"] == 2
+
+    @pytest.mark.integration
+    def test_defects_list_takes_selected(
+        self, client_with_db, as_role, db_session, make_object
+    ):
+        as_role(ADMIN)
+        organization, objects = self._three(db_session, make_object)
+
+        data = _data(
+            client_with_db.get(
+                DEFECTS_URL,
+                params=_params(
+                    organization_id=organization.id, object_ids=[objects[0].id]
+                ),
+            )
+        )
+
+        assert data["items"] == []
+
+    @pytest.mark.integration
+    def test_old_object_id_still_works_alongside(
+        self, client_with_db, as_role, db_session, make_object
+    ):
+        # Старый параметр не сломан: с `object_ids` он просто пересекается.
+        as_role(ADMIN)
+        _organization, objects = self._three(db_session, make_object)
+
+        data = _data(
+            client_with_db.get(
+                URL,
+                params=_params(
+                    object_id=objects[0].id,
+                    object_ids=[objects[0].id, objects[1].id],
+                ),
+            )
+        )
+
+        assert [item["object_id"] for item in data["items"]] == [objects[0].id]
+
+
 class TestObjectWorks:
     @pytest.mark.integration
     def test_unknown_object_is_404(self, client_with_db, as_role):

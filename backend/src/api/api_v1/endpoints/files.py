@@ -124,7 +124,12 @@ def create_export_link(
 
     path = f"{settings.API_V1_STR}{EXPORTS[body.export]}"
     token = create_file_token(user_id=current_user.id, path=path)
-    query = "&".join(f"{key}={value}" for key, value in body.params.items())
+    # Список — повторяющийся параметр: так FastAPI читает `List[int] = Query`.
+    query = "&".join(
+        f"{key}={item}"
+        for key, value in body.params.items()
+        for item in (value if isinstance(value, list) else [value])
+    )
     separator = "&" if query else ""
 
     return SingleEntityResponse(

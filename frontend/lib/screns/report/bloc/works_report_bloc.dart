@@ -88,6 +88,7 @@ class WorksReportBloc extends Bloc<WorksReportEvent, WorksReportState> {
         filters: state.filters,
         format: event.format,
         withPhotos: event.withPhotos,
+        objectIds: event.objectIds,
       );
       emit(WorksReportExportReady(
         filters: state.filters,

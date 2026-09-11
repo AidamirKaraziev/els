@@ -26,10 +26,14 @@ class WorksReportExportRequested extends WorksReportEvent {
   const WorksReportExportRequested({
     required this.format,
     this.withPhotos = false,
+    this.objectIds,
   });
 
   /// `xlsx` или `pdf`.
   final String format;
+
+  /// Лифты, отмеченные галочками. `null` — весь отбор, как раньше.
+  final List<int>? objectIds;
 
   /// Только для PDF и по умолчанию выключено: с фотографиями годовой отчёт
   /// весит сотни мегабайт.

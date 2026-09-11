@@ -40,7 +40,11 @@ class FixtureWorksReportRepository extends WorksReportRepository {
   }) async {
     await _wait();
     final List<int> months = _monthsOf(filters);
-    final List<Map<String, dynamic>> items = _objects
+    // Страница отбора: три «живых» объекта идут первыми, дальше — наполнение,
+    // чтобы листание по 25/50/100 было видно глазами.
+    final List<Map<String, dynamic>> items = _allObjects
+        .skip(offset)
+        .take(limit)
         .map((_FixtureObject object) => object.toRow(months))
         .toList(growable: false);
 
@@ -56,12 +60,12 @@ class FixtureWorksReportRepository extends WorksReportRepository {
     return WorksReport.fromJson(<String, dynamic>{
       'period': _period(filters, months),
       'summary': <String, dynamic>{
-        'objects_total': _objects.length,
-        'objects_without_breakdowns': _objects
+        'objects_total': _allObjects.length,
+        'objects_without_breakdowns': _allObjects
             .where((_FixtureObject object) => object.breakdownsIn(months) == 0)
             .length,
-        'maintenance_planned': months.length * _objects.length,
-        'maintenance_completed': months.length * _objects.length - 2,
+        'maintenance_planned': months.length * _allObjects.length,
+        'maintenance_completed': months.length * _allObjects.length - 2,
         'maintenance_late': 1,
         'maintenance_overdue': 2,
         'completion_percent': 92.0,
@@ -78,8 +82,8 @@ class FixtureWorksReportRepository extends WorksReportRepository {
           .map((int month) => <String, dynamic>{
                 'year': _year,
                 'month': month,
-                'maintenance_planned': _objects.length,
-                'maintenance_completed': _objects.length,
+                'maintenance_planned': _allObjects.length,
+                'maintenance_completed': _allObjects.length,
                 'counts': <String, dynamic>{
                   'breakdowns': month.isEven ? 1 : 0,
                   'defects': _objects.fold<int>(
@@ -90,7 +94,7 @@ class FixtureWorksReportRepository extends WorksReportRepository {
                 },
               })
           .toList(growable: false),
-      'total_objects': _objects.length,
+      'total_objects': _allObjects.length,
       'items': items,
     });
   }
@@ -102,7 +106,7 @@ class FixtureWorksReportRepository extends WorksReportRepository {
   }) async {
     await _wait();
     final List<int> months = _monthsOf(filters);
-    final _FixtureObject object = _objects.firstWhere(
+    final _FixtureObject object = _allObjects.firstWhere(
       (_FixtureObject candidate) => candidate.id == objectId,
       orElse: () => _objects.first,
     );
@@ -176,6 +180,7 @@ class FixtureWorksReportRepository extends WorksReportRepository {
     required ReportFilters filters,
     required String format,
     bool withPhotos = false,
+    List<int>? objectIds,
   }) async {
     return 'about:blank';
   }
@@ -286,6 +291,21 @@ class _FixtureObject {
     return out;
   }
 }
+
+/// Весь отбор фикстуры: три объекта с актами и наполнение до 62 штук —
+/// столько, чтобы на странице по 25 было три страницы, по 50 — две,
+/// по 100 — одна.
+final List<_FixtureObject> _allObjects = <_FixtureObject>[
+  ..._objects,
+  for (int index = 1; index <= 59; index++)
+    _FixtureObject(
+      id: 100 + index,
+      name: 'Лифт ${index.toString().padLeft(2, '0')}',
+      address: 'ул. Строителей, ${index * 2}',
+      mechanic: 'Петров П. П.',
+      defects: const <int, List<String>>{},
+    ),
+];
 
 const List<_FixtureObject> _objects = <_FixtureObject>[
   _FixtureObject(

@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List, Union
 
 from pydantic import BaseModel, Field
 
@@ -31,8 +31,13 @@ class ExportLinkRequest(BaseModel):
     """
 
     export: str = Field(..., title="Ключ выгрузки", example="breakdowns")
-    params: Dict[str, str] = Field(
+    params: Dict[str, Union[str, List[str]]] = Field(
         default_factory=dict,
         title="Параметры запроса",
+        description=(
+            "Список значений — повторяющийся параметр: "
+            '`{"object_ids": ["1", "2"]}` уйдёт как '
+            "`object_ids=1&object_ids=2`."
+        ),
         example={"year": "2026", "month": "5"},
     )

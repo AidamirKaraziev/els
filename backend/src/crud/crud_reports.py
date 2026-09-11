@@ -149,8 +149,13 @@ class CrudReports:
         organization_id: Optional[int] = None,
         company_id: Optional[int] = None,
         object_id: Optional[int] = None,
+        selected_ids: Optional[List[int]] = None,
     ) -> List:
         """Условия отбора объектов — единственное место, где они описаны.
+
+        `selected_ids` — лифты, отмеченные галочками на экране; в API это
+        `object_ids`. Здесь имя другое, потому что `object_ids` у разрезов
+        уже значит «объекты страницы», и в `_collect` оба идут одним `**`.
 
         Первым идёт область видимости: фильтры ниже — это выбор пользователя,
         а она граница, за которую он выйти не может. Запрошенный чужой
@@ -166,6 +171,8 @@ class CrudReports:
             conditions.append(Object.company_id == company_id)
         if object_id is not None:
             conditions.append(Object.id == object_id)
+        if selected_ids is not None:
+            conditions.append(Object.id.in_(selected_ids))
 
         return conditions
 
