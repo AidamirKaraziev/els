@@ -5,4 +5,7 @@
 {"date":"2026-09-10","epic":"E02","stage":"S01 починить двойной домен в ссылке на PDF на проде","area":"front+infra+debug","status":"закрыт","session":"0c059038","commits":["334b4a6"]}
 {"date": "2026-09-10", "epic": "E02", "stage": "S02 сверстать блок дефектных актов в статистике объекта", "area": "front", "status": "закрыт", "session": "c1026aac", "commits": ["23b9445"]}
 {"date":"2026-09-11","epic":"E02","stage":"S03 подключить число и список актов в статистике из API","area":"back+front","status":"закрыт","session":"2a4eab71","commits":["526fee5"]}
-{"date":"2026-09-11","epic":"E02","stage":"S05 вывести раздел дефектных актов в PDF отчёта","area":"back","status":"закрыт","session":"2696ca4b","commits":[]}
+{"date": "2026-09-11", "epic": "E02", "stage": "S05 вывести раздел дефектных актов в PDF отчёта", "area": "back", "status": "закрыт", "session": "2696ca4b", "commits": ["996ea82"]}
+{"date":"2026-09-11","epic":"E02","stage":"S07 сверстать выбор лифтов, галочку фото и шаг пейджера","area":"front","status":"закрыт","session":"634aefa8","commits":[]}
+{"date":"2026-09-11","epic":"E02","stage":"S08 принять список объектов в ручках отчёта","area":"back","status":"закрыт","session":"634aefa8","commits":[]}
+{"date":"2026-09-11","epic":"E02","stage":"S09 подключить выбор лифтов и фото к выгрузке","area":"front","status":"закрыт","session":"634aefa8","commits":[]}

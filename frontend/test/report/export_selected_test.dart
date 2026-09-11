@@ -78,4 +78,27 @@ void main() {
     expect(_Recording.lastObjectIds, isNull);
     await bloc.close();
   });
+
+  test('после выгрузки экран возвращается на ту же страницу отчёта', () async {
+    final WorksReportBloc bloc = await _bloc();
+
+    bloc.add(const WorksReportRequested(offset: 25, limit: 25));
+    await expectLater(bloc.stream, emitsThrough(isA<WorksReportLoaded>()));
+    final WorksReportLoaded page = bloc.state as WorksReportLoaded;
+
+    bloc.add(const WorksReportExportRequested(format: 'pdf'));
+    await expectLater(
+      bloc.stream,
+      emitsInOrder(<Matcher>[
+        isA<WorksReportExportReady>(),
+        isA<WorksReportLoaded>(),
+      ]),
+    );
+
+    final WorksReportLoaded after = bloc.state as WorksReportLoaded;
+    expect(after.offset, page.offset);
+    expect(after.limit, page.limit);
+    expect(after.report, same(page.report));
+    await bloc.close();
+  });
 }

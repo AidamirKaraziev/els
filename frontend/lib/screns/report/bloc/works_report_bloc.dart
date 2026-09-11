@@ -83,6 +83,12 @@ class WorksReportBloc extends Bloc<WorksReportEvent, WorksReportState> {
   ) async {
     // Отчёт при выгрузке не перезапрашиваем: файл собирает сервер по тем же
     // параметрам, и второй запрос на экран только мигал бы данными.
+    //
+    // Результат выгрузки — одноразовое событие для слушателя (открыть ссылку,
+    // показать ошибку), а не новое состояние экрана: сразу за ним возвращаем
+    // прежнее, иначе пейджер и позиция страницы, которые живут только в
+    // `WorksReportLoaded`, пропадают до следующего запроса.
+    final WorksReportState previous = state;
     try {
       final String url = await _repository.exportUrl(
         filters: state.filters,
@@ -102,5 +108,6 @@ class WorksReportBloc extends Bloc<WorksReportEvent, WorksReportState> {
         message: error.message,
       ));
     }
+    emit(previous);
   }
 }
