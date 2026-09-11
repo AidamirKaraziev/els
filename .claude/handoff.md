@@ -1,72 +1,74 @@
 ---
-этап: E02·S07–S09 — выбор лифтов, галочка фото, шаг страницы в «Отчётах»
+этап: E02·S06 — проверка на собранном стеке и удаление замещённого кода
 статус: закрыт
 дата: 2026-09-11
-план: .claude/plan/E02-defektnye-akty-vezde.md
+план: .claude/plan/roadmap.md
 ---
 
-# Передача: S07–S09 закрыты одним коммитом 153f1a5; остался S06 — последний в E02
+# Передача: E02 закрыт 9/9; следующий — E03 «Единая навигация», подплана ещё нет
 
 ## Сделано и проверено
 
-- Экран «Отчёты» (`frontend/lib/screns/report/report_screen.dart`): чекбоксы
-  в строках матрицы, тристейт в шапке «выбрать весь отбор», полоса
-  «Выбрано N из M · Снять · Excel/PDF по выбранным», галочка «С фотографиями»
-  рядом с PDF, пейджер «На странице 25/50/100» + стрелки 40 px с «2 / 3».
-- Бэк: `object_ids: List[int]` в `/reports/works`, `/reports/works/export`,
-  `/reports/works/defects`; внутри crud это `selected_ids` в
-  `_object_conditions` (имя другое, т.к. `object_ids` у разрезов значит
-  «объекты страницы»). `object_id` жив, пересекается с новым.
-- `POST /files/export-link` принимает `params` со списками →
-  `object_ids=24&object_ids=89`.
-- Стенд `make up`, прораб, 2026 год: отметил 2 из 48, «PDF по выбранным» —
-  ссылка с `with_photos=true&object_ids=24&object_ids=89`, в PDF
-  «Объектов в отчёте: 2», чужих объектов нет.
-- `make lint` чист, `make test` — 1009 (+6), `flutter test test/report` — 7.
-- Фикстура отчёта — 62 объекта (3 живых + 59 наполнения), листает по
-  `limit/offset`; превью `report-preview` (порт 5612).
+- На `make up` (http://localhost:8080) прораб проходит путь: «Отчёты» →
+  плитка «Дефектных актов 6» → «открыть список» (6, совпадает) → матрица,
+  две галочки на разных страницах → «PDF по выбранным». PDF по
+  `object_ids=33&object_ids=82`: «Объектов в отчёте: 2», раздел
+  «Дефектные акты за период — Всего: 2», 4 страницы.
+- Починен баг, найденный на стенде: после выгрузки бло́к отдавал
+  `WorksReportExportReady`, и пейджер (рисуется только при `Loaded`)
+  пропадал. Теперь `_onExportRequested` в
+  `frontend/lib/screns/report/bloc/works_report_bloc.dart` после
+  ExportReady/ExportFailed эмитит прежнее состояние; тест
+  «после выгрузки экран возвращается на ту же страницу отчёта» в
+  `frontend/test/report/export_selected_test.dart`.
+- Удалён мёртвый код подрядчика: `helper/defective_act.dart` (старый диалог
+  акта), `helper/sideMenu/sideMenu.dart` (дубль `MyDrawer`),
+  `my_test_screen.dart`.
+- Проверки: `make lint` чист, `make test` — 1009, `flutter test test/report`
+  — 8, `dart analyze lib test` — 0 ошибок (961 инфо подрядчика, было 970),
+  `flutter build web` собран.
+- Не закоммичено: см. `git status` — правки бэка нет, весь дифф фронт + план.
 
 ## Не доделано
 
-- S06: проверка пути статистика → список → отчёт → PDF на стеке и удаление
-  замещённого кода подрядчика. Замещённого кода в этой сессии не появилось —
-  искать в S02–S04 (старый отчёт/статистика).
-- Стрелки пейджера не скроллят к началу матрицы после смены страницы —
-  сознательно: удобно листать, стоя у пейджера. Вернуться, если пользователь
-  попросит.
+- Остальные файлы фронта без единой ссылки, вне темы E02 — не трогал:
+  `widgets_create/create_contract.dart`, `helper/creation_plot.dart`,
+  `helper/calendar/calendar.dart`, `mechanic/screens/soon_screen.dart`,
+  `screns/object/repository/repository_object.dart`,
+  `foreman/companies_foreman/company_widget_foreman/add_companies_foreman.dart`,
+  `foreman/object_foreman/widgets_object_foreman/object_account_freeze_foreman.dart`.
+  Поиск: файл, чьё имя не встречается в `frontend/lib` вне `dev/`.
+- Стрелки пейджера не скроллят к началу матрицы — сознательно, см. прошлую
+  передачу.
 
 ## Следующий этап
 
-**Цель.** S06 — пройти прорабом весь путь на `make up` и убрать код
-подрядчика, который новые экраны заместили.
+**Цель.** E03 «Единая навигация»: на главной прораба общий топ сотрудников,
+один бургер для админа и прораба. Подплана нет — сначала `/plan E03`.
 
-**Готово, когда.** На `make up` прораб проходит статистика → список → отчёт
-→ PDF; замещённый код удалён; `dart analyze` чист; E02 закрыт (9/9).
+**Готово, когда.** Определяется в `/plan E03`; ориентир из roadmap — один
+и тот же drawer у обеих ролей, топ сотрудников на главной прораба.
 
 ## Первые шаги
 
-1. `grep -rn "ReportScreen\|DefectsScreen\|LiveDefectsBadge" frontend/lib`
-   — найти, что из старого отчёта/статистики подрядчика больше не
-   вызывается (`schedule_page.dart`, старые виджеты статистики).
-2. `make up`, вход прорабом руками пользователя (пароли не вводить),
-   прогнать путь из «Готово, когда».
-3. После удаления: `dart analyze frontend/lib`, `flutter build web`,
-   `make test`.
+1. `/plan E03` — нарезать этапы; входные точки: `frontend/lib/foreman/home_foreman.dart`
+   (оболочка прораба, индексы экранов), `frontend/lib/foreman/drawer_foreman.dart`,
+   `frontend/lib/helper/my_drawer/my_drawer.dart` (drawer админа),
+   `frontend/lib/screns/home/top_employees/top_employees.dart`.
+2. Кадр макета: попросить выгрузить главную прораба и бургер в `~/els-figma/`.
+3. Перед кодом — набросок по фикстуре, как в E01/E02.
 
 ## Не трогать
 
-- `_defects_section` в `reports_pdf.py`, `_object_conditions` — утверждены.
-- Ответы `/reports/works*` — только не ломать; параметры менять не надо.
-- `export-link`: значения в query не экранируются (`f"{key}={value}"`) —
-  давнее, чинить отдельной задачей, не в S06.
+- `screns/report/*` и `/reports/works*` — приняты, E02 закрыт.
+- `schedule_page.dart` и старый экран графика — S2.6 другого плана.
+- `export-link`: значения в query не экранируются — отдельная задача.
 
 ## Уточнить перед стартом
 
-- Какой именно код подрядчика считать замещённым — только отчёт/статистика
-  или и старый экран графика (`schedule_page.dart`, задача S2.6 другого плана)?
+- Знание E02 записано в vault 11 сентября; стартовать сразу с `/plan E03`.
 
 ## Ссылки
 
-- `.claude/plan/E02-defektnye-akty-vezde.md` — S06, последний открытый.
-- `frontend/lib/dev/report_preview.dart` — набросок без сервера, `report-preview` в launch.json.
-- `backend/tests/test_api_reports.py::TestSelectedObjects` — контракт `object_ids`.
+- `.claude/plan/roadmap.md` — E03 в «Дальше», подплана нет.
+- `frontend/lib/foreman/home_foreman.dart` — список экранов прораба по индексам.

@@ -8,4 +8,5 @@
 {"date": "2026-09-11", "epic": "E02", "stage": "S05 вывести раздел дефектных актов в PDF отчёта", "area": "back", "status": "закрыт", "session": "2696ca4b", "commits": ["996ea82"]}
 {"date":"2026-09-11","epic":"E02","stage":"S07 сверстать выбор лифтов, галочку фото и шаг пейджера","area":"front","status":"закрыт","session":"634aefa8","commits":[]}
 {"date":"2026-09-11","epic":"E02","stage":"S08 принять список объектов в ручках отчёта","area":"back","status":"закрыт","session":"634aefa8","commits":[]}
-{"date":"2026-09-11","epic":"E02","stage":"S09 подключить выбор лифтов и фото к выгрузке","area":"front","status":"закрыт","session":"634aefa8","commits":[]}
+{"date": "2026-09-11", "epic": "E02", "stage": "S09 подключить выбор лифтов и фото к выгрузке", "area": "front", "status": "закрыт", "session": "634aefa8", "commits": ["0c2ffd1"]}
+{"date":"2026-09-11","epic":"E02","stage":"S06 проверить на собранном стеке и убрать замещённый код","area":"front+infra","status":"закрыт","session":"506068fd","commits":[]}
