@@ -255,7 +255,7 @@ def _summary_block(report: WorksReport, styles, width) -> List:
         ("Среднее время реакции", reaction),
         ("Заявок от заказчика", summary.counts.client_requests),
         ("Прочих работ", summary.counts.other_requests),
-        ("Дефектных ведомостей", summary.counts.defects),
+        ("Дефектных актов", summary.counts.defects),
     ]
 
     cells = [
@@ -543,7 +543,7 @@ def _object_details(
 
         defects = works.get("defects", [])
         if defects:
-            story.append(_p("Дефектные ведомости", styles["h2"]))
+            story.append(_p("Дефектные акты", styles["h2"]))
             for row in defects:
                 story.append(
                     _p(
@@ -568,6 +568,84 @@ def _object_details(
                 )
 
     return story
+
+
+def _defects_section(defect_rows, styles, width) -> List:
+    """Дефектные акты одним списком по всему отбору.
+
+    Внутри объекта акты тоже печатаются, но там они разбросаны по
+    приложениям; заказчику нужен сводный перечень — тот же, что список под
+    плиткой на экране. Фото здесь не печатаются: они остаются в блоке
+    объекта, иначе годовой отчёт с галочкой удвоился бы в размере.
+    """
+    rows_in = list(defect_rows)
+    if not rows_in:
+        return []
+
+    header = [
+        _p(label, styles["head"])
+        for label in (
+            "№",
+            "Дата",
+            "Объект",
+            "Адрес",
+            "Акт",
+            "Статус",
+            "Ответственный",
+            "Фото",
+        )
+    ]
+    rows = [header]
+    for index, row in enumerate(rows_in, start=1):
+        act = [_p(_dash(row.title), styles["cell"])]
+        if row.description:
+            act.append(_p(row.description, styles["sub"]))
+        rows.append(
+            [
+                _p(str(index), styles["cell"]),
+                _p(_date(row.created_at), styles["cell"]),
+                _p(_dash(row.object_name), styles["cell"]),
+                _p(_dash(row.address), styles["cell"]),
+                act,
+                _p(_dash(row.status), styles["cell"]),
+                _p(_dash(row.responsible), styles["cell"]),
+                _p(str(row.photo_count) if row.photo_count else "—", styles["cell"]),
+            ]
+        )
+
+    fixed = 8 * mm + 22 * mm + 12 * mm
+    free = width - fixed
+    widths = [
+        8 * mm,
+        22 * mm,
+        free * 0.17,
+        free * 0.21,
+        free * 0.34,
+        free * 0.12,
+        free * 0.16,
+        12 * mm,
+    ]
+    style = [
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#5F5E5A")),
+        ("GRID", (0, 0), (-1, -1), 0.4, _LINE),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("ALIGN", (0, 0), (0, -1), "CENTER"),
+        ("ALIGN", (-1, 0), (-1, -1), "CENTER"),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+    ]
+
+    return [
+        PageBreak(),
+        _p("Дефектные акты за период", styles["h2"]),
+        _p(
+            f"Всего: {len(rows_in)}. Акты учтены по дате создания; "
+            "фотографии — в подробностях по объекту.",
+            styles["sub"],
+        ),
+        Spacer(1, 4),
+        Table(rows, colWidths=widths, style=TableStyle(style), repeatRows=1),
+    ]
 
 
 def _photo_strip(stored_paths: List[str], styles, width) -> List:
@@ -667,6 +745,7 @@ def build_works_pdf(
     story.extend(_summary_block(report, styles, width))
     story.extend(_matrix(report, styles, width))
     story.extend(_signature(styles, width))
+    story.extend(_defects_section(defect_rows, styles, width))
     story.extend(
         _object_details(
             report,

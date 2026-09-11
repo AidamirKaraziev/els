@@ -762,3 +762,68 @@ class TestDefectsList:
         rows = _data(client_with_db.get(DEFECTS_URL, params=_params()))
 
         assert rows["items"] == []
+
+
+class TestPdfDefectsSection:
+    """Сводный раздел актов в PDF: один список по всему отбору, в
+    дополнение к перечню внутри объекта."""
+
+    @pytest.mark.integration
+    def test_pdf_builds_with_defects(
+        self, client_with_db, as_role, make_object, make_defect
+    ):
+        as_role(ADMIN)
+        obj = make_object()
+        make_defect(obj, created_at=datetime.datetime(this_year(), 2, 3))
+        make_defect(obj, created_at=datetime.datetime(this_year(), 5, 9))
+
+        for with_photos in (False, True):
+            response = client_with_db.get(
+                EXPORT_URL,
+                params=_params(
+                    format="pdf", object_id=obj.id, with_photos=with_photos
+                ),
+            )
+            assert response.status_code == 200, response.text
+            assert response.content[:5] == b"%PDF-"
+
+    def test_section_rows_match_input(self):
+        # Текст из PDF не достать: шрифт вшит субсетом. Поэтому число строк
+        # проверяется на самой таблице, до сборки документа.
+        from types import SimpleNamespace
+
+        from reportlab.platypus import Table
+
+        from src.services.reports_pdf import _defects_section, _ensure_font, _styles
+
+        styles = _styles(_ensure_font())
+        rows = [
+            SimpleNamespace(
+                object_name="Лифт 1",
+                address="ул. Ленина, 1",
+                title="Трос",
+                description="Износ",
+                created_at=datetime.datetime(this_year(), 2, 3),
+                status="Открыт",
+                responsible="Иванов",
+                photo_count=2,
+            ),
+            SimpleNamespace(
+                object_name="Лифт 2",
+                address=None,
+                title="Дверь",
+                description=None,
+                created_at=datetime.datetime(this_year(), 5, 9),
+                status=None,
+                responsible=None,
+                photo_count=0,
+            ),
+        ]
+
+        story = _defects_section(rows, styles, 700)
+
+        tables = [item for item in story if isinstance(item, Table)]
+        assert len(tables) == 1
+        # Шапка и по строке на акт.
+        assert len(tables[0]._cellvalues) == 3
+        assert _defects_section([], styles, 700) == []

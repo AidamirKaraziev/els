@@ -4,3 +4,5 @@
 {"date":"2026-09-10","epic":"E01","stage":"S03 проверить на собранном стеке и убрать старый код окна","area":"front+infra","status":"закрыт","session":"749738f4","commits":["37bb0b3"]}
 {"date":"2026-09-10","epic":"E02","stage":"S01 починить двойной домен в ссылке на PDF на проде","area":"front+infra+debug","status":"закрыт","session":"0c059038","commits":["334b4a6"]}
 {"date": "2026-09-10", "epic": "E02", "stage": "S02 сверстать блок дефектных актов в статистике объекта", "area": "front", "status": "закрыт", "session": "c1026aac", "commits": ["23b9445"]}
+{"date":"2026-09-11","epic":"E02","stage":"S03 подключить число и список актов в статистике из API","area":"back+front","status":"закрыт","session":"2a4eab71","commits":["526fee5"]}
+{"date":"2026-09-11","epic":"E02","stage":"S05 вывести раздел дефектных актов в PDF отчёта","area":"back","status":"закрыт","session":"2696ca4b","commits":[]}
