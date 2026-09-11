@@ -272,16 +272,36 @@ class WorkStep(BaseModel):
 
 
 class DefectItem(BaseModel):
-    """Дефектная ведомость, составленная по итогам ТО."""
+    """Дефектный акт, заведённый на объекте."""
 
-    defect_id: int = Field(..., title="ID дефектной ведомости")
+    defect_id: int = Field(..., title="ID дефектного акта")
     title: str = Field(..., title="Заголовок")
     description: Optional[str] = Field(None, title="Описание дефекта")
-    month: int = Field(..., ge=1, le=12, title="Месяц ТО, к которому относится")
+    month: int = Field(..., ge=1, le=12, title="Месяц составления акта")
     status: Optional[str] = Field(None, title="Статус")
     responsible: Optional[str] = Field(None, title="Ответственный")
     created_at: Optional[datetime.datetime] = Field(None, title="Когда составлена")
     photo_count: int = Field(0, ge=0, title="Сколько фотографий приложено")
+
+
+class ReportDefectRow(DefectItem):
+    """Дефектный акт в списке по всему отбору — с объектом.
+
+    В шторке объекта объект и так известен, а в общем списке каждая строка
+    обязана сказать, о каком доме речь.
+    """
+
+    object_id: int = Field(..., title="ID объекта")
+    object_name: Optional[str] = Field(None, title="Название объекта")
+    address: Optional[str] = Field(None, title="Адрес объекта")
+
+
+class WorksDefectsList(BaseModel):
+    """Дефектные акты всего отбора за период — список с плитки сводки."""
+
+    period: ReportPeriod = Field(..., title="Период отчёта")
+    total: int = Field(..., ge=0, title="Сколько актов в списке")
+    items: List[ReportDefectRow] = Field([], title="Акты, по возрастанию даты")
 
 
 class MaintenanceWork(BaseModel):

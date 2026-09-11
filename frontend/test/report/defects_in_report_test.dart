@@ -10,6 +10,7 @@
 /// справочники с сервера и шапку с аватаром, а проверяется не он.
 library;
 
+import 'package:els/screns/report/models/defect_row.dart';
 import 'package:els/screns/report/models/works_report.dart';
 import 'package:els/screns/report/repository/fixture_works_report_repository.dart';
 import 'package:els/screns/report/repository/works_report_repository.dart';
@@ -130,7 +131,7 @@ void main() {
     expect(find.text('Лифт 7, подъезд 3'), findsNothing);
   });
 
-  testWidgets('шторка списка: без ручки на сервере говорит об этом словами',
+  testWidgets('шторка списка: ошибка сервера показана словами, с «Повторить»',
       (WidgetTester tester) async {
     final WorksReport report = await _load(_year);
 
@@ -141,14 +142,14 @@ void main() {
             filters: _year,
             period: report.period,
             expected: 18,
-            repository: const _NoDefectsRepository(),
+            repository: const _FailingRepository(),
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('не подключён'), findsOneWidget);
+    expect(find.text('Не удалось связаться с сервером'), findsOneWidget);
     expect(find.text('Повторить'), findsOneWidget);
   });
 
@@ -179,6 +180,15 @@ void main() {
 }
 
 /// Живой репозиторий до S03: списка актов за период у него нет.
-class _NoDefectsRepository extends WorksReportRepository {
-  const _NoDefectsRepository();
+/// Живой репозиторий без сети: запрос к серверу падает, и шторка обязана
+/// сказать об этом, а не показать пустой список как «актов не было».
+class _FailingRepository extends WorksReportRepository {
+  const _FailingRepository();
+
+  @override
+  Future<List<ReportDefectRow>> fetchDefects({
+    required ReportFilters filters,
+  }) async {
+    throw const WorksReportException('Не удалось связаться с сервером');
+  }
 }

@@ -42,7 +42,7 @@
 import datetime
 from typing import Dict, List, NamedTuple, Optional, Tuple
 
-from sqlalchemy import and_, case, func, literal, or_, select, union_all
+from sqlalchemy import and_, case, func, literal, select, union_all
 from sqlalchemy.orm import Session, aliased
 
 from src.core.access import AccessScope, object_scope_filter
@@ -320,28 +320,38 @@ class CrudReports:
         scope: AccessScope,
         **filters,
     ):
-        """Дефектные ведомости периода.
+        """Дефектные акты периода.
 
-        Месяц у ведомости свой (`month`), а год берётся у графика, к которому
-        она привязана. Поэтому период применяется парой «год и месяц», как к
-        плановым ТО, а не по `created_at`: ведомость за март, составленная в
-        апреле, относится к мартовскому ТО.
+        Период режется по `created_at`, а не по паре «год графика + месяц
+        акта»: акт заводится из четырёх мест, и три из них (`act_fact_id`,
+        `order_id`, пункт меню) плановое ТО не заполняют. Раньше запрос
+        соединял акты с `PlannedTO` внутренним join'ом и терял всё, что
+        заведено не старой ручкой. Дата создания есть у любого акта, и по
+        ней же считает лента актов объекта
+        (`crud_defective_act.get_by_object_and_year`) — числа в отчёте и в
+        окне графика теперь одни и те же.
+
+        Клиентские акты (`kind == "client"`) не считаются: это порождённые
+        записи, они видны из своего первоисточника. То же правило — в
+        `crud_schedules._defects_count`.
         """
-        month_pairs = or_(
-            *[
-                and_(PlannedTO.year == str(year), DefectiveAct.month == month)
-                for year, month in period.months
-            ]
-        )
-
         return (
             db.query(DefectiveAct)
-            .join(PlannedTO, DefectiveAct.planned_to_id == PlannedTO.id)
-            .join(Object, PlannedTO.object_id == Object.id)
+            .join(Object, DefectiveAct.object_id == Object.id)
             .filter(
-                month_pairs,
+                DefectiveAct.kind == "internal",
+                DefectiveAct.created_at >= period.start,
+                DefectiveAct.created_at < period.end,
                 Object.id.in_(self._visible_object_ids(scope=scope, **filters)),
             )
+        )
+
+    @staticmethod
+    def _defect_year_month():
+        """Год и месяц акта — из даты создания, см. `_defects_query`."""
+        return (
+            func.extract("year", DefectiveAct.created_at),
+            func.extract("month", DefectiveAct.created_at),
         )
 
     # ------------------------------------------------------------------
@@ -528,15 +538,17 @@ class CrudReports:
     def defects_by_month(
         self, *, db: Session, period: ReportRange, scope: AccessScope, **filters
     ) -> List:
-        """Дефектные ведомости по месяцам периода."""
+        """Дефектные акты по месяцам периода."""
+        year, month = self._defect_year_month()
+
         return (
             self._defects_query(db=db, period=period, scope=scope, **filters)
             .with_entities(
-                PlannedTO.year.label("year"),
-                DefectiveAct.month.label("month"),
+                year.label("year"),
+                month.label("month"),
                 func.count(DefectiveAct.id).label("defects"),
             )
-            .group_by(PlannedTO.year, DefectiveAct.month)
+            .group_by(year, month)
             .all()
         )
 
@@ -624,20 +636,22 @@ class CrudReports:
         object_ids: List[int],
         **filters,
     ) -> List:
-        """Дефектные ведомости, разложенные на объект и месяц."""
+        """Дефектные акты, разложенные на объект и месяц."""
         if not object_ids:
             return []
+
+        year, month = self._defect_year_month()
 
         return (
             self._defects_query(db=db, period=period, scope=scope, **filters)
             .filter(Object.id.in_(object_ids))
             .with_entities(
                 Object.id.label("object_id"),
-                PlannedTO.year.label("year"),
-                DefectiveAct.month.label("month"),
+                year.label("year"),
+                month.label("month"),
                 func.count(DefectiveAct.id).label("defects"),
             )
-            .group_by(Object.id, PlannedTO.year, DefectiveAct.month)
+            .group_by(Object.id, year, month)
             .all()
         )
 
@@ -747,8 +761,15 @@ class CrudReports:
         scope: AccessScope,
         **filters,
     ) -> List:
-        """Дефектные ведомости построчно, с числом фотографий."""
+        """Дефектные акты построчно, с числом фотографий.
+
+        Одни и те же строки для листа «Дефекты» файла, для шторки объекта и
+        для списка за период с плитки сводки: число строк здесь равно
+        `defect_total` того же отбора, иначе цифра на плитке и длина списка
+        под ней разошлись бы.
+        """
         responsible = aliased(UniversalUser)
+        year, month = self._defect_year_month()
 
         # Число фотографий отдельным подзапросом, а не соединением с
         # группировкой: соединить напрямую значило бы размножить строки
@@ -774,14 +795,14 @@ class CrudReports:
                 DefectiveAct.id.label("defect_id"),
                 DefectiveAct.title.label("title"),
                 DefectiveAct.description.label("description"),
-                DefectiveAct.month.label("month"),
+                month.label("month"),
                 DefectiveAct.created_at.label("created_at"),
-                PlannedTO.year.label("year"),
+                year.label("year"),
                 Status.name.label("status"),
                 responsible.name.label("responsible"),
                 func.coalesce(photos.c.photo_count, 0).label("photo_count"),
             )
-            .order_by(DefectiveAct.month.asc(), DefectiveAct.id.asc())
+            .order_by(DefectiveAct.created_at.asc(), DefectiveAct.id.asc())
             .all()
         )
 

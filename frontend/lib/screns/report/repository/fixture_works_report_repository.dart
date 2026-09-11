@@ -149,8 +149,8 @@ class FixtureWorksReportRepository extends WorksReportRepository {
 
   /// Акты всего отбора за период — то, что откроется с плитки сводки.
   ///
-  /// Ручки на сервере пока нет, она подключается в S03; форма строки уже
-  /// зафиксирована в [ReportDefectRow].
+  /// Собирается из тех же актов, что лежат в шторках объектов, — как и на
+  /// сервере, где список и число плитки считает один запрос.
   @override
   Future<List<ReportDefectRow>> fetchDefects({
     required ReportFilters filters,

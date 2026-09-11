@@ -125,15 +125,24 @@ class WorksReportRepository {
 
   /// Дефектные акты всего отбора за период — список с плитки сводки.
   ///
-  /// Ручки на сервере ещё нет: она подключается в S03 эпика «Дефектные акты
-  /// видны везде». До тех пор шторка честно говорит, что списка нет, а не
-  /// показывает пустоту — пустой список читался бы как «актов не было».
+  /// Отбор тот же, что у сводки, и сервер считает список тем же запросом,
+  /// что и число на плитке, — поэтому число и длина списка совпадают.
+  /// Без страниц: актов за период десятки, а не тысячи, и листать их
+  /// в шторке было бы неудобнее, чем прокрутить.
   Future<List<ReportDefectRow>> fetchDefects({
     required ReportFilters filters,
   }) async {
-    throw const WorksReportException(
-      'Список актов за период ещё не подключён к серверу',
-    );
+    final Uri uri = Uri.parse('${ApiConfig.base}/reports/works/defects')
+        .replace(queryParameters: filters.toQuery());
+
+    final http.Response response = await _get(uri);
+    final Map<String, dynamic> data = _decode(response);
+    final List<dynamic> items =
+        data['items'] is List ? data['items'] as List<dynamic> : <dynamic>[];
+    return items
+        .whereType<Map>()
+        .map((Map raw) => ReportDefectRow.fromJson(raw.cast<String, dynamic>()))
+        .toList();
   }
 
   /// Адрес выгрузки, который можно открыть в новой вкладке.

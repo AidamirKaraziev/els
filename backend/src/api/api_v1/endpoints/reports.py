@@ -1,8 +1,9 @@
 """Раздел «Отчёты»: что делали на объектах за период.
 
-Три ручки. Первая отдаёт картину целиком — сводку, помесячную полосу и
+Четыре ручки. Первая отдаёт картину целиком — сводку, помесячную полосу и
 матрицу объектов. Вторая раскрывает один объект: чек-листы актов, дефектные
-ведомости и заявки с деталями. Третья отдаёт то же самое файлом Excel.
+акты и заявки с деталями. Третья отдаёт то же самое файлом. Четвёртая —
+дефектные акты всего отбора списком: то, что открывается с плитки сводки.
 
 Вложенность отделена намеренно: на сотне лифтов за год чек-листы всех актов —
 это мегабайты, которые экран покажет только по клику на строку.
@@ -25,8 +26,12 @@ from src.api import deps
 from src.core.permissions import Permission, permissions_for
 from src.core.response import SingleEntityResponse
 from src.crud.crud_reports import crud_reports, report_range
-from src.getters.reports import get_object_works_report, get_works_report
-from src.schemas.reports import ObjectWorksReport, WorksReport
+from src.getters.reports import (
+    get_object_works_report,
+    get_works_defects,
+    get_works_report,
+)
+from src.schemas.reports import ObjectWorksReport, WorksDefectsList, WorksReport
 from src.services.reports_pdf import build_works_pdf, works_pdf_filename
 from src.services.reports_xlsx import build_works_xlsx, works_filename
 
@@ -277,6 +282,52 @@ def export_works_report(
             ),
             "Content-Length": str(len(content)),
         },
+    )
+
+
+@router.get(
+    "/reports/works/defects",
+    response_model=SingleEntityResponse[WorksDefectsList],
+    name="works_report_defects",
+    summary="Дефектные акты всего отбора за период",
+    description=(
+        "Список, который открывается с плитки «Дефектных актов» сводки. "
+        "Отбор тот же, что у `/reports/works`, и число строк равно "
+        "`counts.defects` сводки за тот же отбор: считает их один запрос.\n\n"
+        "Период режется по дате составления акта — как в ленте актов объекта "
+        "в окне графика. Клиентские акты не считаются: это порождённые "
+        "записи, они видны из своего первоисточника.\n\n"
+        "Без страниц: это тот же набор строк, что лист «Дефекты» файла, а "
+        "акты за период исчисляются десятками, не тысячами."
+    ),
+    tags=["Отчёты"],
+)
+def get_works_defects_endpoint(
+    session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.STATISTICS_READ)),
+    date_from: datetime.date = Query(..., title="Начало периода, включительно"),
+    date_to: datetime.date = Query(..., title="Конец периода, включительно"),
+    division_id: int = Query(None, title="Только объекты этого участка"),
+    organization_id: int = Query(None, title="Только объекты этой организации"),
+    company_id: int = Query(None, title="Только объекты этой компании"),
+    object_id: int = Query(None, title="Только этот объект"),
+    scope=Depends(deps.get_read_scope),
+):
+    period = _period(date_from, date_to)
+
+    return SingleEntityResponse(
+        data=get_works_defects(
+            period=period,
+            rows=crud_reports.defect_details(
+                db=session,
+                period=period,
+                scope=scope,
+                division_id=division_id,
+                organization_id=organization_id,
+                company_id=company_id,
+                object_id=object_id,
+            ),
+        )
     )
 
 

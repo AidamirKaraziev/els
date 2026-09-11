@@ -22,6 +22,7 @@ from src.crud.crud_statistics import _PLANNED_MONTH_COLUMN, previous_month
 from src.models import (
     ActFact,
     Company,
+    DefectiveAct,
     Object,
     Organization,
     PlannedTO,
@@ -641,3 +642,123 @@ class TestPdfExport:
         assert response.status_code == 200
         # Имя чужого лифта не должно попасть в документ ни в каком виде.
         assert "Чужой лифт".encode() not in response.content
+
+
+DEFECTS_URL = f"{settings.API_V1_STR}/reports/works/defects"
+
+
+@pytest.fixture
+def make_defect(db_session):
+    """Дефектный акт с нужной датой создания. Плановое ТО не заполняется:
+    три входа из четырёх его и не знают."""
+
+    def _make(obj, *, created_at, kind="internal", parent=None):
+        act = DefectiveAct(
+            object_id=obj.id,
+            title=f"Дефект {uuid.uuid4().hex[:6]}",
+            kind=kind,
+            parent_id=parent.id if parent else None,
+            created_at=created_at,
+        )
+        db_session.add(act)
+        db_session.flush()
+        return act
+
+    return _make
+
+
+class TestDefectsList:
+    """Список актов с плитки сводки считается тем же запросом, что и сама
+    плитка, и по тем же правилам, что лента актов объекта в окне графика:
+    дата создания и только внутренние акты."""
+
+    @pytest.mark.integration
+    def test_act_without_planned_to_is_counted(
+        self, client_with_db, as_role, make_object, make_defect
+    ):
+        # Акт с пункта меню или по заявке планового ТО не знает — раньше
+        # отчёт такие терял.
+        as_role(ADMIN)
+        obj = make_object()
+        act = make_defect(obj, created_at=datetime.datetime(this_year(), 3, 5))
+
+        rows = _data(
+            client_with_db.get(DEFECTS_URL, params=_params(object_id=obj.id))
+        )
+        report = _data(client_with_db.get(URL, params=_params(object_id=obj.id)))
+
+        assert rows["total"] == 1
+        assert [row["defect_id"] for row in rows["items"]] == [act.id]
+        assert rows["items"][0]["object_id"] == obj.id
+        assert rows["items"][0]["month"] == 3
+        assert report["summary"]["counts"]["defects"] == 1
+
+    @pytest.mark.integration
+    def test_client_act_is_not_counted(
+        self, client_with_db, as_role, make_object, make_defect
+    ):
+        as_role(ADMIN)
+        obj = make_object()
+        when = datetime.datetime(this_year(), 4, 1)
+        internal = make_defect(obj, created_at=when)
+        make_defect(obj, created_at=when, kind="client", parent=internal)
+
+        rows = _data(
+            client_with_db.get(DEFECTS_URL, params=_params(object_id=obj.id))
+        )
+
+        assert [row["defect_id"] for row in rows["items"]] == [internal.id]
+
+    @pytest.mark.integration
+    def test_list_matches_summary_and_object_feed(
+        self, client_with_db, as_role, make_object, make_defect
+    ):
+        # Три места показывают одно число: плитка сводки, список под ней и
+        # лента актов в шторке объекта.
+        as_role(ADMIN)
+        obj = make_object()
+        for month in (1, 2, 2):
+            make_defect(obj, created_at=datetime.datetime(this_year(), month, 10))
+
+        params = _params(object_id=obj.id)
+        rows = _data(client_with_db.get(DEFECTS_URL, params=params))
+        report = _data(client_with_db.get(URL, params=params))
+        works = _data(
+            client_with_db.get(
+                f"{settings.API_V1_STR}/reports/object/{obj.id}/works",
+                params=params,
+            )
+        )
+
+        assert rows["total"] == len(rows["items"]) == 3
+        assert report["summary"]["counts"]["defects"] == 3
+        assert report["items"][0]["counts"]["defects"] == 3
+        assert len(works["defects"]) == 3
+        assert works["object"]["counts"]["defects"] == 3
+
+    @pytest.mark.integration
+    def test_act_outside_period_is_left_out(
+        self, client_with_db, as_role, make_object, make_defect
+    ):
+        as_role(ADMIN)
+        obj = make_object()
+        make_defect(obj, created_at=datetime.datetime(this_year() - 1, 12, 31))
+
+        rows = _data(
+            client_with_db.get(DEFECTS_URL, params=_params(object_id=obj.id))
+        )
+
+        assert rows["items"] == []
+        assert rows["total"] == 0
+
+    @pytest.mark.integration
+    def test_mechanic_does_not_see_alien_acts(
+        self, client_with_db, as_role, make_object, make_defect
+    ):
+        obj = make_object()
+        make_defect(obj, created_at=datetime.datetime(this_year(), 6, 1))
+        as_role(MECHANIC)
+
+        rows = _data(client_with_db.get(DEFECTS_URL, params=_params()))
+
+        assert rows["items"] == []

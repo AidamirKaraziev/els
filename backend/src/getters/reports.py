@@ -17,6 +17,7 @@ from src.schemas.reports import (
     MonthCell,
     MonthTotals,
     ObjectWorksReport,
+    ReportDefectRow,
     ReportMonth,
     ReportObjectRow,
     ReportPeriod,
@@ -24,6 +25,7 @@ from src.schemas.reports import (
     RequestWork,
     WorkCounts,
     WorkKind,
+    WorksDefectsList,
     WorksReport,
     WorkStep,
 )
@@ -310,23 +312,41 @@ def _total(counts: WorkCounts) -> int:
     )
 
 
+def _defect_fields(row) -> dict:
+    """Поля акта из строки `crud_reports.defect_details`."""
+    return {
+        "defect_id": row.defect_id,
+        "title": row.title,
+        "description": row.description,
+        "month": int(row.month),
+        "status": row.status,
+        "responsible": row.responsible,
+        "created_at": row.created_at,
+        "photo_count": int(row.photo_count or 0),
+    }
+
+
+def get_works_defects(*, period: ReportRange, rows) -> WorksDefectsList:
+    """Список актов всего отбора — то, что открывается с плитки сводки."""
+    items = [
+        ReportDefectRow(
+            object_id=row.object_id,
+            object_name=row.object_name,
+            address=row.address,
+            **_defect_fields(row),
+        )
+        for row in rows
+    ]
+    return WorksDefectsList(
+        period=get_report_period(period), total=len(items), items=items
+    )
+
+
 def get_object_works_report(
     *, period: ReportRange, obj: ReportObjectRow, maintenance, orders, defects
 ) -> ObjectWorksReport:
     """Работы одного объекта — уровни 2 и 3 экрана."""
-    defect_items = [
-        DefectItem(
-            defect_id=row.defect_id,
-            title=row.title,
-            description=row.description,
-            month=int(row.month),
-            status=row.status,
-            responsible=row.responsible,
-            created_at=row.created_at,
-            photo_count=int(row.photo_count or 0),
-        )
-        for row in defects
-    ]
+    defect_items = [DefectItem(**_defect_fields(row)) for row in defects]
     defects_by_month: Dict[int, List[DefectItem]] = {}
     for item in defect_items:
         defects_by_month.setdefault(item.month, []).append(item)

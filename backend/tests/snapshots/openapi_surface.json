@@ -493,6 +493,13 @@
       "date_to"
     ]
   },
+  "GET /api/v1/reports/works/defects": {
+    "required_body": [],
+    "required_params": [
+      "date_from",
+      "date_to"
+    ]
+  },
   "GET /api/v1/reports/works/export": {
     "required_body": [],
     "required_params": [
