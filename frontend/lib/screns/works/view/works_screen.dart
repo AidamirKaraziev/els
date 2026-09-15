@@ -39,9 +39,15 @@ class WorksScreen extends StatelessWidget {
     this.defectsRepository,
     this.tick = const Duration(seconds: 30),
     this.poll = const Duration(seconds: 15),
+    this.onNewWork,
   }) : super(key: key);
 
   final WorksRepository repository;
+
+  /// Кнопка «Новая работа» в шапке. Пусто — кнопки нет: у роли без права
+  /// `order:create` заводить работы нечем. Получает контекст ленты — снизу
+  /// него виден `WorksBloc`, чтобы после создания перечитать строки.
+  final Future<void> Function(BuildContext context)? onNewWork;
 
   /// Боковое меню. У прораба лента — корень раздела, и на узкой ширине это
   /// единственный путь из «Работ» куда-то ещё.
@@ -78,6 +84,7 @@ class WorksScreen extends StatelessWidget {
         defectsRepository: defectsRepository,
         tick: tick,
         poll: poll,
+        onNewWork: onNewWork,
       ),
     );
   }
@@ -92,6 +99,7 @@ class _WorksBody extends StatefulWidget {
     required this.defectsRepository,
     required this.tick,
     required this.poll,
+    required this.onNewWork,
   }) : super(key: key);
 
   final Widget drawer;
@@ -100,6 +108,7 @@ class _WorksBody extends StatefulWidget {
   final DefectsRepository? defectsRepository;
   final Duration? tick;
   final Duration? poll;
+  final Future<void> Function(BuildContext context)? onNewWork;
 
   @override
   State<_WorksBody> createState() => _WorksBodyState();
@@ -313,6 +322,15 @@ class _WorksBodyState extends State<_WorksBody> with WidgetsBindingObserver {
           elevation: 0,
           backgroundColor: Colors.white,
           foregroundColor: ColorApp.myColorBlack,
+          actions: <Widget>[
+            if (widget.onNewWork != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: _NewWorkButton(
+                  onPressed: () => widget.onNewWork!(context),
+                ),
+              ),
+          ],
         ),
         body: Column(
           children: <Widget>[
@@ -389,6 +407,36 @@ class _WorksBodyState extends State<_WorksBody> with WidgetsBindingObserver {
 
 /// «Показать ещё» в хвосте ленты, пока у ручки есть курсор. Кнопка, а не
 /// подгрузка по скроллу: лента живая, и строки под пальцем и так двигаются.
+/// «Новая работа» в шапке: на широком экране — с подписью, на узком —
+/// одна иконка, чтобы не тесниться с заголовком и бургером.
+class _NewWorkButton extends StatelessWidget {
+  const _NewWorkButton({Key? key, required this.onPressed}) : super(key: key);
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool narrow = MediaQuery.sizeOf(context).width < 600;
+    if (narrow) {
+      return IconButton(
+        tooltip: 'Новая работа',
+        icon: const Icon(Icons.add_circle_outline),
+        color: ColorApp.myColorGreenAuth,
+        onPressed: onPressed,
+      );
+    }
+    return TextButton.icon(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: ColorApp.myColorGreenAuth,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      ),
+      icon: const Icon(Icons.add, size: 18),
+      label: const Text('Новая работа'),
+    );
+  }
+}
+
 class _MoreRow extends StatelessWidget {
   const _MoreRow({Key? key, required this.loading, required this.onPressed})
     : super(key: key);

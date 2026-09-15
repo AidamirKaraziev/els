@@ -90,6 +90,13 @@ class FixtureWorksRepository implements WorksRepository {
   /// меняет, а перемена это всё равно.
   final Map<String, DateTime> _touchedAt = <String, DateTime>{};
 
+  /// Новая строка сверху — для превью формы «Новая работа»: созданное
+  /// должно появиться в ленте, иначе набросок не показывает результат.
+  void add(WorkItem item) {
+    _items.insert(0, item);
+    _touchedAt[item.key] = DateTime.now();
+  }
+
   @override
   Future<WorksFeed> fetch(
     WorkFilters filters, {
