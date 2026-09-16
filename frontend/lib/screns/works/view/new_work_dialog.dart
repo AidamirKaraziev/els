@@ -492,7 +492,6 @@ class _ObjectSearchState extends State<_ObjectSearch> {
   void initState() {
     super.initState();
     _query.addListener(() => setState(() {}));
-    _focus.addListener(() => setState(() {}));
   }
 
   @override
@@ -508,7 +507,9 @@ class _ObjectSearchState extends State<_ObjectSearch> {
     final List<NewWorkObject> found = widget.objects
         .where((NewWorkObject o) => o.matches(q))
         .toList();
-    final bool open = _focus.hasFocus || q.isNotEmpty;
+    // Список виден всегда, пока объект не выбран: на вебе клик по строке
+    // сначала снимает фокус с поля, и список, привязанный к фокусу,
+    // исчезал до того, как InkWell получал tap — выбор не срабатывал.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -533,42 +534,41 @@ class _ObjectSearchState extends State<_ObjectSearch> {
                   ),
           ),
         ),
-        if (open)
-          Container(
-            margin: const EdgeInsets.only(top: 4.0),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(5.0),
-              border: Border.all(color: ColorApp.myColorGrayBorder),
-            ),
-            child: found.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Text(
-                      'Ничего не нашлось — проверь адрес или номер',
-                      style: TextStyle(
-                        fontSize: 13.0,
-                        color: ColorApp.myColorGray,
-                      ),
+        Container(
+          margin: const EdgeInsets.only(top: 4.0),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(5.0),
+            border: Border.all(color: ColorApp.myColorGrayBorder),
+          ),
+          child: found.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: Text(
+                    'Ничего не нашлось — проверь адрес или номер',
+                    style: TextStyle(
+                      fontSize: 13.0,
+                      color: ColorApp.myColorGray,
                     ),
-                  )
-                : Column(
-                    children: <Widget>[
-                      for (final NewWorkObject o in found.take(_limit))
-                        _ObjectRow(object: o, onTap: () => widget.onPicked(o)),
-                      if (found.length > _limit)
-                        Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Text(
-                            'Ещё ${found.length - _limit} — уточни запрос',
-                            style: const TextStyle(
-                              fontSize: 12.0,
-                              color: ColorApp.myColorGrayText,
-                            ),
+                  ),
+                )
+              : Column(
+                  children: <Widget>[
+                    for (final NewWorkObject o in found.take(_limit))
+                      _ObjectRow(object: o, onTap: () => widget.onPicked(o)),
+                    if (found.length > _limit)
+                      Padding(
+                        padding: const EdgeInsets.all(10.0),
+                        child: Text(
+                          'Ещё ${found.length - _limit} — уточни запрос',
+                          style: const TextStyle(
+                            fontSize: 12.0,
+                            color: ColorApp.myColorGrayText,
                           ),
                         ),
-                    ],
-                  ),
-          ),
+                      ),
+                  ],
+                ),
+        ),
       ],
     );
   }
