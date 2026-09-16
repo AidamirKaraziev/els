@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../../../helper/api_client.dart';
 import '../../../helper/api_config.dart';
 import '../../submitted_works/repository/submitted_works_repository.dart';
+import '../models/new_work_draft.dart';
 import '../models/work_counts.dart';
 import '../models/work_employee.dart';
 import '../models/work_filters.dart';
@@ -112,6 +113,38 @@ class ApiWorksRepository implements WorksRepository {
   Future<int> unreviewedCount() =>
       const SubmittedWorksRepository().unreviewedCount();
 
+  @override
+  Future<NewWorkContext> newWorkContext() async {
+    final Uri uri = Uri.parse('${ApiConfig.base}/work/new/context');
+    http.Response response;
+    try {
+      response = await _send(uri).timeout(timeout);
+    } catch (_) {
+      throw const WorksException('Не удалось связаться с сервером');
+    }
+    return NewWorkContext.fromJson(_decode(response));
+  }
+
+  /// `POST /order/` — та же ручка, что у формы диспетчера; `creator_id` и
+  /// `created_at` сервер ставит сам. Ответ — заявка целиком, форме нужен
+  /// только номер.
+  @override
+  Future<int> createWork(NewWorkDraft draft) async {
+    final Uri uri = Uri.parse('${ApiConfig.base}/order/');
+    http.Response response;
+    try {
+      response = await _post(uri, draft.toJson()).timeout(timeout);
+    } catch (_) {
+      throw const WorksException('Не удалось связаться с сервером');
+    }
+    // Отказ (нет такого объекта, исполнителя) — словами бэка из `_decode`.
+    final int? id = _intOf(_decode(response)['id']);
+    if (id == null) {
+      throw const WorksException('Сервер вернул неожиданный ответ');
+    }
+    return id;
+  }
+
   Future<WorkItem> _act(WorkItem item, String action, Object body) async {
     final Uri uri = Uri.parse(
       '${ApiConfig.base}/work/${kindPathSegment(item.kind)}/${item.id}/$action/',
@@ -151,13 +184,23 @@ class ApiWorksRepository implements WorksRepository {
     if (response.statusCode == 401 || response.statusCode == 403) {
       throw const WorksException('Недостаточно прав или истёк вход');
     }
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw WorksException('Сервер ответил ошибкой ${response.statusCode}');
-    }
     dynamic decoded;
     try {
       decoded = jsonDecode(utf8.decode(response.bodyBytes));
     } catch (_) {
+      decoded = null;
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      // Бэк кладёт человеческий текст в `description` («Нет такого
+      // пользователя!»); его и печатаем — форме важно, что именно не так.
+      final dynamic description = decoded is Map ? decoded['description'] : null;
+      throw WorksException(
+        description is String && description.isNotEmpty
+            ? description
+            : 'Сервер ответил ошибкой ${response.statusCode}',
+      );
+    }
+    if (decoded == null) {
       throw const WorksException('Не удалось прочитать ответ сервера');
     }
     if (decoded is! Map || decoded['data'] is! Map) {
@@ -172,4 +215,6 @@ class ApiWorksRepository implements WorksRepository {
   ];
 
   List<dynamic> _list(dynamic raw) => raw is List ? raw : const <dynamic>[];
+
+  int? _intOf(dynamic raw) => raw is num ? raw.toInt() : null;
 }

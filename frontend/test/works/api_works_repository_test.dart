@@ -7,6 +7,7 @@ library;
 
 import 'dart:convert';
 
+import 'package:els/screns/works/models/new_work_draft.dart';
 import 'package:els/screns/works/models/work_attention.dart';
 import 'package:els/screns/works/models/work_employee.dart';
 import 'package:els/screns/works/models/work_filters.dart';
@@ -247,6 +248,153 @@ void main() {
             (WorksException e) => e.message,
             'message',
             'Этой работы больше нет в ленте',
+          ),
+        ),
+      );
+    });
+  });
+
+  group('новая работа', () {
+    const Map<String, Object?> context = <String, Object?>{
+      'objects': <Object?>[
+        <String, Object?>{
+          'id': 7,
+          'name': 'ТЦ Карнавал',
+          'address': 'ул. Ленина, 12',
+          'type': 'Лифт с МП',
+          'factory_number': '4471',
+          'registration_number': 'ЛФ-01-2231',
+          'section_id': 1,
+          'section': 'Центр',
+          'mechanic_id': 11,
+          'mechanic': 'Иванов А. С.',
+          'foreman': 'Морозов П. Е.',
+          'contact_name': 'Администрация ТЦ',
+          'contact_phone': '+7 900 200-00-01',
+        },
+      ],
+      'categories': <Object?>[
+        <String, Object?>{
+          'id': 1,
+          'code': 'AA',
+          'name': 'Застревание пассажира. Опасность',
+          'counts_as_breakdown': true,
+        },
+        <String, Object?>{
+          'id': 6,
+          'code': 'ТО',
+          'name': 'Плановые работы',
+          'counts_as_breakdown': false,
+        },
+        <String, Object?>{
+          'id': 11,
+          'code': 'Р',
+          'name': 'Ремонт по заявке',
+          'counts_as_breakdown': false,
+        },
+      ],
+      'employees': <Object?>[
+        <String, Object?>{'id': 11, 'name': 'Иванов А. С.', 'specialty': 'Механик'},
+        <String, Object?>{'id': 31, 'name': 'УК «Речная»', 'specialty': 'Заказчик'},
+      ],
+      'open_works': <String, Object?>{
+        '7': <Object?>[
+          <String, Object?>{
+            'kind': 'breakdown',
+            'status': 'running',
+            'title': 'Стоит между этажами',
+            'performer': 'Иванов А. С.',
+          },
+        ],
+      },
+      'my_sections': <int>[1],
+      'author': 'Морозов П. Е.',
+    };
+
+    test('справочники разбираются, ТО и «Ложный вызов» в форму не идут', () async {
+      final List<Uri> seen = <Uri>[];
+      final NewWorkContext data = await _repository(
+        context,
+        seen: seen,
+      ).newWorkContext();
+
+      expect(seen.single.path, endsWith('/work/new/context'));
+      expect(data.author, 'Морозов П. Е.');
+      expect(data.mySections, <int>{1});
+
+      final NewWorkObject object = data.objects.single;
+      expect(object.name, 'ТЦ Карнавал');
+      expect(object.mechanicId, 11);
+      expect(object.contactPhone, '+7 900 200-00-01');
+      expect(object.matches('карнавал 4471'), isTrue);
+
+      expect(data.categories.map((NewWorkCategory c) => c.code), <String>[
+        'AA',
+        'Р',
+      ]);
+      expect(data.categoriesFor(NewWorkKind.request).single.name, 'Ремонт по заявке');
+      expect(data.employeeById(31)!.specialty, 'Заказчик');
+
+      final NewWorkOpenItem open = data.openWorks[7]!.single;
+      expect(open.kind, WorkKind.breakdown);
+      expect(open.status, WorkStatus.running);
+      expect(open.title, 'Стоит между этажами');
+    });
+
+    test('создание уходит POST /order/ и отдаёт номер заявки', () async {
+      final List<Uri> seen = <Uri>[];
+      final List<Object> bodies = <Object>[];
+      final NewWorkContext data = NewWorkContext.fromJson(context);
+      final int id = await _repository(
+        <String, Object?>{'id': 1105, 'task_text': 'Заменить кнопку'},
+        seen: seen,
+        bodies: bodies,
+      ).createWork(
+        NewWorkDraft(
+          kind: NewWorkKind.request,
+          object: data.objects.single,
+          category: data.categoriesFor(NewWorkKind.request).single,
+          description: 'Заменить кнопку',
+        ),
+      );
+
+      expect(id, 1105);
+      expect(seen.single.path, endsWith('/order/'));
+      expect(bodies.single, <String, Object?>{
+        'object_id': 7,
+        'fault_category_id': 11,
+        'executor_id': null,
+        'task_text': 'Заменить кнопку',
+      });
+    });
+
+    test('отказ сервера — его словами из description', () async {
+      final ApiWorksRepository repository = ApiWorksRepository(
+        send: (Uri uri) async => http.Response('', 200),
+        post: (Uri uri, Object payload) async => http.Response.bytes(
+          utf8.encode(
+            jsonEncode(<String, Object?>{
+              'message': 'Error',
+              'description': 'Нет такого пользователя!',
+            }),
+          ),
+          404,
+        ),
+      );
+      final NewWorkContext data = NewWorkContext.fromJson(context);
+      expect(
+        () => repository.createWork(
+          NewWorkDraft(
+            kind: NewWorkKind.breakdown,
+            object: data.objects.single,
+            category: data.categoriesFor(NewWorkKind.breakdown).single,
+          ),
+        ),
+        throwsA(
+          isA<WorksException>().having(
+            (WorksException e) => e.message,
+            'message',
+            'Нет такого пользователя!',
           ),
         ),
       );

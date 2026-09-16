@@ -31,6 +31,16 @@ class NewWorkCategory {
     required this.countsAsBreakdown,
   });
 
+  /// Строка `categories[]` из `GET /work/new/context`: код и описание
+  /// приезжают порознь, код из имени уже срезан на бэке.
+  factory NewWorkCategory.fromJson(Map<String, dynamic> json) =>
+      NewWorkCategory(
+        id: _int(json['id']) ?? 0,
+        code: _string(json['code']) ?? '',
+        name: _string(json['name']) ?? '',
+        countsAsBreakdown: json['counts_as_breakdown'] == true,
+      );
+
   final int id;
   final String code;
   final String name;
@@ -58,6 +68,23 @@ class NewWorkObject {
     this.contactName,
     this.contactPhone,
   });
+
+  /// Строка `objects[]` из `GET /work/new/context`.
+  factory NewWorkObject.fromJson(Map<String, dynamic> json) => NewWorkObject(
+    id: _int(json['id']) ?? 0,
+    name: _string(json['name']) ?? 'Объект без названия',
+    address: _string(json['address']) ?? '',
+    type: _string(json['type']),
+    factoryNumber: _string(json['factory_number']),
+    registrationNumber: _string(json['registration_number']),
+    sectionId: _int(json['section_id']),
+    section: _string(json['section']),
+    mechanicId: _int(json['mechanic_id']),
+    mechanic: _string(json['mechanic']),
+    foreman: _string(json['foreman']),
+    contactName: _string(json['contact_name']),
+    contactPhone: _string(json['contact_phone']),
+  );
 
   final int id;
   final String name;
@@ -101,6 +128,17 @@ class NewWorkOpenItem {
     this.performer,
   });
 
+  /// Элемент `open_works[<object_id>][]` из `GET /work/new/context`.
+  factory NewWorkOpenItem.fromJson(Map<String, dynamic> json) {
+    final WorkKind kind = workKindFromJson(json['kind']);
+    return NewWorkOpenItem(
+      kind: kind,
+      status: workStatusFromJson(json['status']),
+      title: _string(json['title']) ?? kind.title,
+      performer: _string(json['performer']),
+    );
+  }
+
   final WorkKind kind;
   final WorkStatus status;
   final String title;
@@ -118,6 +156,52 @@ class NewWorkContext {
     this.mySections = const <int>{},
     this.openWorks = const <int, List<NewWorkOpenItem>>{},
   });
+
+  /// Ответ `GET /work/new/context` целиком. [hiddenCategoryCodes] — что из
+  /// справочника форме не предлагать: плановое ТО идёт из графиков, «Ложный
+  /// вызов» — итог выезда, его ставит механик. Из базы они не удаляются —
+  /// старые заявки на них ссылаются.
+  factory NewWorkContext.fromJson(
+    Map<String, dynamic> json, {
+    Set<String> hiddenCategoryCodes = defaultHiddenCategoryCodes,
+  }) {
+    final Map<int, List<NewWorkOpenItem>> openWorks =
+        <int, List<NewWorkOpenItem>>{};
+    if (json['open_works'] is Map) {
+      (json['open_works'] as Map).forEach((dynamic key, dynamic value) {
+        final int? objectId = int.tryParse('$key');
+        if (objectId == null || value is! List) return;
+        openWorks[objectId] = <NewWorkOpenItem>[
+          for (final dynamic i in value)
+            if (i is Map) NewWorkOpenItem.fromJson(i.cast<String, dynamic>()),
+        ];
+      });
+    }
+    return NewWorkContext(
+      objects: <NewWorkObject>[
+        for (final dynamic o in _list(json['objects']))
+          if (o is Map) NewWorkObject.fromJson(o.cast<String, dynamic>()),
+      ],
+      categories: <NewWorkCategory>[
+        for (final dynamic c in _list(json['categories']))
+          if (c is Map) NewWorkCategory.fromJson(c.cast<String, dynamic>()),
+      ].where((NewWorkCategory c) => !hiddenCategoryCodes.contains(c.code))
+          .toList(),
+      employees: <WorkEmployee>[
+        for (final dynamic e in _list(json['employees']))
+          if (e is Map) WorkEmployee.fromJson(e.cast<String, dynamic>()),
+      ],
+      author: _string(json['author']) ?? '',
+      mySections: <int>{
+        for (final dynamic id in _list(json['my_sections']))
+          if (id is num) id.toInt(),
+      },
+      openWorks: openWorks,
+    );
+  }
+
+  /// Коды категорий, которых в форме нет намеренно — см. [NewWorkContext.fromJson].
+  static const Set<String> defaultHiddenCategoryCodes = <String>{'ТО', 'Л'};
 
   final List<NewWorkObject> objects;
   final List<NewWorkCategory> categories;
@@ -187,3 +271,13 @@ class NewWorkException implements Exception {
   @override
   String toString() => message;
 }
+
+int? _int(dynamic v) => v is num ? v.toInt() : null;
+
+String? _string(dynamic v) {
+  if (v == null) return null;
+  final String s = v.toString();
+  return s.isEmpty ? null : s;
+}
+
+List<dynamic> _list(dynamic raw) => raw is List ? raw : const <dynamic>[];

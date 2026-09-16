@@ -10,6 +10,7 @@ import '../../../navigation/shell_drawer.dart';
 import '../../in_progress_works/repository/work_details_repository.dart';
 import '../../schedule/view/schedule_section.dart' show scheduleShowsLeading;
 import '../bloc/works_bloc.dart';
+import '../models/new_work_draft.dart';
 import '../models/work_counts.dart';
 import '../models/work_employee.dart';
 import '../models/work_filters.dart';
@@ -19,6 +20,7 @@ import '../repository/works_repository.dart';
 import '../widgets/work_filter_chips.dart';
 import '../widgets/work_group_header.dart';
 import '../widgets/work_row_tile.dart';
+import 'new_work_dialog.dart';
 import 'work_item_card_screen.dart';
 
 /// Экран «Работы»: заявки и акты ТО одной лентой.
@@ -39,15 +41,16 @@ class WorksScreen extends StatelessWidget {
     this.defectsRepository,
     this.tick = const Duration(seconds: 30),
     this.poll = const Duration(seconds: 15),
-    this.onNewWork,
+    this.canCreateWork = false,
   }) : super(key: key);
 
   final WorksRepository repository;
 
-  /// Кнопка «Новая работа» в шапке. Пусто — кнопки нет: у роли без права
-  /// `order:create` заводить работы нечем. Получает контекст ленты — снизу
-  /// него виден `WorksBloc`, чтобы после создания перечитать строки.
-  final Future<void> Function(BuildContext context)? onNewWork;
+  /// Кнопка «Новая работа» в шапке. Включается там, где лента смонтирована
+  /// у роли с правом `order:create` — у админа и прораба; у механика кнопки
+  /// нет, ему заводить работы нечем. Справочники и создание идут через
+  /// [repository], после успеха лента перечитывается.
+  final bool canCreateWork;
 
   /// Боковое меню. У прораба лента — корень раздела, и на узкой ширине это
   /// единственный путь из «Работ» куда-то ещё.
@@ -78,13 +81,14 @@ class WorksScreen extends StatelessWidget {
       create: (_) =>
           WorksBloc(repository: repository)..add(const WorksRequested()),
       child: _WorksBody(
+        repository: repository,
         drawer: drawer,
         onOpen: onOpen,
         detailsRepository: detailsRepository,
         defectsRepository: defectsRepository,
         tick: tick,
         poll: poll,
-        onNewWork: onNewWork,
+        canCreateWork: canCreateWork,
       ),
     );
   }
@@ -93,22 +97,25 @@ class WorksScreen extends StatelessWidget {
 class _WorksBody extends StatefulWidget {
   const _WorksBody({
     Key? key,
+    required this.repository,
     required this.drawer,
     required this.onOpen,
     required this.detailsRepository,
     required this.defectsRepository,
     required this.tick,
     required this.poll,
-    required this.onNewWork,
+    required this.canCreateWork,
   }) : super(key: key);
 
+  /// Тот же, что у блока: форме «Новая работа» нужны справочники и создание.
+  final WorksRepository repository;
   final Widget drawer;
   final ValueChanged<WorkItem>? onOpen;
   final WorkDetailsRepository? detailsRepository;
   final DefectsRepository? defectsRepository;
   final Duration? tick;
   final Duration? poll;
-  final Future<void> Function(BuildContext context)? onNewWork;
+  final bool canCreateWork;
 
   @override
   State<_WorksBody> createState() => _WorksBodyState();
@@ -118,6 +125,56 @@ class _WorksBodyState extends State<_WorksBody> with WidgetsBindingObserver {
   Timer? _ticker;
   Timer? _poller;
   DateTime _now = DateTime.now();
+
+  /// Справочники формы грузятся — кнопка «Новая работа» крутится и второй
+  /// клик не открывает вторую форму.
+  bool _loadingNewWork = false;
+
+  /// «Новая работа»: справочники с сервера, форма, создание через
+  /// репозиторий. Ошибка загрузки — snackbar; ошибка создания — строкой в
+  /// форме, форма остаётся с введённым.
+  Future<void> _newWork(BuildContext context) async {
+    if (_loadingNewWork) return;
+    final WorksBloc bloc = context.read<WorksBloc>();
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    setState(() => _loadingNewWork = true);
+    NewWorkContext data;
+    try {
+      data = await widget.repository.newWorkContext();
+    } on WorksException catch (e) {
+      if (mounted) setState(() => _loadingNewWork = false);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          behavior: SnackBarBehavior.floating,
+          width: 360,
+        ),
+      );
+      return;
+    }
+    if (!context.mounted) return;
+    setState(() => _loadingNewWork = false);
+    await showNewWorkDialog(
+      context,
+      data: data,
+      onCreate: (NewWorkDraft draft) async {
+        int id;
+        try {
+          id = await widget.repository.createWork(draft);
+        } on WorksException catch (e) {
+          throw NewWorkException(e.message);
+        }
+        bloc.add(const WorksRequested());
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Работа №$id создана'),
+            behavior: SnackBarBehavior.floating,
+            width: 360,
+          ),
+        );
+      },
+    );
+  }
 
   /// Когда опрашивали в последний раз — чтобы возврат из фона не спрашивал
   /// чаще такта: браузер дёргает видимость вкладки и на смену окна, и на
@@ -323,11 +380,12 @@ class _WorksBodyState extends State<_WorksBody> with WidgetsBindingObserver {
           backgroundColor: Colors.white,
           foregroundColor: ColorApp.myColorBlack,
           actions: <Widget>[
-            if (widget.onNewWork != null)
+            if (widget.canCreateWork)
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: _NewWorkButton(
-                  onPressed: () => widget.onNewWork!(context),
+                  loading: _loadingNewWork,
+                  onPressed: () => _newWork(context),
                 ),
               ),
           ],
@@ -410,28 +468,42 @@ class _WorksBodyState extends State<_WorksBody> with WidgetsBindingObserver {
 /// «Новая работа» в шапке: на широком экране — с подписью, на узком —
 /// одна иконка, чтобы не тесниться с заголовком и бургером.
 class _NewWorkButton extends StatelessWidget {
-  const _NewWorkButton({Key? key, required this.onPressed}) : super(key: key);
+  const _NewWorkButton({
+    Key? key,
+    required this.onPressed,
+    this.loading = false,
+  }) : super(key: key);
 
   final VoidCallback onPressed;
+
+  /// Справочники формы ещё грузятся — вместо плюса крутилка.
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     final bool narrow = MediaQuery.sizeOf(context).width < 600;
+    final Widget icon = loading
+        ? const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : Icon(narrow ? Icons.add_circle_outline : Icons.add, size: 18);
     if (narrow) {
       return IconButton(
         tooltip: 'Новая работа',
-        icon: const Icon(Icons.add_circle_outline),
+        icon: icon,
         color: ColorApp.myColorGreenAuth,
-        onPressed: onPressed,
+        onPressed: loading ? null : onPressed,
       );
     }
     return TextButton.icon(
-      onPressed: onPressed,
+      onPressed: loading ? null : onPressed,
       style: TextButton.styleFrom(
         foregroundColor: ColorApp.myColorGreenAuth,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       ),
-      icon: const Icon(Icons.add, size: 18),
+      icon: icon,
       label: const Text('Новая работа'),
     );
   }

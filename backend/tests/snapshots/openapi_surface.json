@@ -615,6 +615,10 @@
     "required_body": [],
     "required_params": []
   },
+  "GET /api/v1/work/new/context": {
+    "required_body": [],
+    "required_params": []
+  },
   "GET /api/v1/work/submitted": {
     "required_body": [],
     "required_params": []
@@ -853,9 +857,7 @@
     ]
   },
   "POST /api/v1/order/": {
-    "required_body": [
-      "executor_id"
-    ],
+    "required_body": [],
     "required_params": []
   },
   "POST /api/v1/order/{order_id}/archive/": {

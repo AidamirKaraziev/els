@@ -1,9 +1,11 @@
+import '../models/new_work_draft.dart';
 import '../models/work_counts.dart';
 import '../models/work_employee.dart';
 import '../models/work_filters.dart';
 import '../models/work_item.dart';
 import '../models/work_order.dart';
 import '../models/work_section.dart';
+import 'fixture_new_work.dart';
 import 'works_repository.dart';
 
 /// Лента «Работы» в памяти — для тестов экрана и точки `dev/works_preview.dart`.
@@ -174,6 +176,51 @@ class FixtureWorksRepository implements WorksRepository {
     return _items
         .where((WorkItem i) => i.status == WorkStatus.submitted && !i.reviewed)
         .length;
+  }
+
+  @override
+  Future<NewWorkContext> newWorkContext() async {
+    await Future<void>.delayed(delay);
+    return FixtureNewWork.context(author: author);
+  }
+
+  /// Кто заводит работу в превью — строка «Создаст: …» внизу формы.
+  static const String author = 'Морозов П. Е.';
+
+  /// Номера новых работ — выше любых в фикстуре.
+  int _nextId = 1100;
+
+  /// Секунда ожидания — как у ручки; объект «Старый склад» (id 12) отвечает
+  /// ошибкой, чтобы в превью было видно и её.
+  @override
+  Future<int> createWork(NewWorkDraft draft) async {
+    await Future<void>.delayed(const Duration(seconds: 1));
+    if (draft.object.id == 12) {
+      throw const WorksException(
+        'Объект выведен из обслуживания — работу по нему завести нельзя',
+      );
+    }
+    final int id = _nextId++;
+    add(
+      WorkItem(
+        id: id,
+        kind: draft.kind.feedKind,
+        status: WorkStatus.fresh,
+        objectName: draft.object.name,
+        objectType: draft.object.type,
+        objectAddress: draft.object.address,
+        taskText: draft.description.isEmpty
+            ? draft.category.name
+            : draft.description,
+        performerId: draft.executor?.id,
+        performer: draft.executor?.name,
+        performerPhone: draft.executor?.phone,
+        createdAt: DateTime.now(),
+        sectionId: draft.object.sectionId,
+        section: draft.object.section,
+      ),
+    );
+    return id;
   }
 
   WorkItem _replace(WorkItem fresh) {

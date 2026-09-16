@@ -37,7 +37,9 @@ class OrderCreate(BaseModel):
     fault_category_id: Optional[int]
     task_text: Optional[str]
 
-    executor_id: int
+    # Пусто — заявка ложится в ленту «Новой» без исполнителя, назначат из
+    # строки. Форма «Новая работа» так и шлёт, когда у объекта нет механика.
+    executor_id: Optional[int] = None
     # commentary: Optional[str]
     # reason_fault_id: Optional[int]
 

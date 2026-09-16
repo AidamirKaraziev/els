@@ -91,12 +91,16 @@ class CrudOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
         )
         if code != 0:
             return None, code, None
-        # проверка executor_id
-        executor = db.query(UniversalUser).filter(
-            UniversalUser.id == new_data.executor_id
-        )
-        if executor is None:
-            return None, -130, None
+        # Исполнитель не обязателен: без него заявка «Новая», назначат из ленты.
+        # `0` — «никто» у старых клиентов, как в `update_order`.
+        if new_data.executor_id == 0:
+            new_data.executor_id = None
+        if new_data.executor_id is not None:
+            _, code, _ = crud_universal_users.get_user_by_reference(
+                db=db, user_id=new_data.executor_id
+            )
+            if code != 0:
+                return None, code, None
         new_data.created_at = datetime.datetime.utcnow()
         db_obj = super().create(db=db, obj_in=new_data)
         return db_obj, 0, None

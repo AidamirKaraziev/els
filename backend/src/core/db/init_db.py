@@ -290,13 +290,31 @@ def check_fault_category(db: Session):
             counts_as_breakdown=False,
         ),
     ]
+    # Категории заявок, которые прораб и админ заводят с сайта сами. На боевой
+    # базе их добавила миграция `e9b7d4a06c32` без явных id; здесь id заданы,
+    # чтобы пустая и тестовая базы совпадали с фикстурой фронта.
+    request_categories = (
+        (11, "Р", "Р (Ремонт по заявке)"),
+        (12, "НЛ", "НЛ (Наладка и регулировка)"),
+        (13, "ЗЧ", "ЗЧ (Замена запчастей)"),
+        (14, "О", "О (Осмотр по обращению)"),
+        (15, "ПР", "ПР (Предписание надзора)"),
+        (16, "М", "М (Модернизация)"),
+        (17, "УБ", "УБ (Приямок и машинное помещение)"),
+        (18, "ДОК", "ДОК (Документы и организационное)"),
+        (19, "ДР", "ДР (Другое)"),
+    )
+    check_list += [
+        FaultCategory(id=id_, name=name, code=code, counts_as_breakdown=False)
+        for id_, code, name in request_categories
+    ]
     creation_list = []
     for obj in check_list:
-        query = (
-            db.query(FaultCategory)
-            .filter(FaultCategory.id == obj.id, FaultCategory.name == obj.name)
-            .first()
-        )
+        # По имени, а не по паре `(id, name)`: на боевой базе категории заявок
+        # вставила миграция с автоинкрементом, и под id из этого списка может
+        # стоять другая строка — второй «Р (Ремонт по заявке)» упал бы на
+        # `UNIQUE(name)`.
+        query = db.query(FaultCategory).filter(FaultCategory.name == obj.name).first()
         if query is None:
             creation_list.append(obj)
     return creation_list

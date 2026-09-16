@@ -1,5 +1,12 @@
 from src.schemas.maintenance import MaintenanceObject
-from src.schemas.work_feed import WorkEmployee, WorkFeedItem, WorkSection
+from src.schemas.work_feed import (
+    NewWorkCategory,
+    NewWorkObject,
+    NewWorkOpenItem,
+    WorkEmployee,
+    WorkFeedItem,
+    WorkSection,
+)
 from src.services.checklist import parse_checklist
 from src.utils.time_stamp import utc_to_timestamp
 
@@ -58,4 +65,58 @@ def get_work_employee(row) -> WorkEmployee:
         section_id=row.section_id,
         section=row.section,
         phone=row.phone,
+    )
+
+
+def get_new_work_object(row) -> NewWorkObject:
+    return NewWorkObject(
+        id=row.id,
+        name=row.name,
+        address=row.address,
+        type=row.type,
+        factory_number=row.factory_number,
+        registration_number=row.registration_number,
+        section_id=row.section_id,
+        section=row.section,
+        mechanic_id=row.mechanic_id,
+        mechanic=row.mechanic,
+        foreman=row.foreman,
+        contact_name=row.contact_name,
+        contact_phone=row.contact_phone,
+    )
+
+
+def category_title(name, code) -> str:
+    """«Р (Ремонт по заявке)» → «Ремонт по заявке».
+
+    В справочнике код зашит в имя — так его видит админка. Форме нужны
+    порознь: код на бейдж, описание в строку. Имя без такой обёртки
+    отдаётся как есть.
+    """
+    if not name:
+        return name
+    text = name.strip()
+    if code and text.startswith(code):
+        rest = text[len(code) :].strip()
+        if rest.startswith("(") and rest.endswith(")"):
+            return rest[1:-1].strip()
+    return text
+
+
+def get_new_work_category(category) -> NewWorkCategory:
+    return NewWorkCategory(
+        id=category.id,
+        code=category.code,
+        name=category_title(category.name, category.code),
+        counts_as_breakdown=bool(category.counts_as_breakdown),
+    )
+
+
+def get_new_work_open_item(row) -> NewWorkOpenItem:
+    return NewWorkOpenItem(
+        kind=row.kind,
+        status=row.status,
+        title=row.task_text
+        or (parse_checklist(row.step_list_fact).title if row.step_list_fact else None),
+        performer=row.performer,
     )

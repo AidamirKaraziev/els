@@ -1,3 +1,4 @@
+import '../models/new_work_draft.dart';
 import '../models/work_counts.dart';
 import '../models/work_employee.dart';
 import '../models/work_filters.dart';
@@ -96,4 +97,13 @@ abstract class WorksRepository {
   /// «Работы» в бургере. Считается по всему, что видно человеку, а не по
   /// странице на руках: на ней может не быть ни одной сданной.
   Future<int> unreviewedCount();
+
+  /// Справочники для формы «Новая работа»: объекты, категории, кого можно
+  /// назначить, что уже висит по объектам. Спрашивается при открытии формы,
+  /// а не вместе с лентой: объектов сотни, а форму открывают не каждый раз.
+  Future<NewWorkContext> newWorkContext();
+
+  /// Завести работу. Отдаёт номер созданной заявки — для «Работа №N создана».
+  /// Ошибка словами — [WorksException]; форма показывает её и остаётся.
+  Future<int> createWork(NewWorkDraft draft);
 }

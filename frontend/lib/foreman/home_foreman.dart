@@ -132,7 +132,11 @@ class _HomeForemanState extends State<HomeForeman> {
     const SizedBox.shrink(),
 
     ///Работы 2 — единая лента заявок и актов
-    WorksScreen(repository: ApiWorksRepository(), drawer: const ShellDrawer()),
+    WorksScreen(
+      repository: ApiWorksRepository(),
+      drawer: const ShellDrawer(),
+      canCreateWork: true,
+    ),
 
     ///Компании 3
     const CompaniesScreenForeman(),

@@ -232,3 +232,72 @@ class WorkFeed(BaseModel):
 
 class AssignBody(BaseModel):
     performer_id: int = Field(..., title="Кого назначить")
+
+
+class NewWorkObject(BaseModel):
+    """Объект в выборе формы «Новая работа»: всё, по чему его ищут, и всё,
+    что показывает карточка после выбора."""
+
+    id: int = Field(..., title="ID объекта")
+    name: Optional[str] = Field(None, title="Название")
+    address: Optional[str] = Field(None, title="Адрес")
+    type: Optional[str] = Field(None, title="Тип техники")
+    factory_number: Optional[str] = Field(None, title="Заводской номер")
+    registration_number: Optional[str] = Field(None, title="Регистрационный номер")
+    section_id: Optional[int] = Field(None, title="Участок")
+    section: Optional[str] = Field(None, title="Название участка")
+    mechanic_id: Optional[int] = Field(
+        None,
+        title="Закреплённый механик",
+        description="Подставляется исполнителем, пока не выбрали другого.",
+    )
+    mechanic: Optional[str] = Field(None, title="Имя механика")
+    foreman: Optional[str] = Field(None, title="Прораб объекта")
+    contact_name: Optional[str] = Field(None, title="Контактное лицо")
+    contact_phone: Optional[str] = Field(None, title="Телефон контакта")
+
+
+class NewWorkCategory(BaseModel):
+    """Категория заявки из справочника `fault_category`."""
+
+    id: int = Field(..., title="ID категории")
+    code: Optional[str] = Field(None, title="Код", description="«Р», «AA», «ТО».")
+    name: Optional[str] = Field(
+        None,
+        title="Описание без кода",
+        description="«Ремонт по заявке» — код в справочнике стоит в имени, здесь срезан.",
+    )
+    counts_as_breakdown: bool = Field(
+        ..., title="Считается поломкой", description="Да — «Авария», нет — «Заявка»."
+    )
+
+
+class NewWorkOpenItem(BaseModel):
+    """Открытая работа по объекту — чтобы не завести дубль."""
+
+    kind: WorkKind = Field(..., title="Вид работы")
+    status: WorkStatus = Field(..., title="Статус")
+    title: Optional[str] = Field(None, title="Задание или регламент")
+    performer: Optional[str] = Field(None, title="Исполнитель")
+
+
+class NewWorkContext(BaseModel):
+    """Всё, что нужно форме «Новая работа», одним ответом.
+
+    Три справочника с разной пагинацией и клиенты, которых в `employees`
+    ленты нет, — собирать это на клиенте значило бы повторять область
+    видимости в четырёх запросах. Здесь она применяется один раз.
+    """
+
+    objects: List[NewWorkObject] = Field([], title="Объекты в области видимости")
+    categories: List[NewWorkCategory] = Field([], title="Категории заявок")
+    employees: List[WorkEmployee] = Field(
+        [],
+        title="Кого можно назначить",
+        description="Сотрудники ленты плюс заказчики — со `specialty` «Заказчик».",
+    )
+    open_works: Dict[int, List[NewWorkOpenItem]] = Field(
+        {}, title="Открытые работы по объекту", description="Ключ — id объекта."
+    )
+    my_sections: List[int] = Field([], title="Участки того, кто спрашивает")
+    author: Optional[str] = Field(None, title="Кто заводит работу")

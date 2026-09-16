@@ -6,6 +6,7 @@
 library;
 
 import 'package:els/screns/works/bloc/works_bloc.dart';
+import 'package:els/screns/works/models/new_work_draft.dart';
 import 'package:els/screns/works/models/work_counts.dart';
 import 'package:els/screns/works/models/work_employee.dart';
 import 'package:els/screns/works/models/work_filters.dart';
@@ -53,6 +54,13 @@ class _Repository implements WorksRepository {
   bool failAssign = false;
   int unreviewed = 0;
   int unreviewedAsked = 0;
+
+  // Форма «Новая работа» через блок не ходит — экран зовёт репозиторий сам.
+  @override
+  Future<NewWorkContext> newWorkContext() => throw UnimplementedError();
+
+  @override
+  Future<int> createWork(NewWorkDraft draft) => throw UnimplementedError();
 
   @override
   Future<WorksFeed> fetch(

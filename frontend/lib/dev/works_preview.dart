@@ -9,12 +9,7 @@ import '../foreman/defects/defects_repository.dart';
 import '../screns/in_progress_works/models/order_details.dart';
 import '../screns/in_progress_works/models/work_details.dart';
 import '../screns/in_progress_works/repository/work_details_repository.dart';
-import '../screns/works/bloc/works_bloc.dart';
-import '../screns/works/models/new_work_draft.dart';
-import '../screns/works/models/work_item.dart';
-import '../screns/works/repository/fixture_new_work.dart';
 import '../screns/works/repository/fixture_works_repository.dart';
-import '../screns/works/view/new_work_dialog.dart';
 import '../screns/works/view/works_screen.dart';
 
 /// Отдельная точка входа: экран «Работы» на фикстуре, без сервера.
@@ -38,57 +33,6 @@ class WorksPreviewApp extends StatelessWidget {
   /// Одна на превью: созданная в форме работа ложится в ту же ленту.
   final FixtureWorksRepository repository = FixtureWorksRepository();
 
-  /// Номера новых работ — выше любых в фикстуре. Счётчик в списке, а не в
-  /// поле: виджет неизменяемый, а номер расти обязан.
-  final List<int> _nextId = <int>[1100];
-
-  /// Форма «Новая работа» на фикстуре. Секунда ожидания — как у ручки;
-  /// объект «Старый склад» отвечает ошибкой, чтобы видеть и её.
-  Future<void> _newWork(BuildContext context) {
-    final WorksBloc bloc = context.read<WorksBloc>();
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    return showNewWorkDialog(
-      context,
-      data: FixtureNewWork.context(author: 'Морозов П. Е.'),
-      onCreate: (NewWorkDraft draft) async {
-        await Future<void>.delayed(const Duration(seconds: 1));
-        if (draft.object.id == 12) {
-          throw const NewWorkException(
-            'Объект выведен из обслуживания — работу по нему завести нельзя',
-          );
-        }
-        final int id = _nextId[0]++;
-        repository.add(
-          WorkItem(
-            id: id,
-            kind: draft.kind.feedKind,
-            status: WorkStatus.fresh,
-            objectName: draft.object.name,
-            objectType: draft.object.type,
-            objectAddress: draft.object.address,
-            taskText: draft.description.isEmpty
-                ? draft.category.name
-                : draft.description,
-            performerId: draft.executor?.id,
-            performer: draft.executor?.name,
-            performerPhone: draft.executor?.phone,
-            createdAt: DateTime.now(),
-            sectionId: draft.object.sectionId,
-            section: draft.object.section,
-          ),
-        );
-        bloc.add(const WorksRequested());
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Работа №$id создана'),
-            behavior: SnackBarBehavior.floating,
-            width: 360,
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     // Профиль в шапке карточки читает `UserBloc`; даём пустой, без входа он
@@ -109,7 +53,7 @@ class WorksPreviewApp extends StatelessWidget {
         home: WorksScreen(
           repository: repository,
           drawer: const Drawer(),
-          onNewWork: _newWork,
+          canCreateWork: true,
           detailsRepository: const _FixtureDetailsRepository(),
           defectsRepository: const _FixtureDefectsRepository(),
         ),

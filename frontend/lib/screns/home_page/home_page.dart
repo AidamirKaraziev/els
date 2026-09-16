@@ -194,7 +194,11 @@ class _HomePageState extends State<HomePage> {
     const SizedBox.shrink(),
 
     ///Работы 2 — единая лента заявок и актов
-    WorksScreen(repository: ApiWorksRepository(), drawer: const ShellDrawer()),
+    WorksScreen(
+      repository: ApiWorksRepository(),
+      drawer: const ShellDrawer(),
+      canCreateWork: true,
+    ),
 
     ///Обьекты 3
     const ObjectScreen(),

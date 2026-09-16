@@ -73,6 +73,7 @@ from starlette import status as http_status
 from src.core.access import (
     AccessScope,
     act_fact_scope_filter,
+    apply_object_scope,
     apply_user_scope,
     can_access_act_fact,
     can_access_order,
@@ -83,6 +84,7 @@ from src.core.roles import Role
 from src.crud.users.crud_universal_user import crud_universal_users
 from src.models import (
     ActFact,
+    ContactPerson,
     DefectiveAct,
     Division,
     FactoryModel,
@@ -558,17 +560,29 @@ class CrudWorkFeed:
             query = query.filter(c.kind != WorkKind.MAINTENANCE.value)
         return query.first()
 
-    def get_employees(self, *, db: Session, scope: AccessScope):
+    def get_employees(
+        self, *, db: Session, scope: AccessScope, include_clients: bool = False
+    ):
         """Кого можно назначить: живые сотрудники в области видимости.
 
         Не только механики: назначить можно и инженера-наладчика, а должность
         видна в списке — прораб выбирает по ней.
+
+        `include_clients` — для формы «Новая работа»: задача бывает и на
+        заказчика («оплатить», «дать доступ»). Должности у клиента нет —
+        вместо неё «Заказчик», по этому слову форма кладёт его в свою группу.
         """
+        is_client = UniversalUser.role_id == Role.CLIENT
+        specialty = (
+            case((is_client, literal("Заказчик")), else_=WorkingSpecialty.name)
+            if include_clients
+            else WorkingSpecialty.name
+        )
         query = (
             db.query(
                 UniversalUser.id,
                 UniversalUser.name,
-                WorkingSpecialty.name.label("specialty"),
+                specialty.label("specialty"),
                 UniversalUser.division_id.label("section_id"),
                 Division.title.label("section"),
                 UniversalUser.contact_phone.label("phone"),
@@ -578,15 +592,77 @@ class CrudWorkFeed:
                 UniversalUser.working_specialty_id == WorkingSpecialty.id,
             )
             .outerjoin(Division, UniversalUser.division_id == Division.id)
-            .filter(
-                UniversalUser.is_active.isnot(False),
-                or_(
-                    UniversalUser.role_id.is_(None),
-                    UniversalUser.role_id != Role.CLIENT,
-                ),
-            )
+            .filter(UniversalUser.is_active.isnot(False))
         )
+        if not include_clients:
+            query = query.filter(or_(UniversalUser.role_id.is_(None), ~is_client))
         return apply_user_scope(query, scope).order_by(UniversalUser.name).all()
+
+    # ------------------------------------------------------------------
+    # Форма «Новая работа»
+    # ------------------------------------------------------------------
+
+    def get_new_work_objects(self, *, db: Session, scope: AccessScope):
+        """Живые объекты области с тем, что показывает карточка выбора."""
+        mechanic = aliased(UniversalUser)
+        foreman = aliased(UniversalUser)
+        query = (
+            db.query(
+                Object.id,
+                Object.name,
+                Object.address,
+                TypeObject.name.label("type"),
+                Object.factory_number,
+                Object.registration_number,
+                Object.division_id.label("section_id"),
+                Division.title.label("section"),
+                mechanic.id.label("mechanic_id"),
+                mechanic.name.label("mechanic"),
+                foreman.name.label("foreman"),
+                ContactPerson.name.label("contact_name"),
+                ContactPerson.phone.label("contact_phone"),
+            )
+            .select_from(Object)
+            .outerjoin(FactoryModel, Object.factory_model_id == FactoryModel.id)
+            .outerjoin(TypeObject, FactoryModel.type_object_id == TypeObject.id)
+            .outerjoin(Division, Object.division_id == Division.id)
+            .outerjoin(mechanic, Object.mechanic_id == mechanic.id)
+            .outerjoin(foreman, Object.foreman_id == foreman.id)
+            .outerjoin(ContactPerson, Object.contact_person_id == ContactPerson.id)
+            .filter(Object.is_actual.isnot(False))
+        )
+        return apply_object_scope(query, scope).order_by(Object.name, Object.id).all()
+
+    def get_categories(self, *, db: Session):
+        """Весь справочник; что из него предлагать — решает форма по коду."""
+        return db.query(FaultCategory).order_by(FaultCategory.id).all()
+
+    def get_open_works(self, *, db: Session, scope: AccessScope):
+        """Незакрытые заявки и акты по объектам области — под «В работе сейчас».
+
+        Те же ветки, что у ленты: статус одним словом считается в одном месте.
+        """
+        view = ArchiveView.ACTUAL
+        feed = (
+            self._order_branch(db, scope, view)
+            .union_all(self._maintenance_branch(db, scope, view))
+            .subquery("open_works")
+        )
+        c = feed.c
+        closed = [status.value for status in CLOSED_STATUSES]
+        return (
+            db.query(
+                c.object_id,
+                c.kind,
+                c.status,
+                c.task_text,
+                c.step_list_fact,
+                c.performer,
+            )
+            .filter(c.object_id.isnot(None), c.status.notin_(closed))
+            .order_by(c.object_id, c.created_at)
+            .all()
+        )
 
     # ------------------------------------------------------------------
     # Действия

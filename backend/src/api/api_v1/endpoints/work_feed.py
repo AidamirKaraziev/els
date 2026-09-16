@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.params import Path
 
@@ -12,6 +14,9 @@ from src.crud.crud_work_feed import (
     crud_work_feed,
 )
 from src.getters.work_feed import (
+    get_new_work_category,
+    get_new_work_object,
+    get_new_work_open_item,
     get_work_employee,
     get_work_feed_item,
     get_work_section,
@@ -20,6 +25,8 @@ from src.schemas.reports import WorkKind
 from src.schemas.work_feed import (
     AssignBody,
     AttentionReason,
+    NewWorkContext,
+    NewWorkOpenItem,
     WorkCounts,
     WorkFeed,
     WorkFeedItem,
@@ -140,6 +147,52 @@ def work_feed(
                 for row in crud_work_feed.get_employees(db=session, scope=scope)
             ],
             my_sections=my_sections,
+        )
+    )
+
+
+@router.get(
+    path="/work/new/context",
+    response_model=SingleEntityResponse[NewWorkContext],
+    name="new_work_context",
+    summary="Справочники для формы «Новая работа»",
+    description=(
+        "📝 Всё, что нужно форме, одним ответом: объекты области с механиком, "
+        "прорабом и контактом; категории заявок с кодом и флагом поломки; "
+        "кого можно назначить — сотрудники ленты плюс заказчики; открытые "
+        "работы по объектам, чтобы не завести дубль.\n\n"
+        "Создание — как раньше, `POST /order/`; `executor_id` там теперь "
+        "необязателен: без него заявка ложится в ленту «Новой»."
+    ),
+    tags=TAGS,
+)
+def new_work_context(
+    session=Depends(deps.get_db),
+    current_user=Depends(deps.require(Permission.ORDER_CREATE)),
+    scope=Depends(deps.get_read_scope),
+):
+    open_works: Dict[int, List[NewWorkOpenItem]] = {}
+    for row in crud_work_feed.get_open_works(db=session, scope=scope):
+        open_works.setdefault(row.object_id, []).append(get_new_work_open_item(row))
+    return SingleEntityResponse(
+        data=NewWorkContext(
+            objects=[
+                get_new_work_object(row)
+                for row in crud_work_feed.get_new_work_objects(db=session, scope=scope)
+            ],
+            categories=[
+                get_new_work_category(category)
+                for category in crud_work_feed.get_categories(db=session)
+            ],
+            employees=[
+                get_work_employee(row)
+                for row in crud_work_feed.get_employees(
+                    db=session, scope=scope, include_clients=True
+                )
+            ],
+            open_works=open_works,
+            my_sections=sorted(division_ids_of(current_user)),
+            author=current_user.name,
         )
     )
 
