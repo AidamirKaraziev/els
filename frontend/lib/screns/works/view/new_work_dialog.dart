@@ -485,8 +485,9 @@ class _ObjectSearchState extends State<_ObjectSearch> {
   final TextEditingController _query = TextEditingController();
   final FocusNode _focus = FocusNode();
 
-  /// Сколько строк показывать без прокрутки: больше — уже не подсказка.
-  static const int _limit = 6;
+  /// Высота списка — около шести строк; дальше прокрутка внутри рамки,
+  /// чтобы механик мог пролистать всю технику, не набирая запрос.
+  static const double _listHeight = 6.5 * 54.0;
 
   @override
   void initState() {
@@ -551,22 +552,36 @@ class _ObjectSearchState extends State<_ObjectSearch> {
                     ),
                   ),
                 )
-              : Column(
-                  children: <Widget>[
-                    for (final NewWorkObject o in found.take(_limit))
-                      _ObjectRow(object: o, onTap: () => widget.onPicked(o)),
-                    if (found.length > _limit)
+              : ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: _listHeight),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Flexible(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: found.length,
+                          itemBuilder: (BuildContext context, int i) =>
+                              _ObjectRow(
+                                object: found[i],
+                                onTap: () => widget.onPicked(found[i]),
+                              ),
+                        ),
+                      ),
                       Padding(
-                        padding: const EdgeInsets.all(10.0),
+                        padding: const EdgeInsets.all(8.0),
                         child: Text(
-                          'Ещё ${found.length - _limit} — уточни запрос',
+                          q.isEmpty
+                              ? 'Всего ${found.length}'
+                              : 'Найдено ${found.length}',
                           style: const TextStyle(
                             fontSize: 12.0,
                             color: ColorApp.myColorGrayText,
                           ),
                         ),
                       ),
-                  ],
+                    ],
+                  ),
                 ),
         ),
       ],
@@ -583,8 +598,9 @@ class _ObjectRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Название — заголовком: механики ориентируются по нему, а не по адресу.
     final List<String> tail = <String>[
-      object.name,
+      if (object.address.isNotEmpty) object.address,
       if (object.type != null) object.type!,
       if (object.factoryNumber != null) 'зав. № ${object.factoryNumber}',
     ];
@@ -598,7 +614,7 @@ class _ObjectRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(object.address, style: _valueStyle),
+                  Text(object.name, style: _valueStyle),
                   Text(
                     tail.join(' · '),
                     style: const TextStyle(
@@ -660,7 +676,7 @@ class _ObjectCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      object.address,
+                      object.name,
                       style: const TextStyle(
                         fontSize: 15.0,
                         fontWeight: FontWeight.w600,
@@ -669,7 +685,7 @@ class _ObjectCard extends StatelessWidget {
                     ),
                     Text(
                       <String>[
-                        object.name,
+                        if (object.address.isNotEmpty) object.address,
                         if (object.type != null) object.type!,
                       ].join(' · '),
                       style: const TextStyle(
