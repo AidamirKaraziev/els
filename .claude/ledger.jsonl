@@ -32,4 +32,4 @@
 {"date": "2026-09-17", "epic": "E10", "stage": "S04 push и звук в приложении", "area": "front", "status": "закрыт", "branch": "E10-S04", "session": "65b00220", "commits": ["0db7330"]}
 {"date": "2026-09-17", "epic": "E10", "stage": "S05 экран «Очередь отправки», фото на диск и сжатие", "area": "front", "status": "закрыт", "branch": "E10-S05", "session": "0a1ad0cb", "commits": ["a874905"]}
 
-{"date": "2026-09-17", "epic": "E10", "stage": "S06 релиз 1: push и очередь на проде", "area": "infra", "status": "закрыт", "branch": "E10-S06", "session": "1a20b102", "commits": []}
+{"date": "2026-09-17", "epic": "E10", "stage": "S06 релиз 1: push и очередь на проде", "area": "infra", "status": "закрыт", "branch": "E10-S06", "session": "1a20b102", "commits": ["1a87a91"]}
