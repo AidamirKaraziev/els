@@ -5,6 +5,7 @@ import 'package:els/helper/session.dart';
 import 'package:els/navigation/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helper/button/my_button.dart';
 import '../../../helper/class_colors.dart';
@@ -36,6 +37,22 @@ class _LogAndPassState extends State<LogAndPass> {
   /// Что показать человеку под формой. Тексты приходят от бэкенда: там они
   /// согласованы и различают «неверный пароль» и «вход заблокирован».
   String? errorText;
+
+  /// Ключ, под которым на диске лежит почта последнего входа.
+  ///
+  /// Только почта: пароль на телефоне не храним, телефон механика может быть
+  /// общим или потерянным. Почта переживает выход — ради неё это и сделано.
+  static const String _emailKey = 'last_login_email';
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((SharedPreferences preferences) {
+      final String? saved = preferences.getString(_emailKey);
+      if (saved == null || !mounted || log.text.isNotEmpty) return;
+      log.text = saved;
+    });
+  }
 
   @override
   void dispose() {
@@ -90,6 +107,10 @@ class _LogAndPassState extends State<LogAndPass> {
       });
       return;
     }
+
+    // Пароль подошёл — почту запоминаем для следующего входа.
+    final SharedPreferences preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_emailKey, email);
 
     // Токены уже сохранены клиентом. Дальше нужен профиль: без него неизвестна
     // роль, а значит и экран.

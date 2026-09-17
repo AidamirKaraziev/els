@@ -168,12 +168,14 @@ class AppRouterDelegate extends RouterDelegate<AppRoutePath>
   /// Access живёт 30 минут, поэтому «войти один раз и работать» держится не
   /// на нём, а на refresh-токене: он лежит на диске, и при запуске мы меняем
   /// его на свежую пару. Без этого перезагрузка вкладки требовала бы пароль.
+  /// Без сети обмен не состоится, и это не повод для экрана входа: пара
+  /// остаётся на диске, профиль берём из кеша, а шапка покажет «офлайн».
   Future<void> restore() async {
     if (_restoreStarted) return;
     _restoreStarted = true;
 
-    final bool restored =
-        await Api.restoreSession() && await loadProfile();
+    final bool restored = await Api.restoreSession() &&
+        await loadProfile(offlineFromCache: true);
     if (!restored) {
       _stage = AppStage.login;
       notifyListeners();

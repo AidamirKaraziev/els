@@ -312,12 +312,17 @@ class Api {
   /// Восстанавливает сессию при старте приложения.
   ///
   /// Возвращает `true`, если работать можно: либо access ещё жив, либо его
-  /// удалось обновить по refresh.
+  /// удалось обновить по refresh, либо сети нет — тогда пара остаётся на
+  /// диске, и обновить её догонит первый запрос при появлении связи.
+  /// `false` — только когда сессии нет: на диске пусто или сервер отверг
+  /// refresh и пара стёрта. Раньше отказ по сети тоже считался «сессии
+  /// нет», и механик, открывший приложение в подвале, видел экран входа.
   static Future<bool> restoreSession() async {
     await TokenStore.load();
     if (!TokenStore.hasSession) return false;
     if (!TokenStore.isAccessStale) return true;
-    return _refreshTokens();
+    await _refreshTokens();
+    return TokenStore.hasSession;
   }
 
   // --------------------------------------------------------------- внутреннее

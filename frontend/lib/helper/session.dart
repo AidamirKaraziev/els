@@ -11,6 +11,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../bloc/company_bloc/company_bloc.dart';
 import '../bloc/user_bloc/user_bloc.dart';
@@ -68,18 +69,33 @@ int idUserTest = 0;
 /// неудачных запросов.
 bool _atLogin = false;
 
+/// Ключ, под которым на диске лежит последний ответ `/auth/me`.
+///
+/// Нужен только старту без сети: refresh-токен на диске есть, а роль,
+/// чтобы выбрать оболочку, взять неоткуда. Стирается вместе с сессией.
+const String _profileCacheKey = 'profile_cache';
+
 /// Загружает профиль вошедшего и запоминает его роль.
 ///
 /// Профиль лежит в глобальном `userProfile`, из которого читают 73 места
 /// экранов. Возвращает `false`, если профиль получить не вышло — это значит
 /// «сессии нет», и звать надо экран входа.
-Future<bool> loadProfile() async {
+///
+/// `offlineFromCache` — брать ли профиль с диска, когда сети нет. Так
+/// делает только восстановление сессии при старте: пара токенов на диске
+/// принадлежит тому же человеку, что и кеш. На экране входа это запрещено —
+/// там кеш мог остаться от прежнего вошедшего.
+Future<bool> loadProfile({bool offlineFromCache = false}) async {
   http.Response response;
   try {
     response = await Api.get(Uri.parse('${ApiConfig.base}/auth/me'));
   } catch (_) {
     // Сети нет. Это не «выйдите из системы», это «сейчас не получилось».
-    return false;
+    if (!offlineFromCache) return false;
+    final Map<dynamic, dynamic>? cached = await _readProfileCache();
+    if (cached == null) return false;
+    _applyProfile(cached);
+    return true;
   }
 
   if (response.statusCode != 200) return false;
@@ -88,6 +104,12 @@ Future<bool> loadProfile() async {
   final dynamic data = decoded is Map ? decoded['data'] : null;
   if (data is! Map) return false;
 
+  _applyProfile(data);
+  await _writeProfileCache(data);
+  return true;
+}
+
+void _applyProfile(Map<dynamic, dynamic> data) {
   // Именно заменяем, а не дополняем: при повторном входе под нулевым
   // индексом остался бы прежний человек, а его читают все экраны.
   userProfile
@@ -96,7 +118,30 @@ Future<bool> loadProfile() async {
 
   final dynamic role = data['role_id'];
   idUserTest = role is Map && role['id'] is int ? role['id'] as int : 0;
-  return true;
+}
+
+Future<void> _writeProfileCache(Map<dynamic, dynamic> data) async {
+  final SharedPreferences preferences = await SharedPreferences.getInstance();
+  await preferences.setString(_profileCacheKey, jsonEncode(data));
+}
+
+Future<Map<dynamic, dynamic>?> _readProfileCache() async {
+  final SharedPreferences preferences = await SharedPreferences.getInstance();
+  final String? raw = preferences.getString(_profileCacheKey);
+  if (raw == null) return null;
+  try {
+    final dynamic decoded = jsonDecode(raw);
+    return decoded is Map ? decoded : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Стирает кеш профиля. Зовётся при выходе и при потере сессии, чтобы
+/// следующий вошедший не поднялся под чужой ролью.
+Future<void> clearProfileCache() async {
+  final SharedPreferences preferences = await SharedPreferences.getInstance();
+  await preferences.remove(_profileCacheKey);
 }
 
 /// Экран, на который попадает человек с такой ролью.
@@ -175,6 +220,9 @@ void resetSession() {
   userProfile.clear();
   newUserProfile.clear();
   idUserTest = 0;
+  // Диск чистим не дожидаясь: экрану входа кеш не нужен, а на старте его
+  // читают только при живом refresh-токене, который уже стёрт.
+  clearProfileCache();
 }
 
 /// Выход по кнопке: гасит сессию на бэкенде и ведёт на экран входа.
