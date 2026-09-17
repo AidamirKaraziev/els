@@ -34,4 +34,4 @@
 
 {"date": "2026-09-17", "epic": "E10", "stage": "S06 релиз 1: push и очередь на проде", "area": "infra", "status": "закрыт", "branch": "E10-S06", "session": "1a20b102", "commits": []}
 {"date":"2026-09-17","epic":"E10","stage":"S07 раздача APK с сайта","area":"infra+front","status":"закрыт","branch":"E10-S07","session":"48ec0107","commits":["9cf1ad7"]}
-{"date":"2026-09-17","epic":"E10","stage":"S08 индикатор сети и «вышла новая версия» в приложении","area":"front","status":"закрыт","branch":"E10-S08","session":"48ec0107","commits":[]}
+{"date": "2026-09-17", "epic": "E10", "stage": "S08 индикатор сети и «вышла новая версия» в приложении", "area": "front", "status": "закрыт", "branch": "E10-S08", "session": "48ec0107", "commits": ["6f7ecef"]}
