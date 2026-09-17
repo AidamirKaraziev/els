@@ -14,6 +14,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../../app_download/app_release.dart';
 import '../../helper/api_client.dart';
 import '../../helper/api_config.dart';
 import '../../helper/image_picking.dart';
@@ -94,6 +95,7 @@ class MechanicWorkspace {
   void start() {
     _timer ??= Timer.periodic(_period, (_) => refresh());
     unawaited(refresh());
+    unawaited(checkForUpdate());
     // Push пришёл — не ждём таймера, забираем сразу. Здесь же телефон
     // регистрируется на сервере за вошедшим.
     unawaited(PushService.instance.attach(onMessage: refresh));
@@ -132,8 +134,46 @@ class MechanicWorkspace {
       pending: waiting.length,
       rejected: denied.length,
       unread: await journal.unread(),
+      offline: result.offline,
       lastSyncAt: result.ok ? DateTime.now() : status.value.lastSyncAt,
-      lastError: result.ok ? null : result.error,
+      // Без сети текст ошибки не нужен: полоса и так скажет «Офлайн».
+      lastError: result.ok || result.offline ? null : result.error,
+      update: status.value.update,
+    );
+  }
+
+  /// Спрашивает у сервера, не вышла ли сборка новее установленной.
+  ///
+  /// Один раз на запуск, не по таймеру: релиз — событие редкое, а лишний
+  /// запрос каждые две минуты на объекте без связи только греет батарею.
+  /// В браузере своей версии нет (`installedVersionCode` = 0) — там и
+  /// обновлять нечего, запрос не делается.
+  Future<void> checkForUpdate() async {
+    if (AppReleaseApi.installedVersionCode <= 0) return;
+    final AppReleaseResult result = await AppReleaseApi.fetch();
+    final AppRelease? release = result.release;
+    if (release == null ||
+        release.versionCode <= AppReleaseApi.installedVersionCode) {
+      return;
+    }
+    status.value = _withUpdate(release);
+  }
+
+  /// Человек закрыл плашку — до следующего запуска не напоминаем.
+  void dismissUpdate() {
+    status.value = _withUpdate(null);
+  }
+
+  WorkspaceStatus _withUpdate(AppRelease? update) {
+    final WorkspaceStatus now = status.value;
+    return WorkspaceStatus(
+      pending: now.pending,
+      rejected: now.rejected,
+      unread: now.unread,
+      offline: now.offline,
+      lastSyncAt: now.lastSyncAt,
+      lastError: now.lastError,
+      update: update,
     );
   }
 
@@ -219,8 +259,10 @@ class MechanicWorkspace {
       pending: waiting.length,
       rejected: denied.length,
       unread: await journal.unread(),
+      offline: status.value.offline,
       lastSyncAt: status.value.lastSyncAt,
       lastError: status.value.lastError,
+      update: status.value.update,
     );
   }
 
@@ -636,8 +678,10 @@ class WorkspaceStatus {
     this.pending = 0,
     this.rejected = 0,
     this.unread = 0,
+    this.offline = false,
     this.lastSyncAt,
     this.lastError,
+    this.update,
   });
 
   final int pending;
@@ -646,6 +690,15 @@ class WorkspaceStatus {
   /// Непрочитанных уведомлений — красная точка на вкладке из макета.
   final int unread;
 
+  /// Сервер не ответил вовсе — связи нет. Отдельно от [lastError]: «сервер
+  /// отказал» и «сети нет» механик читает по-разному — во втором случае он
+  /// просто ждёт, пока выйдет из подвала.
+  final bool offline;
+
   final DateTime? lastSyncAt;
   final String? lastError;
+
+  /// На сервере лежит сборка новее установленной; null — обновлять нечего
+  /// (или это веб, где своей версии нет).
+  final AppRelease? update;
 }

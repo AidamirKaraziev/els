@@ -308,6 +308,43 @@
       ],
       "cwd": "frontend",
       "port": 5616
+    },
+    {
+      "name": "mechanic-strip-preview",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/dev/mechanic_strip_preview.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5617",
+        "--web-hostname",
+        "127.0.0.1"
+      ],
+      "cwd": "frontend",
+      "port": 5617
+    },
+    {
+      "name": "app-live-apk",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/main.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5618",
+        "--web-hostname",
+        "127.0.0.1",
+        "--dart-define=API_ORIGIN=http://localhost:8080",
+        "--dart-define=APP_VERSION_NAME=1.0.2",
+        "--dart-define=APP_VERSION_CODE=3"
+      ],
+      "cwd": "frontend",
+      "port": 5618
     }
   ]
 }

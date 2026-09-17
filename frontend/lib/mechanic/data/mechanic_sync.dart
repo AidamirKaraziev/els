@@ -34,9 +34,14 @@ class SyncResult {
     required this.ok,
     required this.received,
     this.error,
+    this.offline = false,
   });
 
   final bool ok;
+
+  /// Сервер не ответил вовсе — сети нет. Не то же, что [error] с ответом
+  /// сервера: там он есть и отказал, здесь до него не дошли.
+  final bool offline;
 
   /// Сколько записей приехало. Ноль при `ok` — нормально: значит ничего не
   /// менялось с прошлого раза.
@@ -74,6 +79,7 @@ class MechanicSync {
       ok: orders.ok && maintenance.ok,
       received: orders.received + maintenance.received,
       error: orders.error ?? maintenance.error,
+      offline: orders.offline || maintenance.offline,
     );
   }
 
@@ -101,6 +107,7 @@ class MechanicSync {
         ok: false,
         received: 0,
         error: 'Нет связи с сервером',
+        offline: true,
       );
     }
 

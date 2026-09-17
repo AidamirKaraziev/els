@@ -17,6 +17,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../app_download/app_download_screen.dart';
+import '../app_download/app_release.dart';
 import '../helper/class_colors.dart';
 import '../screns/user/user_contact.dart';
 import 'data/mechanic_workspace.dart';
@@ -26,6 +28,7 @@ import 'screens/objects_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/outbox_screen.dart';
 import 'screens/profile_screen.dart';
+import 'status_strip.dart';
 
 class MechanicShell extends StatefulWidget {
   const MechanicShell({Key? key}) : super(key: key);
@@ -83,6 +86,23 @@ class _MechanicShellState extends State<MechanicShell>
     if (index == 2) _workspace?.markNotificationsRead();
   }
 
+  /// Экран «Приложение» поверх оболочки — тот же, что из профиля: белый фон
+  /// и SafeArea экран скачивания не рисует сам.
+  void _openDownload(BuildContext context) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => Scaffold(
+          backgroundColor: ColorApp.myColorWhite,
+          body: SafeArea(
+            child: AppDownloadScreen(
+              onBack: () => Navigator.of(context).pop(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   int _currentUserId() {
     if (userProfile.isEmpty) return 0;
     final dynamic id = (userProfile[0] as Map)['id'];
@@ -101,13 +121,24 @@ class _MechanicShellState extends State<MechanicShell>
               ValueListenableBuilder<WorkspaceStatus>(
                 valueListenable: _workspace!.status,
                 builder: (BuildContext context, WorkspaceStatus status, _) {
-                  return _StatusStrip(
-                    status: status,
-                    onOpen: () => Navigator.of(context).push<void>(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const MechanicOutboxScreen(),
+                  final AppRelease? update = status.update;
+                  return Column(
+                    children: <Widget>[
+                      if (update != null)
+                        MechanicUpdateBanner(
+                          release: update,
+                          onOpen: () => _openDownload(context),
+                          onDismiss: _workspace!.dismissUpdate,
+                        ),
+                      MechanicStatusStrip(
+                        status: status,
+                        onOpenQueue: () => Navigator.of(context).push<void>(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const MechanicOutboxScreen(),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   );
                 },
               ),
@@ -137,59 +168,6 @@ class _MechanicShellState extends State<MechanicShell>
                 );
               },
             ),
-    );
-  }
-}
-
-/// Полоса состояния связи и очереди.
-///
-/// В макете её нет — там нет и офлайна. Появляется только когда есть что
-/// сказать: обычный день механика она не занимает ни пикселем. Тап ведёт на
-/// экран очереди: там видно, что именно не ушло, и оттуда же отправляют.
-class _StatusStrip extends StatelessWidget {
-  const _StatusStrip({required this.status, required this.onOpen});
-
-  final WorkspaceStatus status;
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final List<String> parts = <String>[
-      if (status.lastError != null) status.lastError!,
-      if (status.pending > 0) 'Не отправлено: ${status.pending}',
-      if (status.rejected > 0) 'Отклонено сервером: ${status.rejected}',
-    ];
-    if (parts.isEmpty) return const SizedBox.shrink();
-
-    final bool offline = status.lastError != null;
-    return Material(
-      color: offline ? ColorApp.myColorYellow : ColorApp.myColorGreenLine,
-      child: InkWell(
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Row(
-            children: <Widget>[
-              Icon(
-                offline ? Icons.cloud_off : Icons.cloud_upload_outlined,
-                size: 16.0,
-                color: ColorApp.myColorBlack,
-              ),
-              const SizedBox(width: 8.0),
-              Expanded(
-                child: Text(
-                  parts.join(' · '),
-                  style: const TextStyle(fontSize: 12.0),
-                ),
-              ),
-              const Text(
-                'Открыть',
-                style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
