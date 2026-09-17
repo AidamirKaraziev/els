@@ -126,6 +126,51 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 
 ---
 
+### 2.5 Ключ Firebase (push механику)
+
+Бэкенд шлёт push в приложение механика через Firebase. Ключ сервисного
+аккаунта — `backend/firebase-service-account.json` — в git не попадает и на
+сервер копируется руками, один раз, рядом с `.env` (на нашем сервере
+репозиторий лежит в `/var/www/els`, алиас ssh — `els`):
+
+```bash
+scp backend/firebase-service-account.json user@server:els/backend/
+```
+
+На сервере:
+
+```bash
+chmod 600 els/backend/firebase-service-account.json
+```
+
+и строка в `.env`:
+
+```
+FIREBASE_SERVICE_ACCOUNT=firebase-service-account.json
+```
+
+Путь относительный — от каталога бэкенда внутри контейнера, compose
+монтирует туда именно этот файл (`infra/docker-compose.prod.yml`).
+
+Две вещи, которые легко пропустить:
+
+**Без ключа стек работает, только без push.** Переменная пуста или файла
+нет — в логе бэкенда при первом уведомлении одна строка «Push выключен», заявки заводятся
+как раньше. Это не ошибка, просто уведомления не уходят.
+
+**Если стек поднимали до того, как файл лёг на место,** docker создал на
+его месте **пустой каталог** — `scp` в него не запишет файл, а положит внутрь.
+Проверить и убрать перед копированием:
+
+```bash
+ls -ld els/backend/firebase-service-account.json && rmdir els/backend/firebase-service-account.json
+```
+
+Ключ подхватывается только при старте контейнера: положили после выката —
+`make prod-deploy` ещё раз (или `docker compose ... up -d --force-recreate backend`).
+
+---
+
 ## Часть 3. Каждый релиз
 
 ### 3.1 Локально: запушить
@@ -174,6 +219,22 @@ make prod-ps
 ```
 
 У `backend` должен быть статус `healthy`. Открыть сайт по адресу сервера.
+
+Push: ключ виден внутри контейнера, а в OpenAPI появился маршрут
+регистрации токенов устройств:
+
+```bash
+docker compose --project-directory . -f infra/docker-compose.prod.yml exec -T backend sh -c 'ls -l /app/firebase-service-account.json; env | grep FIREBASE'
+```
+
+```bash
+curl -s https://els23.ru/api/v1/openapi.json | grep -o '/device-token/' | head -1
+```
+
+Ожидаемо: файл на 2–3 КБ (не каталог `d…`), `FIREBASE_SERVICE_ACCOUNT=…` и
+`/device-token/`. Строка «Push включён: проект Firebase …» в логе бэкенда
+появится не на старте, а при первом уведомлении — после первого назначения
+заявки. Видите «Push выключен» — см. §2.5.
 
 ---
 
