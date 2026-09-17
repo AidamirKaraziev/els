@@ -7,7 +7,7 @@
 
 .PHONY: help up down logs ps sync dev lint format test test-db-up test-db-down \
         web-build web-logs vault-check release build migrate migrate-status \
-        openapi-update prod-deploy prod-ps prod-logs prod-down prod-nginx \
+        openapi-update prod-deploy prod-ps prod-logs prod-down prod-nginx apk-publish \
         cert-staging cert-issue cert-renew cert-renew-dry cert-info \
         guard-not-prod
 
@@ -219,6 +219,11 @@ prod-nginx:  ## применить правку конфига nginx на про
 	# После перезапуска контейнер видел бы старое содержимое.
 	$(COMPOSE_PROD) up -d --force-recreate frontend
 	@$(COMPOSE_PROD) exec -T frontend nginx -t
+
+# С ноутбука, не с сервера: нужны `gh` и артефакты Actions. Сам APK на
+# сервере не собирается — его делает джоба frontend, здесь только доставка.
+apk-publish:  ## с ноутбука: выложить последний CI-APK на прод (scripts/publish-apk.sh --help)
+	scripts/publish-apk.sh $(ARGS)
 
 prod-ps:  ## что запущено на проде
 	$(COMPOSE_PROD) ps
