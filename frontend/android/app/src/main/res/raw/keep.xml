@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Иконки push никто не ссылается из кода — их имя приходит с сервера
+     (services/push.py, LOOKS). Без keep сжатие ресурсов их выкинет. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_push_alarm,@drawable/ic_push_maintenance,@drawable/ic_push_request,@drawable/ic_push_removed" />

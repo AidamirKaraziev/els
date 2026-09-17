@@ -25,6 +25,7 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../helper/api_client.dart';
@@ -49,6 +50,17 @@ class PushService {
     playSound: true,
     enableVibration: true,
   );
+
+  /// Иконка и цвет по `data.look` — тот же справочник, что `LOOKS` в
+  /// `backend/src/services/push.py`. Иконки лежат в `android/.../res/drawable`.
+  /// Закрытому приложению их подставляет система из самого сообщения; здесь
+  /// то же для открытого. Неизвестный look — авария: лучше лишний красный.
+  static const Map<String, _Look> _looks = {
+    'alarm': _Look('ic_push_alarm', Color(0xFFD32F2F)),
+    'maintenance': _Look('ic_push_maintenance', Color(0xFF2E7D32)),
+    'request': _Look('ic_push_request', Color(0xFF1565C0)),
+    'removed': _Look('ic_push_removed', Color(0xFF757575)),
+  };
 
   final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
 
@@ -177,6 +189,7 @@ class PushService {
   Future<void> _showLocally(RemoteMessage message) async {
     final RemoteNotification? note = message.notification;
     if (note == null) return;
+    final look = _looks[message.data['look']] ?? _looks['alarm']!;
     await _local.show(
       message.hashCode,
       note.title,
@@ -188,8 +201,17 @@ class PushService {
           channelDescription: _channel.description,
           importance: Importance.max,
           priority: Priority.high,
+          icon: look.icon,
+          color: look.color,
         ),
       ),
     );
   }
+}
+
+class _Look {
+  const _Look(this.icon, this.color);
+
+  final String icon;
+  final Color color;
 }

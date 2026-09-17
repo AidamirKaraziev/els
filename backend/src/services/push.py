@@ -159,24 +159,67 @@ def enabled() -> bool:
     return service_account() is not None
 
 
+#: Вид уведомления на телефоне: маленькая иконка и цвет подкраски.
+#: Иконка — имя drawable в APK (`android/app/src/main/res/drawable/`),
+#: цвет — hex. Систему просим об этом через `android.notification`, когда
+#: приложение закрыто; открытое читает `data.look` и рисует само.
+LOOKS: Dict[str, Dict[str, str]] = {
+    "alarm": {"icon": "ic_push_alarm", "color": "#D32F2F"},
+    "maintenance": {"icon": "ic_push_maintenance", "color": "#2E7D32"},
+    "request": {"icon": "ic_push_request", "color": "#1565C0"},
+    "removed": {"icon": "ic_push_removed", "color": "#757575"},
+}
+
+#: Коды категорий плановых работ. У ТО из графика push нет — это заявка,
+#: которую завели с категорией «ТО»/«ПТО».
+MAINTENANCE_CODES = ("ТО", "ПТО")
+
+
+def order_look(order: Order, kind: str) -> str:
+    """Ключ из `LOOKS` по заявке и событию.
+
+    Снятие и передача — серые независимо от категории: механику важнее, что
+    задача ушла, чем какой она была. Авария — по `counts_as_breakdown`, без
+    категории тоже авария (то же правило, что в `services/work_kind.py`).
+    """
+    if kind != KIND_ASSIGNED:
+        return "removed"
+    category = order.fault_category
+    if category is None or category.counts_as_breakdown:
+        return "alarm"
+    if (category.code or "").strip() in MAINTENANCE_CODES:
+        return "maintenance"
+    return "request"
+
+
 def build_message(
-    *, title: str, body: str, data: Optional[Dict[str, str]] = None
+    *,
+    title: str,
+    body: str,
+    data: Optional[Dict[str, str]] = None,
+    look: str = "alarm",
 ) -> dict:
     """Тело сообщения FCM без адресата — `token` подставляет `send`.
 
     `notification` показывает система, когда приложение закрыто; `data`
     читает само приложение, когда открыто. Значения `data` — только строки,
-    так требует FCM.
+    так требует FCM. `look` — ключ из `LOOKS`, попадает и в `data`.
     """
+    style = LOOKS[look]
     return {
         "notification": {"title": title, "body": body},
-        "data": {key: str(value) for key, value in (data or {}).items()},
+        "data": {
+            **{key: str(value) for key, value in (data or {}).items()},
+            "look": look,
+        },
         "android": {
             "priority": "high",
             "notification": {
                 "channel_id": ANDROID_CHANNEL,
                 "sound": "default",
                 "default_vibrate_timings": True,
+                "icon": style["icon"],
+                "color": style["color"],
             },
         },
     }
@@ -332,7 +375,10 @@ def notify_order(
         body = f"{label} — {str(order.task_text).strip()}"[:200]
 
     message = build_message(
-        title=title, body=body, data={"kind": kind, "order_id": order.id}
+        title=title,
+        body=body,
+        data={"kind": kind, "order_id": order.id},
+        look=order_look(order, kind),
     )
     background.add_task(send, tokens, message)
     return recipients
@@ -345,6 +391,9 @@ if __name__ == "__main__":  # pragma: no cover — ручная проверка
     parser.add_argument(
         "--token", help="токен FCM устройства; без него — только токен Google"
     )
+    parser.add_argument(
+        "--look", choices=sorted(LOOKS), default="alarm", help="иконка и цвет"
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     acc = service_account()
@@ -355,6 +404,11 @@ if __name__ == "__main__":  # pragma: no cover — ручная проверка
     if args.token:
         n = send(
             [args.token],
-            build_message(title="ЕЛС", body="Проверка push", data={"kind": "test"}),
+            build_message(
+                title="ЕЛС",
+                body=f"Проверка push — {args.look}",
+                data={"kind": "test"},
+                look=args.look,
+            ),
         )
         print("доставлено:", n)

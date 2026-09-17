@@ -6,6 +6,7 @@
 """
 
 import uuid
+from types import SimpleNamespace
 from typing import List, Tuple
 
 import pytest
@@ -163,8 +164,51 @@ def test_new_order_pushes_executor_and_object_mechanic(
     assert message["notification"]["title"] == f"Новая задача №{order['id']}"
     assert lift.name in message["notification"]["body"]
     assert "Застрял лифт" in message["notification"]["body"]
-    assert message["data"] == {"kind": "order_assigned", "order_id": str(order["id"])}
+    assert message["data"] == {
+        "kind": "order_assigned",
+        "order_id": str(order["id"]),
+        "look": "request",
+    }
     assert message["android"]["notification"]["channel_id"] == "emergency"
+    # Категория 11 — «Р (Ремонт по заявке)»: синяя заявка, не авария.
+    assert message["android"]["notification"]["icon"] == "ic_push_request"
+    assert message["android"]["notification"]["color"] == "#1565C0"
+
+
+@pytest.mark.parametrize(
+    "category, look, icon",
+    [
+        (1, "alarm", "ic_push_alarm"),  # AA — застревание
+        (6, "maintenance", "ic_push_maintenance"),  # ТО
+        (8, "request", "ic_push_request"),  # КР — ремонт
+    ],
+)
+def test_look_follows_category(
+    client_with_db, fcm, foreman, lift, executor, db_session, category, look, icon
+):
+    _token(db_session, executor)
+    _data(
+        client_with_db.post(
+            ORDER,
+            json={
+                "object_id": lift.id,
+                "executor_id": executor.id,
+                "fault_category_id": category,
+            },
+        )
+    )
+
+    _, message = fcm.sent[0]
+    assert message["data"]["look"] == look
+    assert message["android"]["notification"]["icon"] == icon
+    assert message["android"]["notification"]["color"] == push.LOOKS[look]["color"]
+
+
+def test_order_without_category_is_alarm():
+    """API без категории не пустит, но в базе такие заявки есть."""
+    order = SimpleNamespace(fault_category=None)
+    assert push.order_look(order, push.KIND_ASSIGNED) == "alarm"
+    assert push.order_look(order, push.KIND_REMOVED) == "removed"
 
 
 def test_author_does_not_push_himself(
@@ -251,6 +295,9 @@ def test_archive_pushes_removed(
     assert len(fcm.sent) == 2
     assert set(fcm.titles()) == {f"Задача №{order['id']} снята"}
     assert fcm.sent[0][1]["data"]["kind"] == "order_removed"
+    # Снятие серое при любой категории.
+    assert fcm.sent[0][1]["data"]["look"] == "removed"
+    assert fcm.sent[0][1]["android"]["notification"]["icon"] == "ic_push_removed"
 
 
 # --- мёртвые токены -----------------------------------------------------------
