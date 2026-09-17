@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Android 13+: показывать уведомления можно только с разрешения. Его
+         спрашивает приложение при старте, см. push_service.dart. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Камера не обязательна: без неё приложение работает, только без фото. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
@@ -37,6 +40,11 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Канал для push, пришедшего без channel_id. Сервер его ставит
+             всегда; это страховка. Сам канал создаёт push_service.dart. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="emergency" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

@@ -26,6 +26,7 @@ import '../screns/object/bloc/object_bloc.dart';
 import '../screns/user/user_contact.dart';
 import 'api_client.dart';
 import 'api_config.dart';
+import '../mechanic/data/push_service.dart';
 import 'class_colors.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -178,6 +179,9 @@ void resetSession() {
 
 /// Выход по кнопке: гасит сессию на бэкенде и ведёт на экран входа.
 Future<void> signOut() async {
+  // Сначала снять токен push — пока access ещё жив. После выхода задачи
+  // этого человека на телефон приходить не должны: он может быть общим.
+  await PushService.instance.unregister();
   await Api.logout();
   resetSession();
   goToLogin();

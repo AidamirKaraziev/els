@@ -4,6 +4,9 @@ plugins {
     // Загружается через includeBuild в settings.gradle — заменяет
     // `apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"`.
     id "dev.flutter.flutter-gradle-plugin"
+    // Push (E10·S04): плагин объявлен в settings.gradle, здесь применяется.
+    // Ищет google-services.json в этом каталоге.
+    id "com.google.gms.google-services"
 }
 
 // Ключ подписи релиза. Лежит вне репозитория: сам файл и три пароля к нему —
@@ -34,6 +37,9 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+        // flutter_local_notifications использует java.time; на minSdk 24 его
+        // нет, и без desugaring Gradle падает на этапе слияния dex.
+        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
@@ -84,4 +90,9 @@ android {
 
 flutter {
     source '../..'
+}
+
+dependencies {
+    // Пара к coreLibraryDesugaringEnabled выше.
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"
 }

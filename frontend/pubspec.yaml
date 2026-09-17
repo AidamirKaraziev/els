@@ -92,6 +92,14 @@ dependencies:
   image_picker: ^1.0.4
   gap: ^3.0.1
   geolocator: ^14.0.2
+  # Push по заявкам (E10·S04). Только Android: весь вызов пакетов сидит за
+  # проверкой платформы в lib/mechanic/data/push_service.dart, на вебе и iOS
+  # они компилируются, но не запускаются.
+  firebase_core: ^4.0.0
+  firebase_messaging: ^16.0.0
+  # Канал `emergency` со звуком и уведомление при открытом приложении —
+  # системе FCM в фореграунде ничего не показывает.
+  flutter_local_notifications: ^19.0.0
 
 
 

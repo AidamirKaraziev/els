@@ -1,6 +1,7 @@
 import 'package:els/helper/api_client.dart';
 import 'package:els/helper/hints/hint_settings.dart';
 import 'package:els/helper/session.dart';
+import 'package:els/mechanic/data/push_service.dart';
 import 'package:els/navigation/app_route.dart';
 import 'package:els/navigation/app_router.dart';
 import 'package:els/screns/employee/bloc/employee_bloc.dart';
@@ -35,6 +36,11 @@ void main() {
   // Не ждём результата: подсказки — украшение, и задерживать из-за них
   // первый кадр приложения незачем.
   HintSettings.instance.load();
+
+  // Push: Firebase и канал уведомлений со звуком. До входа, потому что канал
+  // должен существовать к моменту, когда система покажет первый push в
+  // закрытое приложение. Вне Android — пустой вызов. Первый кадр не ждёт.
+  PushService.instance.init();
 
   runApp(const MyApp());
 }

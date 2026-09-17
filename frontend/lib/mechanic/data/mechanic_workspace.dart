@@ -23,6 +23,7 @@ import 'local_store.dart';
 import 'mechanic_sync.dart';
 import 'notifications.dart';
 import 'outbox.dart';
+import 'push_service.dart';
 import 'tasks.dart';
 
 class MechanicWorkspace {
@@ -74,11 +75,15 @@ class MechanicWorkspace {
   void start() {
     _timer ??= Timer.periodic(_period, (_) => refresh());
     unawaited(refresh());
+    // Push пришёл — не ждём таймера, забираем сразу. Здесь же телефон
+    // регистрируется на сервере за вошедшим.
+    unawaited(PushService.instance.attach(onMessage: refresh));
   }
 
   void _stop() {
     _timer?.cancel();
     _timer = null;
+    unawaited(PushService.instance.detach());
   }
 
   /// Отдать сделанное и забрать изменения — именно в таком порядке.
