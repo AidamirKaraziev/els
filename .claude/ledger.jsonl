@@ -1,26 +1,26 @@
-{"date":"2026-09-10","epic":"—","stage":"0 проект подключён к скиллам, план на сдачу","area":"docs","status":"закрыт","session":"abedf74a","commits":[]}
+{"date": "2026-09-10", "epic": "—", "stage": "0 проект подключён к скиллам, план на сдачу", "area": "docs", "status": "закрыт", "session": "abedf74a", "commits": []}
 {"date": "2026-09-10", "epic": "E01", "stage": "S01 сверстать макет: окно больше, DefectsBadge в строке объекта", "area": "front", "status": "закрыт", "session": "d18b4792", "commits": ["c2a7c2c"]}
-{"date":"2026-09-10","epic":"E01","stage":"S02 подключить число дефектов и тап на список за год","area":"front","status":"закрыт","session":"02b77127","commits":["c34e80b"]}
-{"date":"2026-09-10","epic":"E01","stage":"S03 проверить на собранном стеке и убрать старый код окна","area":"front+infra","status":"закрыт","session":"749738f4","commits":["37bb0b3"]}
-{"date":"2026-09-10","epic":"E02","stage":"S01 починить двойной домен в ссылке на PDF на проде","area":"front+infra+debug","status":"закрыт","session":"0c059038","commits":["334b4a6"]}
+{"date": "2026-09-10", "epic": "E01", "stage": "S02 подключить число дефектов и тап на список за год", "area": "front", "status": "закрыт", "session": "02b77127", "commits": ["c34e80b"]}
+{"date": "2026-09-10", "epic": "E01", "stage": "S03 проверить на собранном стеке и убрать старый код окна", "area": "front+infra", "status": "закрыт", "session": "749738f4", "commits": ["37bb0b3"]}
+{"date": "2026-09-10", "epic": "E02", "stage": "S01 починить двойной домен в ссылке на PDF на проде", "area": "front+infra+debug", "status": "закрыт", "session": "0c059038", "commits": ["334b4a6"]}
 {"date": "2026-09-10", "epic": "E02", "stage": "S02 сверстать блок дефектных актов в статистике объекта", "area": "front", "status": "закрыт", "session": "c1026aac", "commits": ["23b9445"]}
-{"date":"2026-09-11","epic":"E02","stage":"S03 подключить число и список актов в статистике из API","area":"back+front","status":"закрыт","session":"2a4eab71","commits":["526fee5"]}
+{"date": "2026-09-11", "epic": "E02", "stage": "S03 подключить число и список актов в статистике из API", "area": "back+front", "status": "закрыт", "session": "2a4eab71", "commits": ["526fee5"]}
 {"date": "2026-09-11", "epic": "E02", "stage": "S05 вывести раздел дефектных актов в PDF отчёта", "area": "back", "status": "закрыт", "session": "2696ca4b", "commits": ["996ea82"]}
-{"date":"2026-09-11","epic":"E02","stage":"S07 сверстать выбор лифтов, галочку фото и шаг пейджера","area":"front","status":"закрыт","session":"634aefa8","commits":[]}
-{"date":"2026-09-11","epic":"E02","stage":"S08 принять список объектов в ручках отчёта","area":"back","status":"закрыт","session":"634aefa8","commits":[]}
+{"date": "2026-09-11", "epic": "E02", "stage": "S07 сверстать выбор лифтов, галочку фото и шаг пейджера", "area": "front", "status": "закрыт", "session": "634aefa8", "commits": []}
+{"date": "2026-09-11", "epic": "E02", "stage": "S08 принять список объектов в ручках отчёта", "area": "back", "status": "закрыт", "session": "634aefa8", "commits": []}
 {"date": "2026-09-11", "epic": "E02", "stage": "S09 подключить выбор лифтов и фото к выгрузке", "area": "front", "status": "закрыт", "session": "634aefa8", "commits": ["0c2ffd1"]}
 {"date": "2026-09-11", "epic": "E02", "stage": "S06 проверить на собранном стеке и убрать замещённый код", "area": "front+infra", "status": "закрыт", "session": "506068fd", "commits": ["6c48bf3"]}
 {"date": "2026-09-11", "epic": "E03", "stage": "S01 сверстать единый бургер по схеме разделов", "area": "front+design", "status": "закрыт", "session": "b82dce86", "commits": ["92536a9"]}
-{"date":"2026-09-11","epic":"E03","stage":"S02 перевести оболочки админа и прораба на go_router","area":"front","status":"закрыт","session":"23ba3a4e","commits":["eb43063"]}
-{"date":"2026-09-11","epic":"E03","stage":"S03 сверстать экран «Работы» на фикстуре","area":"front+design","status":"закрыт","session":"5c1617d7","commits":[]}
+{"date": "2026-09-11", "epic": "E03", "stage": "S02 перевести оболочки админа и прораба на go_router", "area": "front", "status": "закрыт", "session": "23ba3a4e", "commits": ["eb43063"]}
+{"date": "2026-09-11", "epic": "E03", "stage": "S03 сверстать экран «Работы» на фикстуре", "area": "front+design", "status": "закрыт", "session": "5c1617d7", "commits": []}
 {"date": "2026-09-12", "epic": "E03", "stage": "S03b улучшить окно «Работы» на фикстуре", "area": "front+design", "status": "закрыт", "session": "65a755f7", "commits": ["5953053"]}
-{"date":"2026-09-12","epic":"E03","stage":"S04 отдать единую ленту работ одной ручкой","area":"back","status":"закрыт","session":"f4c19277","commits":["e7f0070"]}
+{"date": "2026-09-12", "epic": "E03", "stage": "S04 отдать единую ленту работ одной ручкой", "area": "back", "status": "закрыт", "session": "f4c19277", "commits": ["e7f0070"]}
 {"date": "2026-09-12", "epic": "E03", "stage": "S05 подключить ленту к API и сделать её живой", "area": "front", "status": "закрыт", "session": "82588212", "commits": ["44c522f"]}
 {"date": "2026-09-12", "epic": "E03", "stage": "S06 вывести топ сотрудников на главной прораба", "area": "front", "status": "закрыт", "session": "e8c16ca8", "commits": ["6a9896f"]}
 {"date": "2026-09-12", "epic": "E03", "stage": "S07 показать бейдж новых работ на пункте «Работы»", "area": "front", "status": "закрыт", "session": "cb7f160f", "commits": ["492c59b"]}
-{"date":"2026-09-13","epic":"E03","stage":"S08 проверить на собранном стеке и снести замещённое","area":"front+infra","status":"закрыт","session":"02344c2a","commits":["a8cfdc9"]}
+{"date": "2026-09-13", "epic": "E03", "stage": "S08 проверить на собранном стеке и снести замещённое", "area": "front+infra", "status": "закрыт", "session": "02344c2a", "commits": ["a8cfdc9"]}
 {"date": "2026-09-13", "epic": "E04", "stage": "S01 сверстать диалог приказа на фикстуре", "area": "front+design", "status": "закрыт", "branch": "fix/apk-api-origin", "session": "f8167c54", "commits": ["4e93f5d"]}
-{"date":"2026-09-13","epic":"E04","stage":"S02 отдать черновик приказа ручкой","area":"back","status":"закрыт","branch":"E04-S02","session":"97409a23","commits":["5d208f5"]}
+{"date": "2026-09-13", "epic": "E04", "stage": "S02 отдать черновик приказа ручкой", "area": "back", "status": "закрыт", "branch": "E04-S02", "session": "97409a23", "commits": ["5d208f5"]}
 {"date": "2026-09-13", "epic": "E04", "stage": "S03 собрать PDF приказа на сервере", "area": "back", "status": "закрыт", "branch": "E04-S03", "session": "d6c0cf70", "commits": ["b45a146"]}
 {"date": "2026-09-15", "epic": "E04", "stage": "S04 подключить диалог к API и выгрузке", "area": "front", "status": "закрыт", "branch": "E04-S04", "session": "c4590ab6", "commits": ["0572cd1"]}
 {"date": "2026-09-15", "epic": "E04", "stage": "S05 проверить на собранном стеке", "area": "front+infra", "status": "закрыт", "branch": "E04-S05", "session": "92bc323f", "commits": ["d08fd14"]}
@@ -31,8 +31,7 @@
 {"date": "2026-09-17", "epic": "E10", "stage": "S03 push через FCM — бэк", "area": "back+db", "status": "закрыт", "branch": "E10-S03", "session": "95b55e08", "commits": ["d225a72", "e4bdd84"]}
 {"date": "2026-09-17", "epic": "E10", "stage": "S04 push и звук в приложении", "area": "front", "status": "закрыт", "branch": "E10-S04", "session": "65b00220", "commits": ["0db7330"]}
 {"date": "2026-09-17", "epic": "E10", "stage": "S05 экран «Очередь отправки», фото на диск и сжатие", "area": "front", "status": "закрыт", "branch": "E10-S05", "session": "0a1ad0cb", "commits": ["a874905"]}
-
-{"date": "2026-09-17", "epic": "E10", "stage": "S06 релиз 1: push и очередь на проде", "area": "infra", "status": "закрыт", "branch": "E10-S06", "session": "1a20b102", "commits": []}
-{"date":"2026-09-17","epic":"E10","stage":"S07 раздача APK с сайта","area":"infra+front","status":"закрыт","branch":"E10-S07","session":"48ec0107","commits":["9cf1ad7"]}
+{"date": "2026-09-17", "epic": "E10", "stage": "S07 раздача APK с сайта", "area": "infra+front", "status": "закрыт", "branch": "E10-S07", "session": "48ec0107", "commits": ["9cf1ad7"]}
 {"date": "2026-09-17", "epic": "E10", "stage": "S08 индикатор сети и «вышла новая версия» в приложении", "area": "front", "status": "закрыт", "branch": "E10-S08", "session": "48ec0107", "commits": ["6f7ecef"]}
 {"date": "2026-09-17", "epic": "E10", "stage": "S06 релиз 1: push и очередь на проде", "area": "infra", "status": "закрыт", "branch": "E10-S06", "session": "1a20b102", "commits": ["1a87a91"]}
+{"date": "2026-09-17", "epic": "E10", "stage": "S09 крэш-репорты через Sentry", "area": "front+infra", "status": "закрыт", "branch": "E10-S09", "session": "48ec0107", "commits": ["d92ba47"]}
