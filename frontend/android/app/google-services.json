@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "484506320979",
+    "project_id": "els-project-4e66a",
+    "storage_bucket": "els-project-4e66a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:484506320979:android:8e3c50a769402a28c2c6a6",
+        "android_client_info": {
+          "package_name": "ru.els.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDocuvb0jQQf3K5kh1xM_hTwvqSMihgCAw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:484506320979:android:6480c453b7eb4f9bc2c6a6",
+        "android_client_info": {
+          "package_name": "ru.els23.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDocuvb0jQQf3K5kh1xM_hTwvqSMihgCAw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

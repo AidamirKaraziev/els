@@ -23,6 +23,12 @@
       "defective_act_photo_id"
     ]
   },
+  "DELETE /api/v1/device-token/": {
+    "required_body": [
+      "token"
+    ],
+    "required_params": []
+  },
   "DELETE /api/v1/order-photo/{order_photo_id}/": {
     "required_body": [],
     "required_params": [
@@ -804,6 +810,12 @@
     "required_params": [
       "defective_act_id"
     ]
+  },
+  "POST /api/v1/device-token/": {
+    "required_body": [
+      "token"
+    ],
+    "required_params": []
   },
   "POST /api/v1/divisions/": {
     "required_body": [

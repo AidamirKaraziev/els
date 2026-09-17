@@ -28,3 +28,4 @@
 {"date": "2026-09-16", "epic": "E11", "stage": "S01 набросок формы «Новая работа» на утверждение", "area": "front", "status": "закрыт", "branch": "E11-S01", "session": "9f4e4d2f", "commits": ["27ed56c"]}
 {"date": "2026-09-16", "epic": "E11", "stage": "S02 форма создаёт заявку через POST /order/", "area": "front", "status": "закрыт", "branch": "E11-S02", "session": "3fd1d393", "commits": ["87b24c6"]}
 {"date": "2026-09-16", "epic": "E11", "stage": "S03 выкатить на прод и проверить глазами", "area": "infra", "status": "закрыт", "branch": "E11-S03", "session": "997617c8", "commits": ["563d445"]}
+{"date": "2026-09-17", "epic": "E10", "stage": "S03 push через FCM — бэк", "area": "back+db", "status": "закрыт", "branch": "E10-S03", "session": "95b55e08", "commits": []}

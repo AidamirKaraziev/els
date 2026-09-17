@@ -43,3 +43,6 @@ frontend/els_mobile/
 # Рабочие копии эпиков и блокировки дорожек
 .claude/worktrees/
 .claude/locks/
+
+# Ключ сервисного аккаунта Firebase (FCM) — секрет, на прод копируется руками как .env
+backend/firebase-service-account.json

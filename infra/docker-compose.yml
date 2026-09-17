@@ -64,6 +64,11 @@ services:
       - "8000"
     volumes:
       - static_data:/app/static
+      # Ключ Firebase для push в приложение механика. Лежит рядом с `.env`,
+      # в git не попадает, на прод копируется руками вместе с `.env`.
+      # Файла нет — docker создаст на его месте пустой каталог, и бэкенд
+      # просто работает без push (см. FIREBASE_SERVICE_ACCOUNT в config.py).
+      - ./backend/firebase-service-account.json:/app/firebase-service-account.json:ro
     env_file:
       - .env
     # Без этой проверки `up -d` возвращает успех, даже если контейнер упал на

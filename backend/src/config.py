@@ -82,6 +82,13 @@ class Settings(BaseSettings):
     #: открывается — на него стоит `internal`.
     X_ACCEL_LOCATION: str = "/internal-static"
 
+    # Путь к ключу сервисного аккаунта Firebase — отсюда бэкенд шлёт push в
+    # приложение механика. Относительный путь считается от `backend/`. Пусто
+    # или файла нет — push выключен: заявки заводятся как раньше, в журнале
+    # одна строка на старте. Так `make dev` и тесты живут без Firebase, а
+    # на проде ключ лежит рядом с `.env` и в git не попадает.
+    FIREBASE_SERVICE_ACCOUNT: Optional[str] = None
+
     SERVER_NAME: str = "default_server_name"
     SERVER_HOST: AnyHttpUrl = "http://localhost"
     BACKEND_CORS_ORIGINS: List = []

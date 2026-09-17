@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from fastapi.params import Path
 
 from src.api import deps
@@ -12,6 +12,7 @@ from src.exceptions import InaccessibleEntity, UnprocessableEntity
 from src.getters.order import getting_order
 from src.schemas.order import OrderCreate, OrderGet, OrderUpdate
 from src.schemas.statistics import TopBreakdownItem
+from src.services import push
 from src.templates_raise import get_raise
 from src.utils.time_stamp import datetime_from_timestamp
 
@@ -175,6 +176,7 @@ def get_order_by_id(
 def create_order(
     request: Request,
     new_data: OrderCreate,
+    background: BackgroundTasks,
     current_user=Depends(deps.require(Permission.ORDER_CREATE)),
     session=Depends(deps.get_db),
     scope=Depends(deps.get_write_scope),
@@ -183,6 +185,15 @@ def create_order(
         db=session, new_data=new_data, current_user=current_user, scope=scope
     )
     get_raise(code=code)
+    # Push уходит после ответа: заявка уже в базе, и молчание Google её не
+    # отменит. Кому — исполнителю и механику объекта, см. `services/push.py`.
+    push.notify_order(
+        session,
+        background,
+        order=obj,
+        kind=push.KIND_ASSIGNED,
+        actor_id=current_user.id,
+    )
     return SingleEntityResponse(data=getting_order(obj, request))
 
 
@@ -202,6 +213,7 @@ def create_order(
 def update_order(
     request: Request,
     new_data: OrderUpdate,
+    background: BackgroundTasks,
     current_user=Depends(deps.require(Permission.ORDER_UPDATE)),
     order_id: int = Path(..., title="Id задачи"),
     session=Depends(deps.get_db),
@@ -225,10 +237,40 @@ def update_order(
             path="$.body",
         )
 
+    # Кто был исполнителем до правки — чтобы сказать ему, что задачу забрали.
+    # Смотрим до CRUD: после него заявка уже с новым исполнителем.
+    previous = (
+        session.query(crud_orders.model.executor_id)
+        .filter(crud_orders.model.id == order_id)
+        .scalar()
+    )
+
     obj, code, indexes = crud_orders.update_order(
         db=session, new_data=new_data, order_id=order_id, scope=scope
     )
     get_raise(code=code)
+
+    # Push только при смене исполнителя. Статус, комментарий, категория —
+    # телефон видит опросом, и будить его ради этого незачем.
+    if obj.executor_id != previous:
+        if obj.executor_id is not None:
+            push.notify_order(
+                session,
+                background,
+                order=obj,
+                kind=push.KIND_ASSIGNED,
+                actor_id=current_user.id,
+                user_ids=[obj.executor_id],
+            )
+        if previous is not None:
+            push.notify_order(
+                session,
+                background,
+                order=obj,
+                kind=push.KIND_REASSIGNED,
+                actor_id=current_user.id,
+                user_ids=[previous],
+            )
 
     return SingleEntityResponse(data=getting_order(obj, request=request))
 
@@ -252,6 +294,7 @@ def update_order(
 )
 def archive_order(
     request: Request,
+    background: BackgroundTasks,
     order_id: int = Path(..., title="Id задачи"),
     current_user=Depends(deps.require(Permission.ORDER_ARCHIVE)),
     session=Depends(deps.get_db),
@@ -261,6 +304,13 @@ def archive_order(
         db=session, order_id=order_id, scope=scope
     )
     get_raise(code=code)
+    push.notify_order(
+        session,
+        background,
+        order=obj,
+        kind=push.KIND_REMOVED,
+        actor_id=current_user.id,
+    )
     return SingleEntityResponse(data=getting_order(obj, request=request))
 
 

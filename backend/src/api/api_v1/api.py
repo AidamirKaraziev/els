@@ -14,6 +14,7 @@ from src.api.api_v1.endpoints import (
     cost_type,
     defective_act,
     defective_act_photo,
+    device_token,
     division,
     factory_model,
     fault_category,
@@ -94,3 +95,4 @@ api_router.include_router(schedules.router)
 api_router.include_router(maintenance_program.router)
 api_router.include_router(files.router)
 api_router.include_router(app_release.router)
+api_router.include_router(device_token.router)
