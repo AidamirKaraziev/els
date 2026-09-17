@@ -31,4 +31,4 @@
 {"date": "2026-09-17", "epic": "E10", "stage": "S03 push через FCM — бэк", "area": "back+db", "status": "закрыт", "branch": "E10-S03", "session": "95b55e08", "commits": ["d225a72"]}
 {"date": "2026-09-17", "epic": "E10", "stage": "S04 push и звук в приложении", "area": "front", "status": "закрыт", "branch": "E10-S04", "session": "65b00220", "commits": ["0db7330"]}
 {"date": "2026-09-17", "epic": "E10", "stage": "S03 push через FCM — бэк", "area": "back+db", "status": "закрыт", "branch": "E10-S03", "session": "95b55e08", "commits": ["e4bdd84"]}
-{"date":"2026-09-17","epic":"E10","stage":"S05 экран «Очередь отправки», фото на диск и сжатие","area":"front","status":"закрыт","branch":"E10-S05","session":"0a1ad0cb","commits":[]}
+{"date": "2026-09-17", "epic": "E10", "stage": "S05 экран «Очередь отправки», фото на диск и сжатие", "area": "front", "status": "закрыт", "branch": "E10-S05", "session": "0a1ad0cb", "commits": ["a874905"]}
