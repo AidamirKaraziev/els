@@ -345,6 +345,25 @@
       ],
       "cwd": "frontend",
       "port": 5618
+    },
+    {
+      "name": "crash-preview",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/dev/crash_preview.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5619",
+        "--web-hostname",
+        "127.0.0.1",
+        "--dart-define=APP_VERSION_NAME=0.0.0-dev",
+        "--dart-define=APP_VERSION_CODE=1"
+      ],
+      "cwd": "frontend",
+      "port": 5619
     }
   ]
 }

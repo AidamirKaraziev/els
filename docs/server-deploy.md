@@ -281,6 +281,30 @@ make apk-publish ARGS='--run 35249858830'
 Файлы `els-*.apk` и `release.json` в `/var/www/els` на сервере — от ручной
 раздачи до этого скрипта, бэкенд их не читает; можно удалить.
 
+### 3.5 Крэш-репорты APK (Sentry)
+
+Падения приложения у механиков уходят в Sentry — проект `els-app`
+(платформа Flutter). Ничего на сервере для этого не нужно: DSN проекта
+лежит в секрете GitHub `SENTRY_DSN`, CI подставляет его в сборку APK
+(`--dart-define=SENTRY_DSN`), код — `frontend/lib/helper/crash_reporting.dart`.
+
+Секрет один раз, с ноутбука (DSN — из Settings → Projects → els-app →
+Client Keys):
+
+```bash
+gh secret set SENTRY_DSN
+```
+
+Веб-сборка и локальные сборки DSN не получают — там Sentry выключен, ни
+одного запроса наружу. В логе джобы `android`, шаг `apk info`, видно
+«Sentry: включён»; нет секрета — предупреждение, сборка не падает.
+
+Найти падение конкретной сборки: в Sentry фильтр `release:els@1.0.3+4` —
+те же `versionName+versionCode`, что в `pubspec.yaml` и `release.json`, так
+что по событию сразу видно, обновился человек или нет. Проверить, что
+цепочка живая, без падения у механика — dev-точка
+`frontend/lib/dev/crash_preview.dart` (команда запуска в шапке файла).
+
 ---
 
 ## Часть 4. Домен

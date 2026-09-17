@@ -15,7 +15,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 1.0.3+4
+version: 1.0.4+5
 
 environment:
   # Было ">=2.17.6 <3.0.0" с 2023 года, хотя коммит «Глобальное обновление»
@@ -100,6 +100,10 @@ dependencies:
   # они компилируются, но не запускаются.
   firebase_core: ^4.0.0
   firebase_messaging: ^16.0.0
+  # Крэш-репорты (E10·S09). Включается только при `--dart-define=SENTRY_DSN`,
+  # который подставляет CI в сборку APK; веб и локальные сборки без DSN —
+  # пакет молчит. См. lib/helper/crash_reporting.dart.
+  sentry_flutter: ^9.0.0
   # Канал `emergency` со звуком и уведомление при открытом приложении —
   # системе FCM в фореграунде ничего не показывает.
   flutter_local_notifications: ^19.0.0

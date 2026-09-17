@@ -1,4 +1,5 @@
 import 'package:els/helper/api_client.dart';
+import 'package:els/helper/crash_reporting.dart';
 import 'package:els/helper/hints/hint_settings.dart';
 import 'package:els/helper/session.dart';
 import 'package:els/mechanic/data/push_service.dart';
@@ -42,7 +43,9 @@ void main() {
   // закрытое приложение. Вне Android — пустой вызов. Первый кадр не ждёт.
   PushService.instance.init();
 
-  runApp(const MyApp());
+  // Падения — в Sentry, если сборке дали DSN (CI даёт его только APK).
+  // Без DSN — обычный runApp.
+  CrashReporting.run(() => runApp(const MyApp()));
 }
 
 class MyApp extends StatelessWidget {

@@ -114,17 +114,26 @@ jobs:
       # сравнивает её с той, что лежит на сервере, и только так понимает, что
       # вышло обновление. Плагин ради двух значений в pubspec добавлять не
       # стали — веб-сборка их просто не задаёт, и баннера обновления там нет.
+      #
+      # SENTRY_DSN — крэш-репорты (lib/helper/crash_reporting.dart). Секрета
+      # нет → пустая строка → Sentry в сборке выключен, сама сборка не падает.
+      # Веб-джоба DSN не получает: там Sentry не нужен.
       - name: build apk (release)
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           version=$(awk '/^version:/{print $2}' pubspec.yaml)
           flutter build apk --release \
             --dart-define=API_ORIGIN=https://els23.ru \
             --dart-define=APP_VERSION_NAME="${version%%+*}" \
-            --dart-define=APP_VERSION_CODE="${version##*+}"
+            --dart-define=APP_VERSION_CODE="${version##*+}" \
+            --dart-define=SENTRY_DSN="${SENTRY_DSN}"
 
       # Подпись и размер печатаются в лог, потому что sha256 — единственный
       # способ убедиться, что на сервер легло ровно то, что собрал CI.
       - name: apk info
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           apk=build/app/outputs/flutter-apk/app-release.apk
           ls -lh "$apk"
@@ -133,6 +142,11 @@ jobs:
             echo "подписан ключом релиза"
           else
             echo "::warning::ключа релиза не было — APK подписан debug-ключом, механикам не раздавать"
+          fi
+          if [ -n "$SENTRY_DSN" ]; then
+            echo "Sentry: включён"
+          else
+            echo "::warning::секрета SENTRY_DSN нет — падения этой сборки в Sentry не попадут"
           fi
 
       - uses: actions/upload-artifact@v4
