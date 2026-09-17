@@ -35,4 +35,4 @@
 {"date": "2026-09-17", "epic": "E10", "stage": "S08 индикатор сети и «вышла новая версия» в приложении", "area": "front", "status": "закрыт", "branch": "E10-S08", "session": "48ec0107", "commits": ["6f7ecef"]}
 {"date": "2026-09-17", "epic": "E10", "stage": "S06 релиз 1: push и очередь на проде", "area": "infra", "status": "закрыт", "branch": "E10-S06", "session": "1a20b102", "commits": ["1a87a91"]}
 {"date": "2026-09-17", "epic": "E10", "stage": "S09 крэш-репорты через Sentry", "area": "front+infra", "status": "закрыт", "branch": "E10-S09", "session": "48ec0107", "commits": ["d92ba47"]}
-{"date":"2026-09-18","epic":"E10","stage":"S11 релиз 2 и аудит сайт ↔ APK","area":"infra+docs","status":"закрыт","branch":"E10-S11","session":"90fff0b9","commits":[]}
+{"date": "2026-09-18", "epic": "E10", "stage": "S11 релиз 2 и аудит сайт ↔ APK", "area": "infra+docs", "status": "закрыт", "branch": "E10-S11", "session": "90fff0b9", "commits": ["0b99554"]}
