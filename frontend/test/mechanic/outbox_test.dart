@@ -7,6 +7,7 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:els/mechanic/data/local_store.dart';
 import 'package:els/mechanic/data/outbox.dart';
@@ -292,6 +293,158 @@ void main() {
     });
   });
 
+  group('Outbox со снимками на диске', () {
+    late MemoryStore store;
+    late MemoryBlobStore blobs;
+
+    setUp(() {
+      store = MemoryStore();
+      blobs = MemoryBlobStore();
+    });
+
+    Outbox outboxThat(SendOutcome Function(OutboxAction action) decide) {
+      return Outbox(
+        userId: 7,
+        store: store,
+        blobs: blobs,
+        sender: (OutboxAction action) async => decide(action),
+      );
+    }
+
+    Future<OutboxAction> photo(Outbox outbox, List<int> bytes) {
+      return outbox.enqueue(
+        title: 'фото к заявке №14',
+        method: 'POST',
+        path: '/order-photo/14/',
+        file: bytes,
+        fileName: 'photo.jpg',
+      );
+    }
+
+    test('байты лежат на диске, а не в настройках', () async {
+      // Настройки на Android — один XML, который переписывается целиком на
+      // каждую запись. Снимку там не место — это и есть критерий этапа.
+      final Outbox outbox = outboxThat((_) => SendOutcome.retry);
+      await photo(outbox, <int>[1, 2, 3]);
+
+      expect(blobs.keys, hasLength(1));
+      expect(await store.keys('mechanic.7.outbox.file.'), isEmpty);
+      final String queue = (await store.read('mechanic.7.outbox'))!;
+      expect(queue, isNot(contains('AQID')), reason: 'base64 байтов в очереди нет');
+    });
+
+    test('снимок из настроек прежней сборки всё равно уходит', () async {
+      // Приложение обновили, пока снимок ждал связи в старом формате.
+      await store.write('mechanic.7.outbox.file.legacy-0', base64Encode(<int>[7, 7]));
+      await store.write(
+        'mechanic.7.outbox',
+        jsonEncode(<Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 'legacy-0',
+            'title': 'фото',
+            'method': 'POST',
+            'path': '/order-photo/14/',
+            'body': <String, dynamic>{},
+            'created_at': 0,
+            'file_key': 'mechanic.7.outbox.file.legacy-0',
+            'file_name': 'photo.jpg',
+          },
+        ]),
+      );
+      List<int>? delivered;
+      final Outbox outbox = outboxThat((OutboxAction action) {
+        delivered = action.bytes;
+        return SendOutcome.done;
+      });
+
+      await outbox.flush();
+
+      expect(delivered, <int>[7, 7]);
+      expect(await store.keys('mechanic.7.outbox.file.'), isEmpty);
+    });
+
+    test('отклонённый снимок хранится до решения человека', () async {
+      final Outbox outbox = outboxThat((_) => SendOutcome.rejected);
+      final OutboxAction action = await photo(outbox, <int>[4, 2]);
+      await outbox.flush();
+
+      final OutboxAction denied = (await outbox.rejected()).single;
+      expect(denied.id, action.id);
+      expect(await outbox.attachment(denied), <int>[4, 2],
+          reason: 'превью отклонённого показать можно');
+
+      await outbox.dismissRejected(denied.id);
+      expect(await outbox.rejected(), isEmpty);
+      expect(blobs.keys, isEmpty, reason: 'убрали — снимок ушёл с диска');
+    });
+
+    test('«Повторить» возвращает отклонённое в очередь вместе со снимком',
+        () async {
+      bool allowed = false;
+      List<int>? delivered;
+      final Outbox outbox = outboxThat((OutboxAction action) {
+        if (!allowed) return SendOutcome.rejected;
+        delivered = action.bytes;
+        return SendOutcome.done;
+      });
+      final OutboxAction action = await photo(outbox, <int>[8]);
+      await outbox.flush();
+      expect(await outbox.rejected(), hasLength(1));
+
+      allowed = true;
+      await outbox.retryRejected(action.id);
+      await outbox.flush();
+
+      expect(delivered, <int>[8]);
+      expect(await outbox.rejected(), isEmpty);
+      expect(await outbox.pending(), isEmpty);
+      expect(blobs.keys, isEmpty);
+    });
+
+    test('повтор сбрасывает попытки и причину отказа', () async {
+      bool allowed = false;
+      final Outbox outbox = outboxThat((OutboxAction action) {
+        if (allowed) return SendOutcome.done;
+        action.lastError = '403 нет доступа';
+        return SendOutcome.rejected;
+      });
+      final OutboxAction action = await outbox.enqueue(
+        title: 'в работу',
+        method: 'PUT',
+        path: '/order/1/',
+      );
+      await outbox.flush();
+      expect((await outbox.rejected()).single.lastError, '403 нет доступа');
+
+      allowed = true;
+      await outbox.retryRejected(action.id);
+      await outbox.flush();
+
+      expect(await outbox.rejected(), isEmpty);
+      expect(await outbox.pending(), isEmpty);
+    });
+
+    test('«убрать всё отклонённое» чистит и диск', () async {
+      final Outbox outbox = outboxThat((_) => SendOutcome.rejected);
+      await photo(outbox, <int>[1]);
+      await photo(outbox, <int>[2]);
+      await outbox.flush();
+      expect(blobs.keys, hasLength(2));
+
+      await outbox.forgetRejected();
+      expect(blobs.keys, isEmpty);
+    });
+
+    test('выход из системы забирает снимки с диска', () async {
+      final Outbox outbox = outboxThat((_) => SendOutcome.retry);
+      await photo(outbox, <int>[1]);
+      await outbox.forget();
+
+      expect(blobs.keys, isEmpty);
+      expect(await store.keys('mechanic.7.'), isEmpty);
+    });
+  });
+
   group('отложенный id', () {
     late MemoryStore store;
 
@@ -394,11 +547,11 @@ void main() {
         (await outbox.rejected()).last.lastError,
         contains('отправить некуда'),
       );
-      expect(
-        await store.keys('mechanic.7.outbox.file.'),
-        isEmpty,
-        reason: 'отклонённый снимок не занимает место на телефоне',
-      );
+      // Снимок остаётся до решения человека — «Повторить» без байтов
+      // невозможен. Убрал — место освободилось.
+      expect(await store.keys('mechanic.7.outbox.file.'), hasLength(1));
+      await outbox.forgetRejected();
+      expect(await store.keys('mechanic.7.outbox.file.'), isEmpty);
     });
 
     test('ключ переживает перезапуск между актом и снимком', () async {

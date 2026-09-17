@@ -19,6 +19,7 @@ import '../../helper/api_config.dart';
 import '../../helper/image_picking.dart';
 import 'acts.dart';
 import 'defect_link.dart';
+import 'disk_blob_store.dart';
 import 'local_store.dart';
 import 'mechanic_sync.dart';
 import 'notifications.dart';
@@ -27,17 +28,35 @@ import 'push_service.dart';
 import 'tasks.dart';
 
 class MechanicWorkspace {
-  MechanicWorkspace._(this.userId, {KeyValueStore store = const PreferencesStore()})
-      : localStore = LocalStore(userId: userId, store: store) {
+  MechanicWorkspace._(
+    this.userId, {
+    KeyValueStore store = const PreferencesStore(),
+    BlobStore? blobs,
+    ActionSender? sender,
+  }) : localStore = LocalStore(userId: userId, store: store) {
     outbox = Outbox(
       userId: userId,
-      sender: _send,
+      sender: sender ?? _send,
       store: store,
+      // Снимки — файлами на диске; в браузере диска нет, там base64 в
+      // настройках, как и раньше.
+      blobs: blobs ?? (kIsWeb ? PreferencesBlobStore(store) : DiskBlobStore()),
       onChanged: () => unawaited(_publishQueue()),
     );
     journal = NotificationJournal(store: localStore);
     sync = MechanicSync(store: localStore, journal: journal);
   }
+
+  /// Рабочее место на подменённых хранилище и отправщике — для тестов
+  /// экранов, которым нужна очередь, но не сеть и не диск.
+  @visibleForTesting
+  factory MechanicWorkspace.forTest({
+    required int userId,
+    required KeyValueStore store,
+    required BlobStore blobs,
+    required ActionSender sender,
+  }) =>
+      MechanicWorkspace._(userId, store: store, blobs: blobs, sender: sender);
 
   final int userId;
   final LocalStore localStore;

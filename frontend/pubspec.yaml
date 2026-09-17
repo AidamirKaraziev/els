@@ -90,6 +90,9 @@ dependencies:
   # держал flutter_map ^3). Заменён на живой location_picker_flutter_map.
   location_picker_flutter_map: ^4.1.0
   image_picker: ^1.0.4
+  # Снимки очереди исходящих лежат файлами, а не в SharedPreferences —
+  # см. mechanic/data/disk_blob_store.dart.
+  path_provider: any
   gap: ^3.0.1
   geolocator: ^14.0.2
   # Push по заявкам (E10·S04). Только Android: весь вызов пакетов сидит за

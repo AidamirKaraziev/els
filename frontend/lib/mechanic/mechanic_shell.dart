@@ -24,6 +24,7 @@ import 'mechanic_theme.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/objects_screen.dart';
 import 'screens/orders_screen.dart';
+import 'screens/outbox_screen.dart';
 import 'screens/profile_screen.dart';
 
 class MechanicShell extends StatefulWidget {
@@ -102,7 +103,11 @@ class _MechanicShellState extends State<MechanicShell>
                 builder: (BuildContext context, WorkspaceStatus status, _) {
                   return _StatusStrip(
                     status: status,
-                    onRetry: () => _workspace!.refresh(),
+                    onOpen: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const MechanicOutboxScreen(),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -139,12 +144,13 @@ class _MechanicShellState extends State<MechanicShell>
 /// Полоса состояния связи и очереди.
 ///
 /// В макете её нет — там нет и офлайна. Появляется только когда есть что
-/// сказать: обычный день механика она не занимает ни пикселем.
+/// сказать: обычный день механика она не занимает ни пикселем. Тап ведёт на
+/// экран очереди: там видно, что именно не ушло, и оттуда же отправляют.
 class _StatusStrip extends StatelessWidget {
-  const _StatusStrip({required this.status, required this.onRetry});
+  const _StatusStrip({required this.status, required this.onOpen});
 
   final WorkspaceStatus status;
-  final VoidCallback onRetry;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +165,7 @@ class _StatusStrip extends StatelessWidget {
     return Material(
       color: offline ? ColorApp.myColorYellow : ColorApp.myColorGreenLine,
       child: InkWell(
-        onTap: onRetry,
+        onTap: onOpen,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Row(
@@ -177,7 +183,7 @@ class _StatusStrip extends StatelessWidget {
                 ),
               ),
               const Text(
-                'Повторить',
+                'Открыть',
                 style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
               ),
             ],

@@ -21,6 +21,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -93,6 +94,86 @@ class MemoryStore implements KeyValueStore {
   @override
   Future<List<String>> keys(String prefix) async {
     return _values.keys.where((String key) => key.startsWith(prefix)).toList();
+  }
+}
+
+/// Хранилище байтов — снимки, которые ждут связи в очереди исходящих.
+///
+/// Отдельно от [KeyValueStore] намеренно. `SharedPreferences` на Android —
+/// один XML-файл, который целиком перечитывается и переписывается на каждом
+/// `setString`; снимок в 300 КБ base64 в нём означает, что каждый шаг очереди
+/// таскает эти 300 КБ туда-обратно, а пять снимков — уже мегабайты. Байтам
+/// место на диске, по файлу на ключ — см. `disk_blob_store.dart`.
+abstract class BlobStore {
+  Future<void> write(String key, List<int> bytes);
+
+  Future<Uint8List?> read(String key);
+
+  Future<void> remove(String key);
+
+  /// Убирает всё с этим префиксом — при выходе человека.
+  Future<void> removeAll(String prefix);
+}
+
+/// Байты base64-строкой внутри [KeyValueStore].
+///
+/// Для веба: диска там нет, а сборка под браузер должна работать. Это ровно
+/// то, как снимки лежали до появления [BlobStore]; на телефоне так больше
+/// не делаем.
+class PreferencesBlobStore implements BlobStore {
+  const PreferencesBlobStore([this._store = const PreferencesStore()]);
+
+  final KeyValueStore _store;
+
+  @override
+  Future<void> write(String key, List<int> bytes) =>
+      _store.write(key, base64Encode(bytes));
+
+  @override
+  Future<Uint8List?> read(String key) async {
+    final String? raw = await _store.read(key);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return base64Decode(raw);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> remove(String key) => _store.remove(key);
+
+  @override
+  Future<void> removeAll(String prefix) async {
+    for (final String key in await _store.keys(prefix)) {
+      await _store.remove(key);
+    }
+  }
+}
+
+/// Байты в памяти — для тестов.
+class MemoryBlobStore implements BlobStore {
+  final Map<String, Uint8List> _values = <String, Uint8List>{};
+
+  /// Что лежит сейчас — тестам, чтобы проверить, что удалено.
+  Iterable<String> get keys => _values.keys;
+
+  @override
+  Future<void> write(String key, List<int> bytes) async {
+    _values[key] = Uint8List.fromList(bytes);
+  }
+
+  @override
+  Future<Uint8List?> read(String key) async => _values[key];
+
+  @override
+  Future<void> remove(String key) async {
+    _values.remove(key);
+  }
+
+  @override
+  Future<void> removeAll(String prefix) async {
+    _values.removeWhere((String key, _) => key.startsWith(prefix));
   }
 }
 

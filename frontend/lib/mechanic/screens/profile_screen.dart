@@ -27,6 +27,7 @@ import '../../helper/session.dart';
 import '../../screns/user/user_contact.dart';
 import '../data/mechanic_workspace.dart';
 import '../mechanic_theme.dart';
+import 'outbox_screen.dart';
 
 class MechanicProfileScreen extends StatelessWidget {
   const MechanicProfileScreen({Key? key, this.onBack}) : super(key: key);
@@ -133,6 +134,28 @@ class MechanicProfileScreen extends StatelessWidget {
         _Group(
           label: 'Приложение',
           rows: <Widget>[
+            // Очередь отправки доступна и отсюда: полоса состояния наверху
+            // скрыта, когда всё ушло, а отклонённое сервером человеку может
+            // понадобиться и после.
+            InkWell(
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => const MechanicOutboxScreen(),
+                ),
+              ),
+              child: ValueListenableBuilder<WorkspaceStatus>(
+                valueListenable: MechanicWorkspace.current?.status ??
+                    ValueNotifier<WorkspaceStatus>(const WorkspaceStatus()),
+                builder: (BuildContext context, WorkspaceStatus status, _) {
+                  final int waiting = status.pending + status.rejected;
+                  return _Row(
+                    icon: Icons.cloud_upload_outlined,
+                    label: 'Очередь отправки',
+                    value: waiting == 0 ? 'пусто' : '$waiting',
+                  );
+                },
+              ),
+            ),
             // Единственная строка кабинета, которая куда-то ведёт: механик
             // открывает систему в браузере телефона, а работать ему нужно в
             // установленном приложении — и узнать об этом больше неоткуда.

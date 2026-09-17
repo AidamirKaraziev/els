@@ -21,12 +21,17 @@
 ///   очереди это просто «сейчас не вышло».
 /// * **Фотография едет вместе с действием.** Снимок сделан в машинном
 ///   помещении, где связи нет, и ждать её с телефоном в руках механик не
-///   станет. Байты лежат отдельным ключом хранилища, а не внутри очереди:
-///   очередь читается и перезаписывается на каждом шаге, и таскать в ней
-///   полмегабайта base64 значит делать это полмегабайтами. Сжатие — на входе,
-///   средствами `image_picker`, до сотен килобайт: в хранилище телефона
-///   несжатый снимок на 4 МБ не поместится, да и на сервере том со статикой
-///   растёт именно от них.
+///   станет. Байты лежат файлом на диске (`BlobStore`), а не внутри очереди
+///   и не в `SharedPreferences`: очередь читается и перезаписывается на
+///   каждом шаге, а настройки на Android — один XML-файл, который целиком
+///   переписывается на каждую запись; таскать в них полмегабайта значит
+///   делать это полмегабайтами. Сжатие — на входе, средствами
+///   `image_picker`, до сотен килобайт: на сервере том со статикой растёт
+///   именно от несжатых снимков.
+/// * **Отклонённое хранит снимок до решения человека.** Сервер сказал «нет»
+///   — но человек может сказать «повтори», когда причину устранят (дали
+///   доступ, вернули акт). Повторить снимок без байтов нельзя, поэтому файл
+///   удаляется только когда действие ушло или человек его убрал.
 /// * **Адрес может быть известен не до отправки.** Снимок дефекта уходит по
 ///   `/defective-act-photo/{id}/`, а сам `id` придумывает сервер в ответ на
 ///   создание акта — и в машинном помещении в очереди лежат оба. Поэтому
@@ -41,6 +46,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'local_store.dart';
 
@@ -169,16 +175,22 @@ class Outbox {
     required this.userId,
     required ActionSender sender,
     KeyValueStore store = const PreferencesStore(),
+    BlobStore? blobs,
     DateTime Function() now = DateTime.now,
     void Function()? onChanged,
   })  : _sender = sender,
         _store = store,
+        _blobs = blobs ?? PreferencesBlobStore(store),
         _now = now,
         _onChanged = onChanged;
 
   final int userId;
   final ActionSender _sender;
   final KeyValueStore _store;
+
+  /// Где лежат байты снимков. На телефоне — диск, в вебе и по умолчанию —
+  /// base64 в том же [KeyValueStore], как было до появления диска.
+  final BlobStore _blobs;
   final DateTime Function() _now;
 
   /// Очередь изменилась сама по себе: действие ушло на сервер или было
@@ -257,9 +269,7 @@ class Outbox {
     );
 
     await _guard(() async {
-      if (file != null) {
-        await _store.write(_fileKeyFor(id), base64Encode(file));
-      }
+      if (file != null) await _blobs.write(_fileKeyFor(id), file);
       final List<OutboxAction> queue = await _load(_queueKey);
       queue.add(action);
       await _save(_queueKey, queue);
@@ -275,10 +285,61 @@ class Outbox {
   /// Что сервер отклонил и о чём надо сказать человеку.
   Future<List<OutboxAction>> rejected() => _load(_rejectedKey);
 
-  /// Убирает отклонённое из показа — человек его увидел.
+  /// Убирает всё отклонённое из показа — человек его увидел.
   Future<void> forgetRejected() async {
-    await _store.remove(_rejectedKey);
+    await _guard(() async {
+      for (final OutboxAction denied in await _load(_rejectedKey)) {
+        await _dropFile(denied);
+      }
+      await _store.remove(_rejectedKey);
+    });
     _onChanged?.call();
+  }
+
+  /// Убирает одно отклонённое — вместе со снимком.
+  Future<void> dismissRejected(String id) async {
+    await _guard(() async {
+      final List<OutboxAction> denied = await _load(_rejectedKey);
+      final int at = denied.indexWhere((OutboxAction a) => a.id == id);
+      if (at < 0) return;
+      await _dropFile(denied.removeAt(at));
+      await _save(_rejectedKey, denied);
+    });
+    _onChanged?.call();
+  }
+
+  /// Возвращает отклонённое в очередь — в хвост, как новое действие.
+  ///
+  /// В хвост, а не на прежнее место: порядок нужен между «в работу» и
+  /// «выполнил» одной заявки, а всё, что стояло за отклонённым, давно ушло.
+  /// Счётчик попыток и причина сбрасываются: это новая попытка по воле
+  /// человека, а не продолжение старой.
+  Future<void> retryRejected(String id) async {
+    bool moved = false;
+    await _guard(() async {
+      final List<OutboxAction> denied = await _load(_rejectedKey);
+      final int at = denied.indexWhere((OutboxAction a) => a.id == id);
+      if (at < 0) return;
+      final OutboxAction action = denied.removeAt(at);
+      action.attempts = 0;
+      action.lastError = null;
+      final List<OutboxAction> queue = await _load(_queueKey);
+      queue.add(action);
+      await _save(_rejectedKey, denied);
+      await _save(_queueKey, queue);
+      moved = true;
+    });
+    if (!moved) return;
+    _onChanged?.call();
+    unawaited(flush());
+  }
+
+  /// Байты снимка для превью — или `null`, если действие без файла или
+  /// файл потерян.
+  Future<Uint8List?> attachment(OutboxAction action) {
+    final String? key = action.fileKey;
+    if (key == null) return Future<Uint8List?>.value();
+    return _readFile(key);
   }
 
   /// Отправляет очередь по порядку, до первой временной осечки.
@@ -385,15 +446,17 @@ class Outbox {
         final OutboxAction settled = queue.removeAt(at);
         await _save(_queueKey, queue);
 
-        // Действие отработало — файл больше не нужен ни при успехе, ни при
-        // отказе. В отклонённых остаётся запись о нём, а не полмегабайта.
-        if (settled.fileKey != null) await _store.remove(settled.fileKey!);
-
         if (outcome == SendOutcome.rejected) {
+          // Снимок остаётся: человек может попросить повторить, когда
+          // причину отказа устранят. Уйдёт вместе с записью, когда он
+          // решит.
+          settled.lastError = sending.lastError ?? settled.lastError;
           final List<OutboxAction> denied = await _load(_rejectedKey);
           denied.add(settled);
           await _save(_rejectedKey, denied);
         } else {
+          // Ушло — файл больше не нужен.
+          await _dropFile(settled);
           // Ключ записывается здесь же, под тем же замком, что убрал действие
           // из очереди: между «ушло» и «ключ известен» не должно быть щели, в
           // которую влезет отправка ждущего этот ключ снимка.
@@ -428,10 +491,21 @@ class Outbox {
       await _store.remove(_queueKey);
       await _store.remove(_rejectedKey);
       await _store.remove(_idsKey);
-      for (final String key in await _store.keys('$_prefix.$userId.outbox.file.')) {
+      final String files = '$_prefix.$userId.outbox.file.';
+      await _blobs.removeAll(files);
+      // Остатки прежнего формата — base64 в настройках.
+      for (final String key in await _store.keys(files)) {
         await _store.remove(key);
       }
     });
+  }
+
+  /// Удаляет снимок действия — и с диска, и остаток прежнего формата.
+  Future<void> _dropFile(OutboxAction action) async {
+    final String? key = action.fileKey;
+    if (key == null) return;
+    await _blobs.remove(key);
+    await _store.remove(key);
   }
 
   /// Убирает одно действие из очереди по просьбе человека.
@@ -450,11 +524,12 @@ class Outbox {
       // приезжает копия без неё — человеку нужна именно причина.
       settled.lastError = action.lastError ?? settled.lastError;
       await _save(_queueKey, queue);
-      if (settled.fileKey != null) await _store.remove(settled.fileKey!);
       if (outcome == SendOutcome.rejected) {
         final List<OutboxAction> denied = await _load(_rejectedKey);
         denied.add(settled);
         await _save(_rejectedKey, denied);
+      } else {
+        await _dropFile(settled);
       }
     });
     _onChanged?.call();
@@ -494,7 +569,12 @@ class Outbox {
     }
   }
 
-  Future<List<int>?> _readFile(String key) async {
+  /// Байты снимка: с диска, а если там нет — из настроек, где они лежали
+  /// до появления диска. Снимок, поставленный в очередь прежней сборкой,
+  /// должен уйти, а не потеряться при обновлении приложения.
+  Future<Uint8List?> _readFile(String key) async {
+    final Uint8List? bytes = await _blobs.read(key);
+    if (bytes != null) return bytes;
     final String? raw = await _store.read(key);
     if (raw == null || raw.isEmpty) return null;
     try {
