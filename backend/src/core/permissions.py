@@ -163,6 +163,9 @@ ROLE_PERMISSIONS: Dict[Role, FrozenSet[Permission]] = {
         # Лента сданных работ: прораб смотрит, что сдали за него люди, и
         # гасит счётчик отметкой «проверил».
         Permission.WORK_REVIEW,
+        # Виды ТО прораб заводит из «Графиков», не дожидаясь админа. Право
+        # одно на все справочники — города и типы объектов идут в комплекте.
+        Permission.DIRECTORY_WRITE,
     },
     Role.MECHANIC: _FIELD_WORK,
     Role.ENGINEER: _FIELD_WORK,

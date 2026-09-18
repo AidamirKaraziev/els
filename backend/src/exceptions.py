@@ -26,6 +26,11 @@ class UnprocessableEntity(EntityError):
     http_status = 422
 
 
+# уже есть: имя занято другой записью
+class ConflictEntity(EntityError):
+    http_status = 409
+
+
 class ListOfEntityError(ValueError):
     def __init__(self, errors: List[EntityError], description: str, http_status: int):
         self.errors = errors

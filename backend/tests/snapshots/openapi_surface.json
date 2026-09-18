@@ -928,6 +928,12 @@
     ],
     "required_params": []
   },
+  "POST /api/v1/type-acts/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": []
+  },
   "POST /api/v1/work/{kind}/{work_id}/assign/": {
     "required_body": [
       "performer_id"
@@ -1253,6 +1259,14 @@
     ],
     "required_params": [
       "sub_step_id"
+    ]
+  },
+  "PUT /api/v1/type-acts/{type_act_id}/": {
+    "required_body": [
+      "name"
+    ],
+    "required_params": [
+      "type_act_id"
     ]
   },
   "PUT /api/v1/working-specialty/{working_specialty_id}/": {
