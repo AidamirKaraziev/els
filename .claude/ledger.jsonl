@@ -38,3 +38,4 @@
 {"date": "2026-09-18", "epic": "E10", "stage": "S11 релиз 2 и аудит сайт ↔ APK", "area": "infra+docs", "status": "закрыт", "branch": "E10-S11", "session": "90fff0b9", "commits": ["0b99554"]}
 {"date": "2026-09-20", "epic": "E08", "stage": "S03 набросок «Шаблоны ТО» и редактора на фикстуре", "area": "front", "status": "закрыт", "branch": "E08-S03", "session": "20e3a9a4", "commits": ["e43d1e3"]}
 {"date": "2026-09-18", "epic": "E08", "stage": "S01 POST и PUT /type-acts/ — вид ТО создаётся и переименовывается", "area": "back", "status": "закрыт", "branch": "E08-S01", "session": "6ebf629f", "commits": ["22df98d"]}
+{"date":"2026-09-20","epic":"E08","stage":"S02 шаблоны: список по модели, steps как массив, канонический step_list","area":"back","status":"закрыт","branch":"E08-S02","session":"2da76a1c","commits":[]}

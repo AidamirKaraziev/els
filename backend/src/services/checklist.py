@@ -336,6 +336,32 @@ def to_canonical(step_list_fact: Optional[str]) -> Optional[str]:
     return dump_checklist(parse_checklist(step_list_fact))
 
 
+def template_from_steps(steps: List[str]) -> str:
+    """Шаблон чек-листа (`acts_bases.step_list`) из плоского списка названий.
+
+    Шаблон пишем в той же канонической форме, что и акт: `title` пустой —
+    название ТО живёт у вида ТО, а не у шаблона, — шаги без отметок, номера
+    1..n. Пустые строки выкидываем: пункт без текста механику показать нечем.
+    """
+    titles = [str(step).strip() for step in steps]
+    return dump_checklist(
+        Checklist(
+            title=None,
+            steps=[
+                ChecklistStep(id=number, title=title, done=False)
+                for number, title in enumerate(
+                    (title for title in titles if title), start=1
+                )
+            ],
+        )
+    )
+
+
+def template_steps(step_list: Optional[str]) -> List[str]:
+    """Названия шагов шаблона, в какой бы форме он ни лежал в базе."""
+    return [step.title for step in parse_checklist(step_list).steps]
+
+
 def photo_bytes(payload: Any) -> Tuple[Optional[bytes], Optional[str]]:
     """Байты и расширение встроенного в шаг снимка.
 

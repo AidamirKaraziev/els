@@ -18,6 +18,8 @@ CASES = [
     ("POST", "/api/v1/locations/", {Role.ADMIN, Role.FOREMAN}),
     ("POST", "/api/v1/working-specialty/", {Role.ADMIN, Role.FOREMAN}),
     ("POST", "/api/v1/type-acts/", {Role.ADMIN, Role.FOREMAN}),
+    # Убрать вид ТО у модели — тоже правка справочника: админ и прораб.
+    ("DELETE", "/api/v1/act-base/1/", {Role.ADMIN, Role.FOREMAN}),
     # Объекты создаёт и правит админ с прорабом.
     ("POST", "/api/v1/object/", {Role.ADMIN, Role.FOREMAN}),
     # Заявки: клиент заводит, диспетчер тоже, механик — нет.

@@ -58,7 +58,7 @@ class CrudMaintenanceProgram(CRUDBase):
     def available_type_act_ids(self, db: Session, *, factory_model_id: int) -> set:
         """Виды ТО, на которые у модели есть шаблон чек-листа.
 
-        Без шаблона (`acts_bases`) вид ТО предлагать нельзя: по нему нечего
+        Без живого шаблона (`acts_bases` без `deleted_at`) вид ТО предлагать нельзя: по нему нечего
         показать механику — решение заказчика №7.
         """
         rows = (
@@ -66,6 +66,7 @@ class CrudMaintenanceProgram(CRUDBase):
             .filter(
                 ActBase.factory_model_id == factory_model_id,
                 ActBase.type_act_id.isnot(None),
+                ActBase.deleted_at.is_(None),
             )
             .distinct()
             .all()

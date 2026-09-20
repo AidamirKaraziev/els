@@ -90,7 +90,9 @@ _STATUS_DONE = 4
 # `text`, `bool`, `comment`, `photo`. Число пунктов — это число вхождений
 # ключа `text`; считать его в SQL дешевле, чем разбирать строку в Python на
 # каждой из трёхсот заготовок.
-_STEP_MARKER = '"text":'
+# Пункт чек-листа в строке: старые формы держат текст под ключом `text`,
+# каноническая — отметку под `done`; ни одна форма не содержит оба ключа.
+_STEP_MARKERS = ('"text":', '"done":')
 
 # Месяц в `planned_to` — это отдельная колонка, а не строка таблицы. Разложить
 # её в нормальную форму значило бы переписать экран графика ТО, который в неё
@@ -132,12 +134,18 @@ def month_period(year: int, month: int) -> MonthPeriod:
 def _checklist_steps():
     """Число пунктов в чек-листе заготовки акта, выражением SQL.
 
-    Считаем вхождения ключа `text`: строка хранится питоновским `repr`-подобным
-    текстом, и разбирать её ради одного числа дорого. Пустая заготовка даёт
+    Считаем вхождения ключей-маркеров пункта: строка хранится текстом
+    разных форм, и разбирать её ради одного числа дорого. Пустая заготовка даёт
     ноль — деления на это число нигде нет.
     """
-    stripped = func.length(func.replace(ActBase.step_list, _STEP_MARKER, ""))
-    return (func.length(ActBase.step_list) - stripped) / len(_STEP_MARKER)
+    return sum(
+        (
+            func.length(ActBase.step_list)
+            - func.length(func.replace(ActBase.step_list, marker, ""))
+        )
+        / len(marker)
+        for marker in _STEP_MARKERS
+    )
 
 
 def previous_month(year: int, month: int) -> Tuple[int, int]:

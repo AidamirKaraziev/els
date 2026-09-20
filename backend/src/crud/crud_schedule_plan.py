@@ -90,6 +90,9 @@ def act_bases_by_type_act(db: Session, *, factory_model_id: int) -> Dict[int, Ac
         .filter(
             ActBase.factory_model_id == factory_model_id,
             ActBase.type_act_id.isnot(None),
+            # Убранный у модели вид ТО в график не идёт — иначе «удалить»
+            # на экране шаблонов ничего бы не значило.
+            ActBase.deleted_at.is_(None),
         )
         .all()
     )

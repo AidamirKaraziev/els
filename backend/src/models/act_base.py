@@ -1,4 +1,11 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from src.models import FactoryModel, TypeAct
@@ -12,7 +19,14 @@ class ActBase(Base):
         Integer, ForeignKey("factories_models.id", ondelete="SET NULL")
     )
     type_act_id = Column(Integer, ForeignKey("types_acts.id", ondelete="SET NULL"))
+    #: Чек-лист шаблона — каноническая форма `services.checklist`; в старых
+    #: строках встречаются и прежние формы, читать только через `parse_checklist`.
     step_list = Column(String)
+
+    #: Мягкое удаление вида ТО у модели. Настоящий `DELETE` обнулил бы
+    #: `acts_fact.act_base_id` (FK `SET NULL`) у уже созданных актов, а по нему
+    #: график узнаёт вид ТО акта. Удалённую пару мастер графика не предлагает.
+    deleted_at = Column(DateTime)
 
     factory_model = relationship(FactoryModel)
     type_act = relationship(TypeAct)
