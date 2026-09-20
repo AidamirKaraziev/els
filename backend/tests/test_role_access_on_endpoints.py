@@ -12,10 +12,12 @@ from src.core.roles import Role
 # (метод, путь, кому можно) — «можно» здесь про право, а не про конкретную
 # запись: 404 или 422 от несуществующего id нас устраивают, лишь бы не 403.
 CASES = [
-    # Справочники читает любой, кто вошёл, — включая клиента. Правит админ.
+    # Справочники читает любой, кто вошёл, — включая клиента. Правят админ и
+    # прораб: право одно на все справочники, прорабу оно нужно ради видов ТО.
     ("GET", "/api/v1/roles/", set(Role)),
-    ("POST", "/api/v1/locations/", {Role.ADMIN}),
-    ("POST", "/api/v1/working-specialty/", {Role.ADMIN}),
+    ("POST", "/api/v1/locations/", {Role.ADMIN, Role.FOREMAN}),
+    ("POST", "/api/v1/working-specialty/", {Role.ADMIN, Role.FOREMAN}),
+    ("POST", "/api/v1/type-acts/", {Role.ADMIN, Role.FOREMAN}),
     # Объекты создаёт и правит админ с прорабом.
     ("POST", "/api/v1/object/", {Role.ADMIN, Role.FOREMAN}),
     # Заявки: клиент заводит, диспетчер тоже, механик — нет.

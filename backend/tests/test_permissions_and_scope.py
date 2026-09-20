@@ -69,9 +69,12 @@ def test_client_can_only_create_orders():
         assert not has_permission(Role.CLIENT, forbidden), forbidden
 
 
-def test_only_admin_edits_directories():
+def test_admin_and_foreman_edit_directories():
+    # Прораб заводит виды ТО из «Графиков» — вместе с ними получает запись
+    # во все справочники; остальным ролям справочники только на чтение.
+    assert has_permission(Role.ADMIN, Permission.DIRECTORY_WRITE)
+    assert has_permission(Role.FOREMAN, Permission.DIRECTORY_WRITE)
     for role in (
-        Role.FOREMAN,
         Role.MECHANIC,
         Role.ENGINEER,
         Role.DISPATCHER,
