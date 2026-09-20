@@ -45,11 +45,26 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
       typeAct: typeAct,
     );
     if (steps == null || !mounted) return;
-    await widget.repository.save(
-      modelId: model.id,
-      typeActId: typeAct.typeActId,
-      steps: steps,
-    );
+    await _run(() => widget.repository.save(
+          modelId: model.id,
+          typeActId: typeAct.typeActId,
+          steps: steps,
+        ));
+  }
+
+  /// Действие на сервере и перечитывание списка следом. Не вышло —
+  /// плашка с причиной словами, список остаётся прежним: человек видит,
+  /// что ничего не изменилось, и может повторить.
+  Future<void> _run(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
+      return;
+    }
     if (!mounted) return;
     setState(_load);
   }
@@ -63,9 +78,9 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
       existing: <String>[for (final TemplateTypeAct t in item.types) t.typeActName],
     );
     if (name == null || !mounted) return;
-    await widget.repository.addTypeAct(modelId: item.model.id, name: name);
-    if (!mounted) return;
-    setState(_load);
+    await _run(
+      () => widget.repository.addTypeAct(modelId: item.model.id, name: name),
+    );
   }
 
   /// Убрать вид у модели — мягко: строка уходит вниз зачёркнутой, шаблон
@@ -100,24 +115,59 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
       );
       if (ok != true || !mounted) return;
     }
-    await widget.repository.removeTypeAct(
-      modelId: model.id,
-      typeActId: typeAct.typeActId,
-    );
-    if (!mounted) return;
-    setState(_load);
+    await _run(() => _remove(model, typeAct));
+  }
+
+  /// Сервер отказал: по шаблону стоят ещё не начатые ТО. Это не ошибка, а
+  /// вопрос — убрать всё равно или оставить. «Да» — тот же запрос с `force`.
+  Future<void> _remove(TemplateModel model, TemplateTypeAct typeAct) async {
+    try {
+      await widget.repository.removeTypeAct(
+        modelId: model.id,
+        typeActId: typeAct.typeActId,
+      );
+    } on TemplateInUseException catch (e) {
+      if (!mounted) return;
+      final bool? ok = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+          title: const Text('По шаблону стоят ТО'),
+          content: Text(
+            '${e.message}. Акты уже созданы со своим снимком шагов и '
+            'останутся; в новые графики вид попадать не будет.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              style: TextButton.styleFrom(foregroundColor: ColorApp.myColorGray),
+              child: const Text('Оставить'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: ColorApp.myColorRed),
+              child: const Text('Удалить всё равно'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      await widget.repository.removeTypeAct(
+        modelId: model.id,
+        typeActId: typeAct.typeActId,
+        force: true,
+      );
+    }
   }
 
   Future<void> _restoreTypeAct(
     TemplateModel model,
     TemplateTypeAct typeAct,
   ) async {
-    await widget.repository.restoreTypeAct(
-      modelId: model.id,
-      typeActId: typeAct.typeActId,
-    );
-    if (!mounted) return;
-    setState(_load);
+    await _run(() => widget.repository.restoreTypeAct(
+          modelId: model.id,
+          typeActId: typeAct.typeActId,
+        ));
   }
 
   @override
@@ -138,10 +188,23 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
         ) {
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Не удалось загрузить шаблоны: ${snapshot.error}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    'Не удалось загрузить шаблоны: ${snapshot.error}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14.0),
+                  ),
+                  const SizedBox(height: 12.0),
+                  TextButton(
+                    onPressed: () => setState(_load),
+                    style: TextButton.styleFrom(
+                      foregroundColor: ColorApp.myColorGreenAuth,
+                    ),
+                    child: const Text('Повторить'),
+                  ),
+                ],
               ),
             );
           }
@@ -269,12 +332,16 @@ class _ModelBlock extends StatelessWidget {
                 ),
               ),
               Text(
-                missing == 0
-                    ? 'все шаблоны есть'
-                    : '${item.withTemplate} из $total с шаблоном',
+                // У модели без видов «все шаблоны есть» звучало бы как
+                // готовность, а это как раз пустота.
+                total == 0
+                    ? 'видов ТО нет'
+                    : missing == 0
+                        ? 'все шаблоны есть'
+                        : '${item.withTemplate} из $total с шаблоном',
                 style: TextStyle(
                   fontSize: 13.0,
-                  color: missing == 0
+                  color: missing == 0 && total > 0
                       ? ColorApp.myColorGreenAuth
                       : ColorApp.myColorGray,
                 ),

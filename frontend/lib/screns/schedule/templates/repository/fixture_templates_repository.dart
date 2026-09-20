@@ -166,6 +166,7 @@ class FixtureTemplatesRepository implements TemplatesRepository {
   Future<void> removeTypeAct({
     required int modelId,
     required int typeActId,
+    bool force = false,
   }) async {
     await _wait();
     _deleted.putIfAbsent(modelId, () => <int>{}).add(typeActId);

@@ -13,6 +13,7 @@ import '../screns/companies/view/company_page.dart';
 import '../screns/employee/view/employee_page.dart';
 import '../screns/home_page/home_page.dart';
 import '../screns/report/report_screen.dart';
+import '../screns/schedule/templates/repository/api_templates_repository.dart';
 import '../screns/schedule/view/schedule_section.dart';
 import '../screns/schedule/view/route_schedule_object_opener.dart';
 import '../screns/schedule/view/schedules_screen.dart';
@@ -119,6 +120,8 @@ class _HomeForemanState extends State<HomeForeman> {
       // Клик в строку открывает тот же экран «График объекта», что и у
       // админа, — маршрутом поверх оболочки, но глазами прораба.
       opener: const RouteScheduleObjectOpener.foreman(),
+      // Кнопка «Шаблоны ТО» в шапке: без репозитория раздел её не рисует.
+      templatesRepository: ApiTemplatesRepository(),
     );
   }
 

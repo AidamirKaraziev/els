@@ -6,6 +6,7 @@ import 'package:els/screns/object/view/object_screen.dart';
 import 'package:els/screns/report/report_screen.dart';
 import 'package:els/screns/schedule/bloc/schedules_bloc.dart';
 import 'package:els/screns/schedule/models/schedule_filters.dart';
+import 'package:els/screns/schedule/templates/repository/api_templates_repository.dart';
 import 'package:els/screns/schedule/view/schedule_section.dart';
 import 'package:els/screns/schedule/view/route_schedule_object_opener.dart';
 import 'package:els/screns/schedule/view/schedules_screen.dart';
@@ -179,6 +180,8 @@ class _HomePageState extends State<HomePage> {
       // Клик в строку открывает экран «График объекта» маршрутом поверх
       // оболочки. Экран подрядчика из этого пути ушёл.
       opener: const RouteScheduleObjectOpener.admin(),
+      // Кнопка «Шаблоны ТО» в шапке: без репозитория раздел её не рисует.
+      templatesRepository: ApiTemplatesRepository(),
       // Ключ меняется только на заходе с главной: иначе Flutter переиспользовал
       // бы состояние прежней ленты, и новый фильтр приехал бы к старым строкам.
       key: ValueKey<int>(_scheduleRequests),
