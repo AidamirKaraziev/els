@@ -9,6 +9,8 @@ import '../models/month_cell.dart';
 import '../models/schedule_filters.dart';
 import '../models/schedule_role.dart';
 import '../models/schedule_row.dart';
+import '../templates/repository/templates_repository.dart';
+import '../templates/view/templates_screen.dart';
 import '../widgets/schedule_filters_bar.dart';
 import '../widgets/schedule_row_tile.dart';
 import 'schedule_object_opener.dart';
@@ -26,9 +28,15 @@ class SchedulesScreen extends StatefulWidget {
     this.role = ScheduleRole.admin,
     this.drawer = const ShellDrawer(),
     this.opener,
+    this.templatesRepository,
   }) : super(key: key);
 
   final ScheduleRole role;
+
+  /// Откуда экран «Шаблоны ТО» берёт модели и шаги. Пусто — кнопки в шапке
+  /// нет: так лента живёт в оболочке подрядчика и в старых тестах, пока
+  /// сетевого репозитория ещё нет.
+  final TemplatesRepository? templatesRepository;
 
   /// Чем открывать экран «График» по клику в строку.
   ///
@@ -171,6 +179,18 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     }
   }
 
+  /// Экран «Шаблоны ТО» — маршрутом поверх ленты, как экран объекта:
+  /// стрелка «назад» возвращает в ленту с тем же отбором.
+  void _openTemplates() {
+    final TemplatesRepository repository = widget.templatesRepository!;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) =>
+            TemplatesScreen(repository: repository),
+      ),
+    );
+  }
+
   /// Любая перемена отбора — фильтр, год или поиск — это один и тот же запрос
   /// с первой страницы.
   void _onFiltersChanged(ScheduleFilters filters) {
@@ -189,6 +209,20 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: ColorApp.myColorBlack,
+        actions: <Widget>[
+          if (widget.templatesRepository != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: TextButton.icon(
+                onPressed: _openTemplates,
+                style: TextButton.styleFrom(
+                  foregroundColor: ColorApp.myColorGreenAuth,
+                ),
+                icon: const Icon(Icons.checklist_outlined, size: 20.0),
+                label: const Text('Шаблоны ТО'),
+              ),
+            ),
+        ],
       ),
       body: BlocBuilder<SchedulesBloc, SchedulesState>(
         builder: (BuildContext context, SchedulesState state) {

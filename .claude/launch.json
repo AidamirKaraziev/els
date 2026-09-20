@@ -364,6 +364,23 @@
       ],
       "cwd": "frontend",
       "port": 5619
+    },
+    {
+      "name": "templates-preview",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/dev/templates_preview.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5620",
+        "--web-hostname",
+        "127.0.0.1"
+      ],
+      "cwd": "frontend",
+      "port": 5620
     }
   ]
 }

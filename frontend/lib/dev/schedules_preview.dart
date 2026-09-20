@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../screns/schedule/models/schedule_role.dart';
 import '../screns/schedule/repository/fixture_schedules_repository.dart';
+import '../screns/schedule/templates/repository/fixture_templates_repository.dart';
 import '../screns/schedule/view/schedule_section.dart';
 
 /// Отдельная точка входа: раздел «Графики» на фикстуре, без сервера.
@@ -42,6 +43,7 @@ class SchedulesPreviewApp extends StatelessWidget {
       home: ScheduleSection(
         role: ScheduleRole.admin,
         repository: FixtureSchedulesRepository(),
+        templatesRepository: FixtureTemplatesRepository(),
         drawer: const Drawer(),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/schedules_bloc.dart';
 import '../models/schedule_filters.dart';
 import '../repository/schedules_repository.dart';
+import '../templates/repository/templates_repository.dart';
 import 'schedule_object_opener.dart';
 import 'schedules_screen.dart';
 
@@ -66,9 +67,13 @@ class ScheduleSection extends StatelessWidget {
     this.bloc,
     this.opener,
     this.drawer = const ShellDrawer(),
+    this.templatesRepository,
   }) : super(key: key);
 
   final ScheduleRole role;
+
+  /// Откуда брать шаблоны ТО для кнопки в шапке. Пусто — кнопки нет.
+  final TemplatesRepository? templatesRepository;
 
   /// С каким отбором открыть ленту. Пусто — все объекты за текущий год.
   final ScheduleFilters? initialFilters;
@@ -104,7 +109,12 @@ class ScheduleSection extends StatelessWidget {
       // оставить оболочку с мёртвой лентой на следующем заходе.
       return BlocProvider<SchedulesBloc>.value(
         value: owned,
-        child: SchedulesScreen(role: role, drawer: drawer, opener: opener),
+        child: SchedulesScreen(
+          role: role,
+          drawer: drawer,
+          opener: opener,
+          templatesRepository: templatesRepository,
+        ),
       );
     }
 
@@ -113,7 +123,12 @@ class ScheduleSection extends StatelessWidget {
         repository: repository,
         filters: initialFilters,
       ),
-      child: SchedulesScreen(role: role, drawer: drawer, opener: opener),
+      child: SchedulesScreen(
+          role: role,
+          drawer: drawer,
+          opener: opener,
+          templatesRepository: templatesRepository,
+        ),
     );
   }
 }
