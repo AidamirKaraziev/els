@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../helper/class_colors.dart';
+import '../../../templates/models/checklist_template.dart';
+import '../../../templates/repository/templates_repository.dart';
+import '../../../templates/widgets/template_editor_dialog.dart';
 import '../bloc/schedule_wizard_bloc.dart';
 import '../models/maintenance_program.dart';
 import '../models/schedule_wizard_data.dart';
@@ -31,6 +34,7 @@ class ScheduleWizardScreen extends StatelessWidget {
     Key? key,
     required this.repository,
     required this.programRepository,
+    required this.templatesRepository,
     required this.objectId,
     required this.year,
     this.modelId,
@@ -46,6 +50,11 @@ class ScheduleWizardScreen extends StatelessWidget {
   /// [repository] по той же границе, что и в самих репозиториях: заготовка —
   /// про год объекта, программа — про модель.
   final MaintenanceProgramRepository programRepository;
+
+  /// Куда уходит шаблон чек-листа, заведённый кнопкой «Создать шаблон» в
+  /// предпросмотре. Тот же репозиторий, что у экрана «Шаблоны ТО»: редактор
+  /// один, и «Скопировать из…» в нём берёт чужие шаблоны отсюда же.
+  final TemplatesRepository templatesRepository;
 
   final int objectId;
 
@@ -68,13 +77,16 @@ class ScheduleWizardScreen extends StatelessWidget {
       create: (_) => ScheduleWizardBloc(
         repository: repository,
         programRepository: programRepository,
+        templatesRepository: templatesRepository,
         objectId: objectId,
         year: year,
+        modelId: modelId,
       )..add(const WizardOpened()),
       child: _WizardView(
         year: year,
         objectName: objectName,
         programRepository: programRepository,
+        templatesRepository: templatesRepository,
         modelId: modelId,
         modelName: modelName,
       ),
@@ -93,6 +105,7 @@ class _WizardView extends StatefulWidget {
     Key? key,
     required this.year,
     required this.programRepository,
+    required this.templatesRepository,
     this.modelId,
     this.modelName,
     this.objectName,
@@ -100,6 +113,7 @@ class _WizardView extends StatefulWidget {
 
   final int year;
   final MaintenanceProgramRepository programRepository;
+  final TemplatesRepository templatesRepository;
   final int? modelId;
   final String? modelName;
   final String? objectName;
@@ -162,6 +176,31 @@ class _WizardViewState extends State<_WizardView> {
     bloc.add(WizardProgramSaved(saved));
   }
 
+  /// Открыть редактор шаблона на вид ТО без шаблона и, если человек сохранил,
+  /// отдать шаги блоку.
+  ///
+  /// Редактор тот же, что на экране «Шаблоны ТО», вместе со «Скопировать
+  /// из…»: шаблон на новый вид чаще всего похож на соседний. Сохраняет блок —
+  /// за записью идёт перезапрос заготовки, и неудачу показывает он же.
+  Future<void> _createTemplate(
+    ScheduleWizardLoaded state,
+    int typeActId,
+    String typeActName,
+  ) async {
+    final ScheduleWizardBloc bloc = context.read<ScheduleWizardBloc>();
+    final List<String>? steps = await showTemplateEditorDialog(
+      context,
+      repository: widget.templatesRepository,
+      model: TemplateModel(
+        id: widget.modelId!,
+        name: widget.modelName ?? state.data?.modelName ?? '',
+      ),
+      typeAct: TemplateTypeAct(typeActId: typeActId, typeActName: typeActName),
+    );
+    if (steps == null) return;
+    bloc.add(WizardTemplateSaved(typeActId: typeActId, steps: steps));
+  }
+
   Widget _body(ScheduleWizardLoaded state) {
     return WizardPreviewStep(
       data: state.data,
@@ -173,6 +212,12 @@ class _WizardViewState extends State<_WizardView> {
       // Модели нет — править нечего: строка программы гасит кнопку и говорит
       // почему. Идти в окно с выдуманным `modelId` было бы хуже.
       onEditProgram: widget.modelId == null ? null : () => _editProgram(state),
+      // Шаблон заводится на модель — без неё кнопка «Создать шаблон» так же
+      // выключена, как и правка программы.
+      onCreateTemplate: widget.modelId == null
+          ? null
+          : (int typeActId, String typeActName) =>
+              _createTemplate(state, typeActId, typeActName),
       // Перетаскивание — и есть выбор точки отсчёта, по любой клетке.
       // На время перезапроса лента замирает: две правки подряд разошлись бы
       // с тем, что считает сервер.

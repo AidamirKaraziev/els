@@ -92,6 +92,7 @@ ScheduleWizardData buildWizardFixture(
       month: month,
       position: position,
       typeActName: 'ТО $typeAct',
+      typeActId: typeAct,
       occupied: occupied.contains(month),
       templateMissing: typeAct == missingTypeAct,
     ));

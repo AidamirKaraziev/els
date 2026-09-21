@@ -11,6 +11,7 @@ import 'package:els/screns/schedule/object/models/schedule_responsible.dart';
 import 'package:els/screns/schedule/object/repository/fixture_schedule_object_repository.dart';
 import 'package:els/screns/schedule/object/view/schedule_object_screen.dart';
 import 'package:els/screns/schedule/object/wizard/repository/fixture_maintenance_program_repository.dart';
+import 'package:els/screns/schedule/templates/repository/fixture_templates_repository.dart';
 import 'package:els/screns/schedule/object/wizard/repository/fixture_schedule_wizard_repository.dart';
 import 'package:els/screns/schedule/object/widgets/object_responsibles_card.dart';
 import 'package:els/screns/schedule/view/schedule_work_card_screen.dart';
@@ -45,6 +46,7 @@ Future<void> _pumpScreen(
         programRepository: FixtureMaintenanceProgramRepository(
           delay: Duration.zero,
         ),
+        templatesRepository: FixtureTemplatesRepository(delay: Duration.zero),
         role: ScheduleRole.admin,
         initialYear: initialYear,
         objectName: 'ТЦ Карнавал 3 этаж 1',

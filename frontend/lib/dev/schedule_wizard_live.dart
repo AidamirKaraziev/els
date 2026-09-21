@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../helper/api_client.dart';
 import '../helper/class_colors.dart';
 import '../screns/schedule/object/wizard/repository/api_maintenance_program_repository.dart';
+import '../screns/schedule/templates/repository/api_templates_repository.dart';
 import '../screns/schedule/object/wizard/repository/api_schedule_wizard_repository.dart';
 import '../screns/schedule/object/wizard/view/schedule_wizard_screen.dart';
 
@@ -137,6 +138,7 @@ class _LiveFormState extends State<_LiveForm> {
           repository:
               ApiScheduleWizardRepository(modelName: _model.text.trim()),
           programRepository: ApiMaintenanceProgramRepository(),
+          templatesRepository: ApiTemplatesRepository(),
           objectId: objectId,
           year: year,
           modelId: int.tryParse(_modelId.text.trim()),

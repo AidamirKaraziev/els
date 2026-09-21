@@ -11,6 +11,7 @@ import 'package:els/screns/schedule/models/schedule_role.dart';
 import 'package:els/screns/schedule/object/repository/fixture_schedule_object_repository.dart';
 import 'package:els/screns/schedule/object/view/schedule_object_screen.dart';
 import 'package:els/screns/schedule/object/wizard/repository/fixture_maintenance_program_repository.dart';
+import 'package:els/screns/schedule/templates/repository/fixture_templates_repository.dart';
 import 'package:els/screns/schedule/object/wizard/repository/fixture_schedule_wizard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +33,7 @@ Future<void> _pump(WidgetTester tester, {required Size size}) async {
         programRepository: FixtureMaintenanceProgramRepository(
           delay: Duration.zero,
         ),
+        templatesRepository: FixtureTemplatesRepository(delay: Duration.zero),
         role: ScheduleRole.admin,
         initialYear: _filledYear,
         objectName: 'График',

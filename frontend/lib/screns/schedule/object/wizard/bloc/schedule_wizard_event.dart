@@ -34,6 +34,18 @@ class WizardProgramSaved extends ScheduleWizardEvent {
   final MaintenanceProgram program;
 }
 
+/// Человек сохранил шаблон чек-листа в редакторе, открытом из предпросмотра.
+///
+/// Шаги приходят целиком, как и программа: шаблон — плоский список, и ручка
+/// заменяет его весь. После записи заготовка перезапрашивается — клетка
+/// «нет шаблона» должна погаснуть по ответу сервера, а не по нашей вере.
+class WizardTemplateSaved extends ScheduleWizardEvent {
+  const WizardTemplateSaved({required this.typeActId, required this.steps});
+
+  final int typeActId;
+  final List<String> steps;
+}
+
 /// Человек нажал «Утвердить»: расставить год в базе.
 ///
 /// Месяца в событии нет намеренно — блок берёт тот, что сейчас показан в

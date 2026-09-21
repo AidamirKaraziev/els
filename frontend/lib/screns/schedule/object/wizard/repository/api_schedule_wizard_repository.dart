@@ -185,6 +185,7 @@ class ApiScheduleWizardRepository implements ScheduleWizardRepository {
         month: month,
         position: asInt(cell['position']) ?? month,
         typeActName: asString(cell['type_act_name']) ?? '',
+        typeActId: asInt(cell['type_act_id']),
         occupied: cell['occupied'] == true,
         templateMissing: cell['template_missing'] == true,
       );

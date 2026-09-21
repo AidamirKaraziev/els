@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../repository/schedules_repository.dart';
+import '../../../templates/repository/templates_repository.dart';
 import '../models/maintenance_program.dart';
 import '../models/schedule_wizard_data.dart';
 import '../repository/maintenance_program_repository.dart';
@@ -22,14 +23,18 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
   ScheduleWizardBloc({
     required ScheduleWizardRepository repository,
     required MaintenanceProgramRepository programRepository,
+    required TemplatesRepository templatesRepository,
     required this.objectId,
     required this.year,
+    this.modelId,
   })  : _repository = repository,
         _programs = programRepository,
+        _templates = templatesRepository,
         super(const ScheduleWizardInitial()) {
     on<WizardOpened>(_onOpened);
     on<WizardAnchorChanged>(_onAnchorChanged);
     on<WizardProgramSaved>(_onProgramSaved);
+    on<WizardTemplateSaved>(_onTemplateSaved);
     on<WizardApproved>(_onApproved);
   }
 
@@ -39,8 +44,17 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
   /// перезапрашивается: раскладку считает сервер, и держать рядом с ним свою
   /// правленую копию значило бы показывать не то, что ляжет в базу.
   final MaintenanceProgramRepository _programs;
+
+  /// Куда уходит шаблон чек-листа, заведённый из предпросмотра. Шаблон, как
+  /// и программа, принадлежит модели — потому блоку нужен и [modelId].
+  final TemplatesRepository _templates;
   final int objectId;
   final int year;
+
+  /// Модель оборудования объекта. `null` — в карточке её нет; тогда шаблон
+  /// заводить не на что, и событие [WizardTemplateSaved] пропускается —
+  /// как и кнопка, которая его шлёт, не показывается.
+  final int? modelId;
 
   /// Месяц, который мастер показывает, когда сервер отказался подбирать его
   /// сам. Январь — видимое умолчание, а не молча применённый сдвиг: человек
@@ -128,6 +142,37 @@ class ScheduleWizardBloc extends Bloc<ScheduleWizardEvent, ScheduleWizardState> 
       return;
     } catch (_) {
       emit(current.copyWith(error: 'Не удалось сохранить программу'));
+      return;
+    }
+
+    await _openPreview(emit, preferredAnchor: current.anchorMonth);
+  }
+
+  /// Человек сохранил шаблон в редакторе.
+  ///
+  /// Тот же путь, что у программы: сначала запись, потом заготовка заново —
+  /// «нет шаблона» на клетке гасит сервер, а не мы.
+  Future<void> _onTemplateSaved(
+    WizardTemplateSaved event,
+    Emitter<ScheduleWizardState> emit,
+  ) async {
+    final ScheduleWizardState current = state;
+    if (current is! ScheduleWizardLoaded) return;
+    final int? modelId = this.modelId;
+    if (modelId == null) return;
+
+    emit(current.copyWith(isReloading: true));
+    try {
+      await _templates.save(
+        modelId: modelId,
+        typeActId: event.typeActId,
+        steps: event.steps,
+      );
+    } on SchedulesException catch (error) {
+      emit(current.copyWith(error: error.message));
+      return;
+    } catch (_) {
+      emit(current.copyWith(error: 'Не удалось сохранить шаблон'));
       return;
     }
 

@@ -194,6 +194,26 @@ void main() {
         'steps': <String>['Шаг'],
       });
     });
+
+    test('строка пары убрана — сначала restore, потом PUT', () async {
+      // Из мастера графика шаблон заводят на клетку «нет шаблона», а такой
+      // её делает и мягко удалённая строка: PUT по ней шаблон не оживил бы.
+      final List<_Seen> seen = <_Seen>[];
+      final ApiTemplatesRepository repository = _repository(_catalogue, seen);
+      await repository.loadAll();
+      seen.clear();
+
+      await repository.save(modelId: 7, typeActId: 3, steps: <String>['Шаг']);
+      expect(seen.map((_Seen s) => '$s'), <String>[
+        'POST /act-base/73/restore/',
+        'PUT /act-base/73/',
+      ]);
+
+      // Второй раз — строка уже живая.
+      seen.clear();
+      await repository.save(modelId: 7, typeActId: 3, steps: <String>['Ещё']);
+      expect(seen.map((_Seen s) => '$s'), <String>['PUT /act-base/73/']);
+    });
   });
 
   group('addTypeAct', () {

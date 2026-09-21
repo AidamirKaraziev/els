@@ -119,6 +119,8 @@ void main() {
     expect(data.cells[5].mark, WizardCellMark.templateMissing);
     expect(data.cells[0].mark, WizardCellMark.toAdd);
     expect(data.hasMissingTemplate, isTrue);
+    // Вид ТО клетки нужен кнопке «Создать шаблон».
+    expect(data.cells[5].typeActId, 1);
   });
 
   test('якорь без параметра считается прошлогодним, с параметром — нет',

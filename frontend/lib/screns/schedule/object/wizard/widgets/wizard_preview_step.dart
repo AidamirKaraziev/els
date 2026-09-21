@@ -6,6 +6,9 @@ import '../../../../../helper/class_colors.dart';
 import '../../widgets/object_block.dart';
 import '../models/schedule_wizard_data.dart';
 
+/// Завести шаблон чек-листа на вид ТО [typeActId] с именем [typeActName].
+typedef WizardCreateTemplate = void Function(int typeActId, String typeActName);
+
 /// Всё окно мастера: программа модели строкой и двенадцать клеток года под
 /// ней.
 ///
@@ -58,9 +61,9 @@ class WizardPreviewStep extends StatelessWidget {
   /// позиция клетки известна только ленте; год по нему раскладывает сервер.
   final ValueChanged<int>? onAnchorMoved;
 
-  /// Переход в создание шаблона чек-листа. Пока не подключён: экрана
-  /// шаблонов у нас ещё нет, и кнопка появится вместе с ним.
-  final VoidCallback? onCreateTemplate;
+  /// Завести шаблон чек-листа на вид ТО, у которого его нет. `null` —
+  /// модель объекта неизвестна, и заводить шаблон не на что: кнопка выключена.
+  final WizardCreateTemplate? onCreateTemplate;
 
   /// Куда встанет первая позиция цикла, если клетку месяца [fromMonth] с
   /// позицией [position] перетащили на [toMonth].
@@ -125,7 +128,7 @@ class _Year extends StatelessWidget {
   final int anchorMonth;
   final bool anchorUnknown;
   final ValueChanged<int>? onAnchorMoved;
-  final VoidCallback? onCreateTemplate;
+  final WizardCreateTemplate? onCreateTemplate;
 
   void _moved(int fromMonth, int toMonth) {
     final ValueChanged<int>? moved = onAnchorMoved;
@@ -169,7 +172,7 @@ class _Year extends StatelessWidget {
         if (data.hasMissingTemplate) ...<Widget>[
           const SizedBox(height: 16.0),
           _MissingTemplateNote(
-            names: _missingNames(data.cells),
+            missing: _missing(data.cells),
             onCreateTemplate: onCreateTemplate,
           ),
         ] else if (data.hasNothingToAdd) ...<Widget>[
@@ -182,14 +185,16 @@ class _Year extends StatelessWidget {
 
   /// Виды ТО без шаблона — по одному разу, а не по разу на клетку: один ТО 6
   /// в году встречается дважды, и повторять его в тексте незачем.
-  static List<String> _missingNames(List<WizardPreviewCell> cells) {
-    final List<String> names = <String>[];
+  static List<WizardPreviewCell> _missing(List<WizardPreviewCell> cells) {
+    final List<WizardPreviewCell> missing = <WizardPreviewCell>[];
     for (final WizardPreviewCell cell in cells) {
       if (cell.mark != WizardCellMark.templateMissing) continue;
-      if (names.contains(cell.typeActName)) continue;
-      names.add(cell.typeActName);
+      if (missing.any((WizardPreviewCell m) => m.typeActName == cell.typeActName)) {
+        continue;
+      }
+      missing.add(cell);
     }
-    return names;
+    return missing;
   }
 }
 
@@ -765,15 +770,42 @@ class _NothingToAddNote extends StatelessWidget {
 class _MissingTemplateNote extends StatelessWidget {
   const _MissingTemplateNote({
     Key? key,
-    required this.names,
+    required this.missing,
     this.onCreateTemplate,
   }) : super(key: key);
 
-  final List<String> names;
-  final VoidCallback? onCreateTemplate;
+  /// По одной клетке на каждый вид ТО без шаблона.
+  final List<WizardPreviewCell> missing;
+  final WizardCreateTemplate? onCreateTemplate;
+
+  /// Кнопка на вид. Один вид — просто «Создать шаблон»; несколько — с именем,
+  /// иначе непонятно, на который из них откроется редактор.
+  Widget _button(WizardPreviewCell cell) {
+    final WizardCreateTemplate? create = onCreateTemplate;
+    final int? typeActId = cell.typeActId;
+    return TextButton(
+      onPressed: create == null || typeActId == null
+          ? null
+          : () => create(typeActId, cell.typeActName),
+      style: TextButton.styleFrom(
+        padding: EdgeInsets.zero,
+        foregroundColor: ColorApp.myColorGreenAuth,
+        minimumSize: const Size(0, 0),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(
+        missing.length == 1
+            ? 'Создать шаблон'
+            : 'Создать шаблон: ${cell.typeActName}',
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final List<String> names = <String>[
+      for (final WizardPreviewCell cell in missing) cell.typeActName,
+    ];
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12.0),
@@ -791,17 +823,12 @@ class _MissingTemplateNote extends StatelessWidget {
             style: const TextStyle(fontSize: 13.0, color: ColorApp.myColorBlack),
           ),
           const SizedBox(height: 8.0),
-          TextButton(
-            // Экрана шаблонов ещё нет — кнопка выключена, а не ведёт в
-            // пустоту. Появится он, появится и переход.
-            onPressed: onCreateTemplate,
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              foregroundColor: ColorApp.myColorGreenAuth,
-              minimumSize: const Size(0, 0),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: const Text('Создать шаблон'),
+          Wrap(
+            spacing: 16.0,
+            runSpacing: 4.0,
+            children: <Widget>[
+              for (final WizardPreviewCell cell in missing) _button(cell),
+            ],
           ),
         ],
       ),

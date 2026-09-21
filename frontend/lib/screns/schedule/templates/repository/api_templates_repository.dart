@@ -65,12 +65,17 @@ class ApiTemplatesRepository implements TemplatesRepository {
   /// `acts_bases.id` по паре модель × вид ТО из последней загрузки.
   final Map<String, int> _rows = <String, int>{};
 
+  /// Пары, чья строка мягко удалена. `PUT` по такой строке шагов не оживит:
+  /// предпросмотр графика считает шаблоном только строку без `deleted_at`.
+  final Set<String> _deletedRows = <String>{};
+
   static String _key(int modelId, int typeActId) => '$modelId:$typeActId';
 
   @override
   Future<List<ModelTemplates>> loadAll() async {
     final List<TemplateModel> models = await _models();
     _rows.clear();
+    _deletedRows.clear();
 
     final List<ModelTemplates> result = <ModelTemplates>[
       for (final TemplateModel model in models)
@@ -142,6 +147,7 @@ class ApiTemplatesRepository implements TemplatesRepository {
         steps: steps,
         deleted: asString(nested(item, 'deleted_at')) != null,
       );
+      if (typeAct.deleted) _deletedRows.add(_key(modelId, typeActId));
       (typeAct.deleted ? deleted : live).add(typeAct);
     }
     return <TemplateTypeAct>[...live, ...deleted];
@@ -163,6 +169,11 @@ class ApiTemplatesRepository implements TemplatesRepository {
   }) async {
     final int? rowId = await _rowId(modelId, typeActId);
     if (rowId != null) {
+      // Строка есть, но удалена — сначала вернуть: из мастера графика шаблон
+      // заводят на клетку «нет шаблона», и удалённая пара — одна из её причин.
+      if (_deletedRows.remove(_key(modelId, typeActId))) {
+        await _post('/act-base/$rowId/restore/', const <String, dynamic>{});
+      }
       await _put('/act-base/$rowId/', <String, dynamic>{'steps': steps});
       return;
     }
@@ -237,7 +248,10 @@ class ApiTemplatesRepository implements TemplatesRepository {
     } catch (_) {
       throw const SchedulesException('Не удалось связаться с сервером');
     }
-    if (response.statusCode == 200) return;
+    if (response.statusCode == 200) {
+      _deletedRows.add(_key(modelId, typeActId));
+      return;
+    }
     if (response.statusCode == 409 && errorCode(response) == 1213) {
       throw TemplateInUseException(errorText(response));
     }
@@ -251,6 +265,7 @@ class ApiTemplatesRepository implements TemplatesRepository {
   }) async {
     final int rowId = await _requireRowId(modelId, typeActId);
     await _post('/act-base/$rowId/restore/', const <String, dynamic>{});
+    _deletedRows.remove(_key(modelId, typeActId));
   }
 
   /// Чужие шаблоны — из последней загрузки: экран её уже сделал, а гонять

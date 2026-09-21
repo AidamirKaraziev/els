@@ -15,10 +15,7 @@ const int kProgramLength = 12;
 class TypeAct {
   const TypeAct({required this.id, required this.name});
 
-  /// `null` — вид заведён только в этом окне и в справочнике его ещё нет:
-  /// ручки на создание вида ТО у нас пока нет. С такой позицией программу
-  /// не сохранить, и окно об этом говорит.
-  final int? id;
+  final int id;
 
   final String name;
 }

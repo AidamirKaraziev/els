@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../helper/class_colors.dart';
 import '../screns/schedule/object/wizard/fixture_schedule_wizard_data.dart';
 import '../screns/schedule/object/wizard/repository/fixture_maintenance_program_repository.dart';
+import '../screns/schedule/templates/repository/fixture_templates_repository.dart';
 import '../screns/schedule/object/wizard/repository/fixture_schedule_wizard_repository.dart';
 import '../screns/schedule/object/wizard/view/schedule_wizard_screen.dart';
 
@@ -63,6 +64,7 @@ class _WizardPickerState extends State<_WizardPicker> {
             withKnownAnchor: _withKnownAnchor,
           ),
           programRepository: FixtureMaintenanceProgramRepository(),
+          templatesRepository: FixtureTemplatesRepository(),
           objectId: 1,
           year: DateTime.now().year + 1,
           modelId: 1,

@@ -72,9 +72,8 @@ class _WizardProgramDialogState extends State<_WizardProgramDialog> {
   /// вид не заведён в базе.
   List<String> _positions = List<String>.filled(kProgramLength, '');
 
-  /// Справочник видов ТО. Заведённый в этом же окне вид приходит сюда без
-  /// `id`: ручки на создание вида ТО у нас нет, и такую программу не
-  /// сохранить — окно об этом говорит.
+  /// Справочник видов ТО. Заведённый в этом же окне вид приходит сюда уже
+  /// из базы, с `id`, — и ничем не отличается от остальных.
   List<TypeAct> _typeActs = <TypeAct>[];
 
   final TextEditingController _note = TextEditingController();
@@ -165,22 +164,10 @@ class _WizardProgramDialogState extends State<_WizardProgramDialog> {
   bool get _hasEmptyPosition =>
       _positions.any((String name) => name.isEmpty);
 
-  /// Есть ли на позициях вид ТО, которого нет в справочнике базы.
-  ///
-  /// Такую программу сохранить нельзя: `PUT` ждёт `type_act_id`, а его нет —
-  /// вид заведён только в этом окне.
-  bool get _hasUnknownAct => _positions.any(
-        (String name) => name.isNotEmpty && _actByName(name)?.id == null,
-      );
-
-  bool get _canSave => !_hasEmptyPosition && !_hasUnknownAct;
+  bool get _canSave => !_hasEmptyPosition;
 
   String? get _disabledReason {
     if (_hasEmptyPosition) return 'У каждой позиции цикла должен быть выбран вид ТО';
-    if (_hasUnknownAct) {
-      return 'Новый вид ТО ещё не заведён в справочнике — сохранить программу '
-          'с ним нельзя';
-    }
     return null;
   }
 
@@ -191,15 +178,21 @@ class _WizardProgramDialogState extends State<_WizardProgramDialog> {
     });
   }
 
+  /// Заводит вид ТО в справочнике и добавляет его в список.
+  ///
+  /// `POST` делает само маленькое окно — там же, где поле, показывается и
+  /// отказ сервера; сюда вид приходит уже с `id`, и его можно ставить в
+  /// позицию и сохранять программу.
   Future<void> _addTypeAct() async {
-    final String? name = await showDialog<String>(
+    final TypeAct? act = await showDialog<TypeAct>(
       context: context,
-      builder: (BuildContext context) => _NewTypeActDialog(typeActs: _typeActs),
+      builder: (BuildContext context) => _NewTypeActDialog(
+        typeActs: _typeActs,
+        onCreate: widget.repository.createTypeAct,
+      ),
     );
-    if (name == null || name.isEmpty) return;
-    // Без `id`: ручки на создание вида ТО нет, и завести его по-настоящему
-    // окно не может. Выбрать в позицию — может, но «Сохранить» на этом гаснет.
-    setState(() => _typeActs = <TypeAct>[..._typeActs, TypeAct(id: null, name: name)]);
+    if (act == null || !mounted) return;
+    setState(() => _typeActs = <TypeAct>[..._typeActs, act]);
   }
 
   void _save() {
@@ -326,10 +319,6 @@ class _WizardProgramDialogState extends State<_WizardProgramDialog> {
             icon: const Icon(Icons.add, size: 18.0),
             label: const Text('Добавить вид ТО'),
           ),
-          if (_hasUnknownAct) ...<Widget>[
-            const SizedBox(height: 12.0),
-            const _UnknownActNote(),
-          ],
           const SizedBox(height: 20.0),
           const _ModelWideNote(),
         ],
@@ -560,17 +549,7 @@ class _PositionRow extends StatelessWidget {
                     for (final TypeAct act in typeActs)
                       DropdownMenuItem<String>(
                         value: act.name,
-                        child: Text(
-                          // Вид без `id` заведён только в этом окне: пометка
-                          // нужна прямо в списке, иначе выбор выглядит
-                          // обычным, а «Сохранить» гаснет непонятно почему.
-                          act.id == null ? '${act.name} — не в справочнике' : act.name,
-                          style: TextStyle(
-                            color: act.id == null
-                                ? ColorApp.myColorRed
-                                : ColorApp.myColorBlack,
-                          ),
-                        ),
+                        child: Text(act.name),
                       ),
                   ],
                   onChanged: (String? name) {
@@ -581,33 +560,6 @@ class _PositionRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Вид ТО завели в окне, а в справочнике базы его нет.
-///
-/// Ручки на создание вида ТО у нас пока нет, и молча проглотить это нельзя:
-/// человек выбрал вид в позицию и упёрся бы в серую кнопку без объяснения.
-class _UnknownActNote extends StatelessWidget {
-  const _UnknownActNote({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        color: ColorApp.myColorYellowLight,
-        borderRadius: BorderRadius.circular(8.0),
-        border: Border.all(color: ColorApp.myColorYellow),
-      ),
-      child: const Text(
-        'Новый вид ТО пока живёт только в этом окне: завести его в справочник '
-        'приложение ещё не умеет. Программу с ним не сохранить — выберите на '
-        'этих позициях вид из справочника.',
-        style: TextStyle(fontSize: 13.0, color: ColorApp.myColorBlack),
       ),
     );
   }
@@ -701,15 +653,22 @@ class _Bottom extends StatelessWidget {
 /// заводят посреди правки программы, и длинная форма здесь сбивает с того,
 /// зачем окно открыли. Чек-лист — отдельным экраном справочника.
 ///
-/// В базу вид не уходит: ручки на создание вида ТО нет, и окно возвращает
-/// только название. Программу с таким видом не сохранить — об этом говорит
-/// окно программы.
+/// Вид уходит в базу отсюда же: «Добавить» зовёт [onCreate] и закрывает
+/// окно только по ответу сервера. Отказ — 409 «имя занято», обрыв сети —
+/// показывается под полем: закрой мы окно раньше, показать его было бы негде.
 class _NewTypeActDialog extends StatefulWidget {
-  const _NewTypeActDialog({Key? key, required this.typeActs}) : super(key: key);
+  const _NewTypeActDialog({
+    Key? key,
+    required this.typeActs,
+    required this.onCreate,
+  }) : super(key: key);
 
   /// Уже заведённые виды ТО — нужны, чтобы окно само сказало про дубль.
   /// Молча проглоченное повторное имя выглядит как сломанная кнопка.
   final List<TypeAct> typeActs;
+
+  /// Завести вид в справочнике. Возвращает его с `id`.
+  final Future<TypeAct> Function(String name) onCreate;
 
   @override
   State<_NewTypeActDialog> createState() => _NewTypeActDialogState();
@@ -718,10 +677,16 @@ class _NewTypeActDialog extends StatefulWidget {
 class _NewTypeActDialogState extends State<_NewTypeActDialog> {
   final TextEditingController _name = TextEditingController();
 
+  /// Запрос ушёл, ответа ещё нет: кнопка погашена, второй `POST` не уйдёт.
+  bool _isSaving = false;
+
+  /// Чем сервер ответил на прошлую попытку. Сбрасывается правкой имени.
+  String? _failure;
+
   @override
   void initState() {
     super.initState();
-    _name.addListener(() => setState(() {}));
+    _name.addListener(() => setState(() => _failure = null));
   }
 
   @override
@@ -738,11 +703,31 @@ class _NewTypeActDialogState extends State<_NewTypeActDialog> {
         (TypeAct act) => act.name.toLowerCase() == _value.toLowerCase(),
       );
 
-  bool get _canAdd => _value.isNotEmpty && !_isDuplicate;
+  bool get _canAdd => _value.isNotEmpty && !_isDuplicate && !_isSaving;
 
-  void _add() {
+  Future<void> _add() async {
     if (!_canAdd) return;
-    Navigator.of(context).pop(_value);
+    setState(() {
+      _isSaving = true;
+      _failure = null;
+    });
+    try {
+      final TypeAct act = await widget.onCreate(_value);
+      if (!mounted) return;
+      Navigator.of(context).pop(act);
+    } on SchedulesException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _failure = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _failure = 'Не удалось завести вид ТО';
+      });
+    }
   }
 
   @override
@@ -811,6 +796,12 @@ class _NewTypeActDialogState extends State<_NewTypeActDialog> {
                 'Такой вид ТО уже есть — выберите его в позиции цикла.',
                 style: TextStyle(fontSize: 12.0, color: ColorApp.myColorRed),
               ),
+            ] else if (_failure != null) ...<Widget>[
+              const SizedBox(height: 6.0),
+              Text(
+                _failure!,
+                style: const TextStyle(fontSize: 12.0, color: ColorApp.myColorRed),
+              ),
             ],
             const SizedBox(height: 16.0),
             const _SharedBookNote(),
@@ -838,7 +829,16 @@ class _NewTypeActDialogState extends State<_NewTypeActDialog> {
               borderRadius: BorderRadius.circular(8.0),
             ),
           ),
-          child: const Text('Добавить'),
+          child: _isSaving
+              ? const SizedBox(
+                  width: 16.0,
+                  height: 16.0,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.0,
+                    color: ColorApp.myColorWhite,
+                  ),
+                )
+              : const Text('Добавить'),
         ),
       ],
     );

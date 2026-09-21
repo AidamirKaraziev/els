@@ -25,6 +25,9 @@ import 'package:els/screns/schedule/object/wizard/repository/schedule_wizard_rep
 import 'package:els/screns/schedule/object/wizard/view/schedule_wizard_screen.dart';
 import 'package:els/screns/schedule/object/wizard/widgets/wizard_preview_step.dart';
 import 'package:els/screns/schedule/repository/schedules_repository.dart';
+import 'package:els/screns/schedule/templates/models/checklist_template.dart';
+import 'package:els/screns/schedule/templates/repository/fixture_templates_repository.dart';
+import 'package:els/screns/schedule/templates/repository/templates_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -87,6 +90,56 @@ class _FailingWizardRepository implements ScheduleWizardRepository {
   }
 }
 
+/// Мастер на фикстуре «нет шаблона», который считает запросы заготовки:
+/// после сохранения шаблона она должна быть перезапрошена, а не поправлена
+/// на клиенте.
+class _CountingWizardRepository implements ScheduleWizardRepository {
+  _CountingWizardRepository();
+
+  static const FixtureScheduleWizardRepository _inner =
+      FixtureScheduleWizardRepository(
+    fixture: WizardFixture.withMissingTemplate,
+    withKnownAnchor: true,
+    delay: Duration.zero,
+  );
+
+  int previews = 0;
+
+  @override
+  Future<ScheduleWizardData> preview(
+    int objectId,
+    int year, {
+    int? anchorMonth,
+  }) {
+    previews++;
+    return _inner.preview(objectId, year, anchorMonth: anchorMonth);
+  }
+
+  @override
+  Future<void> generate(
+    int objectId,
+    int year, {
+    required int anchorMonth,
+  }) async {}
+}
+
+/// Репозиторий шаблонов, который помнит, что в него сохранили.
+class _TemplatesRecorder extends FixtureTemplatesRepository {
+  _TemplatesRecorder() : super(delay: Duration.zero);
+
+  /// `modelId:typeActId:шаги через |`.
+  final List<String> saved = <String>[];
+
+  @override
+  Future<void> save({
+    required int modelId,
+    required int typeActId,
+    required List<String> steps,
+  }) async {
+    saved.add('$modelId:$typeActId:${steps.join('|')}');
+  }
+}
+
 /// Год, на который фикстура экрана кладёт заполненную ленту. Мастер
 /// открываем на соседнем: кнопка создания есть только у пустого года.
 const int _filledYear = 2026;
@@ -97,6 +150,8 @@ Future<void> _pumpWizard(
   WizardFixture fixture = WizardFixture.ok,
   bool withKnownAnchor = false,
   bool withProgram = true,
+  ScheduleWizardRepository? repository,
+  TemplatesRepository? templates,
 }) async {
   tester.view.physicalSize = const Size(1600.0, 1400.0);
   tester.view.devicePixelRatio = 1.0;
@@ -105,15 +160,18 @@ Future<void> _pumpWizard(
   await tester.pumpWidget(
     MaterialApp(
       home: ScheduleWizardScreen(
-        repository: FixtureScheduleWizardRepository(
-          fixture: fixture,
-          withKnownAnchor: withKnownAnchor,
-          withProgram: withProgram,
-          delay: Duration.zero,
-        ),
+        repository: repository ??
+            FixtureScheduleWizardRepository(
+              fixture: fixture,
+              withKnownAnchor: withKnownAnchor,
+              withProgram: withProgram,
+              delay: Duration.zero,
+            ),
         programRepository: FixtureMaintenanceProgramRepository(
           delay: Duration.zero,
         ),
+        templatesRepository:
+            templates ?? FixtureTemplatesRepository(delay: Duration.zero),
         objectId: 1,
         year: _emptyYear,
         modelId: 1,
@@ -161,6 +219,7 @@ void main() {
           programRepository: FixtureMaintenanceProgramRepository(
             delay: Duration.zero,
           ),
+          templatesRepository: FixtureTemplatesRepository(delay: Duration.zero),
           role: ScheduleRole.admin,
           initialYear: _emptyYear,
           objectName: 'ТЦ Карнавал 3 этаж 1',
@@ -256,6 +315,58 @@ void main() {
     expect(find.textContaining('нет шаблона чек-листа'), findsOneWidget);
   });
 
+  testWidgets('«Создать шаблон» открывает редактор на модель и вид, сохранение '
+      'уходит в репозиторий и перезапрашивает заготовку',
+      (WidgetTester tester) async {
+    final _CountingWizardRepository wizard = _CountingWizardRepository();
+    final _TemplatesRecorder templates = _TemplatesRecorder();
+    await _pumpWizard(tester, repository: wizard, templates: templates);
+    expect(wizard.previews, 1);
+
+    await tester.tap(find.text('Создать шаблон'));
+    await tester.pumpAndSettle();
+
+    // Редактор тот же, что на экране «Шаблоны ТО»: вид — из клетки, модель —
+    // из карточки объекта.
+    expect(find.text('Новый шаблон ТО 6'), findsOneWidget);
+    expect(find.text('LIFT A388509'), findsWidgets);
+
+    await tester.enterText(find.byType(TextField).first, 'Проверить тормоз');
+    await tester.pump();
+    await _tap(tester, 'Сохранить');
+
+    expect(templates.saved, <String>['1:6:Проверить тормоз']);
+    expect(find.text('Новый шаблон ТО 6'), findsNothing);
+    // «Нет шаблона» гасит сервер — заготовка запрошена заново.
+    expect(wizard.previews, 2);
+  });
+
+  testWidgets('несколько видов без шаблона — по кнопке на каждый',
+      (WidgetTester tester) async {
+    await _pumpPreview(
+      tester,
+      ScheduleWizardData(
+        year: _emptyYear,
+        modelName: 'LIFT A388509',
+        program: const <WizardProgramItem>[],
+        cells: <WizardPreviewCell>[
+          for (int month = 1; month <= 12; month++)
+            WizardPreviewCell(
+              month: month,
+              position: month,
+              typeActName: month.isEven ? 'ТО 6' : 'ТО 12',
+              typeActId: month.isEven ? 6 : 12,
+              templateMissing: true,
+            ),
+        ],
+      ),
+    );
+
+    expect(find.text('Создать шаблон: ТО 12'), findsOneWidget);
+    expect(find.text('Создать шаблон: ТО 6'), findsOneWidget);
+    expect(find.text('Создать шаблон'), findsNothing);
+  });
+
   testWidgets('чистый год — «Утвердить» доступна и закрывает мастер по ответу',
       (WidgetTester tester) async {
     await _pumpWizard(tester, withKnownAnchor: true);
@@ -305,6 +416,7 @@ void main() {
           programRepository: FixtureMaintenanceProgramRepository(
             delay: Duration.zero,
           ),
+          templatesRepository: FixtureTemplatesRepository(delay: Duration.zero),
           role: ScheduleRole.admin,
           initialYear: _emptyYear,
           objectName: 'ТЦ Карнавал 3 этаж 1',
@@ -338,6 +450,7 @@ void main() {
           programRepository: FixtureMaintenanceProgramRepository(
             delay: Duration.zero,
           ),
+          templatesRepository: FixtureTemplatesRepository(delay: Duration.zero),
           objectId: 1,
           year: _emptyYear,
           modelId: 1,

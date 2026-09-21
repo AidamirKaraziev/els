@@ -6,6 +6,7 @@ import '../screns/schedule/models/schedule_role.dart';
 import '../screns/schedule/object/repository/fixture_schedule_object_repository.dart';
 import '../screns/schedule/object/view/schedule_object_screen.dart';
 import '../screns/schedule/object/wizard/repository/fixture_maintenance_program_repository.dart';
+import '../screns/schedule/templates/repository/fixture_templates_repository.dart';
 import '../screns/schedule/object/wizard/repository/fixture_schedule_wizard_repository.dart';
 
 /// Отдельная точка входа: показать экран графика объекта на фикстуре.
@@ -47,6 +48,7 @@ class ScheduleObjectPreviewApp extends StatelessWidget {
         wizardRepository: (String modelName) =>
             const FixtureScheduleWizardRepository(),
         programRepository: FixtureMaintenanceProgramRepository(),
+        templatesRepository: FixtureTemplatesRepository(),
         role: ScheduleRole.admin,
         objectName: 'График',
       ),

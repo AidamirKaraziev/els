@@ -50,7 +50,29 @@ class _GappyProgramRepository implements MaintenanceProgramRepository {
   Future<List<TypeAct>> typeActs() async => _acts;
 
   @override
+  Future<TypeAct> createTypeAct(String name) async => TypeAct(id: 3, name: name);
+
+  @override
   Future<void> save(MaintenanceProgram program) async {}
+}
+
+/// Та же программа с дырой, но справочник помнит, что в него заводили:
+/// проверяем, что «Добавить вид ТО» доходит до `POST` и чем отвечает окно.
+class _BookRepository extends _GappyProgramRepository {
+  _BookRepository({this.failure});
+
+  /// Чем сервер отказывает. `null` — вид заводится.
+  final String? failure;
+
+  final List<String> created = <String>[];
+
+  @override
+  Future<TypeAct> createTypeAct(String name) async {
+    created.add(name);
+    final String? message = failure;
+    if (message != null) throw MaintenanceProgramException(message);
+    return TypeAct(id: 10 + created.length, name: name);
+  }
 }
 
 /// Справочник не ответил: править нечем, и окно должно сказать это словами.
@@ -68,6 +90,9 @@ class _FailingProgramRepository implements MaintenanceProgramRepository {
   Future<List<TypeAct>> typeActs() async {
     throw const MaintenanceProgramException('Сервер ответил ошибкой 500');
   }
+
+  @override
+  Future<TypeAct> createTypeAct(String name) async => TypeAct(id: 1, name: name);
 
   @override
   Future<void> save(MaintenanceProgram program) async {}
@@ -109,6 +134,21 @@ Future<MaintenanceProgram?> _open(
   await tester.tap(find.text('Открыть'));
   await tester.pumpAndSettle();
   return result;
+}
+
+/// Кнопка «Добавить вид ТО» — в подвале списка позиций, до неё надо
+/// докрутить; дальше окно «Новый вид ТО» с одним полем.
+Future<void> _addTypeAct(WidgetTester tester, String name) async {
+  // Подвал списка строится, только когда до него докрутили: тянем ленту
+  // позиций, пока кнопка не появится.
+  for (int i = 0; i < 6 && find.text('Добавить вид ТО').evaluate().isEmpty; i++) {
+    await tester.drag(find.byType(Scrollable).last, const Offset(0.0, -400.0));
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(find.text('Добавить вид ТО'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byType(TextField).last, name);
+  await tester.pump();
 }
 
 /// «Сохранить»: нажимается или нет.
@@ -216,5 +256,48 @@ void main() {
     expect(find.text('Повторить'), findsOneWidget);
     // Править нечего — сохранять тоже нечего.
     expect(_canSave(tester), isFalse);
+  });
+
+  testWidgets('«Добавить вид ТО» заводит вид в справочнике, и он сразу обычный',
+      (WidgetTester tester) async {
+    final _BookRepository repository = _BookRepository();
+    await _open(tester, repository);
+
+    await _addTypeAct(tester, 'ТО 4');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Добавить'));
+    await tester.pumpAndSettle();
+
+    // Вид ушёл в базу, окно закрылось.
+    expect(repository.created, <String>['ТО 4']);
+    expect(find.text('Новый вид ТО'), findsNothing);
+
+    // В позицию без вида ставится как любой другой — без пометки и без
+    // красного, и «Сохранить» от него не гаснет.
+    await tester.tap(find.text('вид ТО не выбран'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ТО 4').last);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('не в справочнике'), findsNothing);
+    expect(_canSave(tester), isTrue);
+  });
+
+  testWidgets('сервер отказал заводить вид — окно остаётся и говорит почему',
+      (WidgetTester tester) async {
+    final _BookRepository repository =
+        _BookRepository(failure: 'Вид ТО с таким именем уже есть');
+    await _open(tester, repository);
+
+    await _addTypeAct(tester, 'ТО 4');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Добавить'));
+    await tester.pumpAndSettle();
+
+    expect(repository.created, <String>['ТО 4']);
+    expect(find.text('Новый вид ТО'), findsOneWidget);
+    expect(find.text('Вид ТО с таким именем уже есть'), findsOneWidget);
+    // В список вид не попал: сервер его не завёл.
+    await tester.tap(find.text('Отмена').last);
+    await tester.pumpAndSettle();
+    expect(find.text('ТО 4'), findsNothing);
   });
 }

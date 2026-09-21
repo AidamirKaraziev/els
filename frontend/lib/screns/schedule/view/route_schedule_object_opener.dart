@@ -7,6 +7,7 @@ import '../models/schedule_row.dart';
 import '../object/repository/api_schedule_object_repository.dart';
 import '../object/view/schedule_object_screen.dart';
 import '../object/wizard/repository/api_maintenance_program_repository.dart';
+import '../templates/repository/api_templates_repository.dart';
 import '../object/wizard/repository/api_schedule_wizard_repository.dart';
 import 'schedule_object_opener.dart';
 
@@ -47,6 +48,7 @@ class RouteScheduleObjectOpener extends ScheduleObjectOpener {
             wizardRepository: (String modelName) =>
                 ApiScheduleWizardRepository(modelName: modelName),
             programRepository: ApiMaintenanceProgramRepository(),
+            templatesRepository: ApiTemplatesRepository(),
             role: _role,
             // Год берём из строки, а не текущий: человек смотрел ленту за
             // выбранный год, и график должен открыться на нём же.

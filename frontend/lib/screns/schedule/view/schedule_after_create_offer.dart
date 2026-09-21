@@ -5,6 +5,7 @@ import '../object/repository/api_schedule_object_repository.dart';
 import '../object/view/schedule_object_screen.dart';
 import '../object/widgets/schedule_offer_dialog.dart';
 import '../object/wizard/repository/api_maintenance_program_repository.dart';
+import '../templates/repository/api_templates_repository.dart';
 import '../object/wizard/repository/api_schedule_wizard_repository.dart';
 import '../object/wizard/view/schedule_wizard_screen.dart';
 import '../repository/api_envelope.dart';
@@ -52,6 +53,7 @@ Future<void> offerScheduleForNewObject(
       builder: (BuildContext context) => ScheduleWizardScreen(
         repository: ApiScheduleWizardRepository(modelName: modelName ?? ''),
         programRepository: ApiMaintenanceProgramRepository(),
+        templatesRepository: ApiTemplatesRepository(),
         objectId: objectId,
         year: year,
         modelId: modelId,
@@ -73,6 +75,7 @@ Future<void> offerScheduleForNewObject(
         wizardRepository: (String modelName) =>
             ApiScheduleWizardRepository(modelName: modelName),
         programRepository: ApiMaintenanceProgramRepository(),
+        templatesRepository: ApiTemplatesRepository(),
         role: role,
         initialYear: year,
         objectName: objectName.isEmpty ? null : objectName,

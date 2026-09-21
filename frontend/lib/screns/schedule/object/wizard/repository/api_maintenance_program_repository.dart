@@ -19,8 +19,10 @@ class ApiMaintenanceProgramRepository implements MaintenanceProgramRepository {
     this.timeout = const Duration(seconds: 20),
     Future<http.Response> Function(Uri uri)? send,
     Future<http.Response> Function(Uri uri, String body)? sendPut,
+    Future<http.Response> Function(Uri uri, String body)? sendPost,
   })  : _send = send ?? _getViaApi,
-        _sendPut = sendPut ?? _putViaApi;
+        _sendPut = sendPut ?? _putViaApi,
+        _sendPost = sendPost ?? _postViaApi;
 
   final Duration timeout;
 
@@ -28,9 +30,18 @@ class ApiMaintenanceProgramRepository implements MaintenanceProgramRepository {
   /// смысла класса, а проверить его иначе, чем подставив готовый ответ, нельзя.
   final Future<http.Response> Function(Uri uri) _send;
   final Future<http.Response> Function(Uri uri, String body) _sendPut;
+  final Future<http.Response> Function(Uri uri, String body) _sendPost;
+
+  static const Map<String, String> _jsonHeaders = <String, String>{
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
 
   static Future<http.Response> _getViaApi(Uri uri) =>
       Api.get(uri, headers: <String, String>{'Accept': 'application/json'});
+
+  static Future<http.Response> _postViaApi(Uri uri, String body) =>
+      Api.post(uri, headers: _jsonHeaders, body: body);
 
   static Future<http.Response> _putViaApi(Uri uri, String body) => Api.put(
         uri,
@@ -100,6 +111,31 @@ class ApiMaintenanceProgramRepository implements MaintenanceProgramRepository {
       acts.add(TypeAct(id: id, name: name));
     }
     return acts;
+  }
+
+  @override
+  Future<TypeAct> createTypeAct(String name) async {
+    final Uri uri = Uri.parse('${ApiConfig.base}/type-acts/');
+    final String body = jsonEncode(<String, dynamic>{'name': name});
+
+    http.Response response;
+    try {
+      response = await _sendPost(uri, body).timeout(timeout);
+    } catch (_) {
+      throw const MaintenanceProgramException('Не удалось связаться с сервером');
+    }
+    // 409 «имя занято» и 422 «пустое имя» приходят сюда текстом сервера — его
+    // и показываем: своих формулировок на чужие правила у окна нет.
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw MaintenanceProgramException(errorText(response));
+    }
+
+    final Map<String, dynamic> data = _object(response);
+    final int? id = asInt(data['id']);
+    if (id == null) {
+      throw const MaintenanceProgramException('Сервер вернул неожиданный ответ');
+    }
+    return TypeAct(id: id, name: asString(data['name']) ?? name);
   }
 
   @override

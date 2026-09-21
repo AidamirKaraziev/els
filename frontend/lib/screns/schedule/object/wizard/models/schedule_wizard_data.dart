@@ -104,6 +104,7 @@ class WizardPreviewCell {
     required this.month,
     required this.position,
     required this.typeActName,
+    this.typeActId,
     this.occupied = false,
     this.templateMissing = false,
   });
@@ -115,6 +116,10 @@ class WizardPreviewCell {
   final int position;
 
   final String typeActName;
+
+  /// Вид ТО из справочника — под него заводится шаблон прямо из мастера.
+  /// Ручка отдаёт всегда; `null` только у клетки-заглушки без данных.
+  final int? typeActId;
 
   final bool occupied;
   final bool templateMissing;

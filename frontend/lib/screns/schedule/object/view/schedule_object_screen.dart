@@ -6,6 +6,7 @@ import '../../../../helper/class_colors.dart';
 import '../../../in_progress_works/view/employee_card.dart';
 import '../../models/month_cell.dart';
 import '../../models/schedule_role.dart';
+import '../../templates/repository/templates_repository.dart';
 import '../../view/schedule_work_card_screen.dart';
 import '../bloc/schedule_object_bloc.dart';
 import '../models/schedule_object_card.dart';
@@ -40,6 +41,7 @@ class ScheduleObjectScreen extends StatelessWidget {
     required this.repository,
     required this.wizardRepository,
     required this.programRepository,
+    required this.templatesRepository,
     this.role = ScheduleRole.admin,
     this.objectName,
     this.initialYear,
@@ -61,6 +63,10 @@ class ScheduleObjectScreen extends StatelessWidget {
   /// объектом, а не функцией, в отличие от [wizardRepository]: модель его
   /// методы принимают аргументом, и ждать карточки объекта ему незачем.
   final MaintenanceProgramRepository programRepository;
+
+  /// Куда мастер пишет шаблон чек-листа, заведённый из предпросмотра. Тоже
+  /// готовым объектом: модель он получает аргументом.
+  final TemplatesRepository templatesRepository;
 
   /// Чьими глазами открыт экран. Три верхних блока у ролей одинаковые; роль
   /// решает, показывать ли кнопку создания графика.
@@ -91,6 +97,7 @@ class ScheduleObjectScreen extends StatelessWidget {
         role: role,
         wizardRepository: wizardRepository,
         programRepository: programRepository,
+        templatesRepository: templatesRepository,
         onScheduleChanged: onScheduleChanged,
       ),
     );
@@ -104,6 +111,7 @@ class _ScheduleObjectView extends StatelessWidget {
     required this.role,
     required this.wizardRepository,
     required this.programRepository,
+    required this.templatesRepository,
     this.onScheduleChanged,
   }) : super(key: key);
 
@@ -117,6 +125,7 @@ class _ScheduleObjectView extends StatelessWidget {
   final ScheduleRole role;
   final ScheduleWizardRepositoryBuilder wizardRepository;
   final MaintenanceProgramRepository programRepository;
+  final TemplatesRepository templatesRepository;
 
   /// Позвать, когда график поменялся: экрану, откуда пришли, нужна свежая
   /// строка.
@@ -152,6 +161,7 @@ class _ScheduleObjectView extends StatelessWidget {
               twoColumnsWidth: _twoColumnsWidth,
               wizardRepository: wizardRepository,
               programRepository: programRepository,
+              templatesRepository: templatesRepository,
               onScheduleChanged: onScheduleChanged,
             );
           }
@@ -170,6 +180,7 @@ class _Content extends StatelessWidget {
     required this.twoColumnsWidth,
     required this.wizardRepository,
     required this.programRepository,
+    required this.templatesRepository,
     this.objectName,
     this.onScheduleChanged,
   }) : super(key: key);
@@ -179,6 +190,7 @@ class _Content extends StatelessWidget {
   final double twoColumnsWidth;
   final ScheduleWizardRepositoryBuilder wizardRepository;
   final MaintenanceProgramRepository programRepository;
+  final TemplatesRepository templatesRepository;
 
   /// Название объекта для шапки карточки работы — то же, что в шапке экрана.
   final String? objectName;
@@ -257,6 +269,7 @@ class _Content extends StatelessWidget {
         builder: (BuildContext context) => ScheduleWizardScreen(
           repository: wizardRepository(state.card.model ?? ''),
           programRepository: programRepository,
+          templatesRepository: templatesRepository,
           objectId: bloc.objectId,
           year: year,
           modelId: state.card.modelId,

@@ -15,6 +15,9 @@ import 'package:els/screns/schedule/object/wizard/repository/fixture_maintenance
 import 'package:els/screns/schedule/object/wizard/repository/maintenance_program_repository.dart';
 import 'package:els/screns/schedule/object/wizard/repository/schedule_wizard_repository.dart';
 import 'package:els/screns/schedule/repository/schedules_repository.dart';
+import 'package:els/screns/schedule/templates/models/checklist_template.dart';
+import 'package:els/screns/schedule/templates/repository/fixture_templates_repository.dart';
+import 'package:els/screns/schedule/templates/repository/templates_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Репозиторий, который записывает вопросы и отвечает по указке теста.
@@ -91,13 +94,17 @@ class _Recorder implements ScheduleWizardRepository {
 ScheduleWizardBloc _bloc(
   _Recorder repository, {
   MaintenanceProgramRepository? programs,
+  TemplatesRepository? templates,
 }) =>
     ScheduleWizardBloc(
       repository: repository,
       programRepository: programs ??
           FixtureMaintenanceProgramRepository(delay: Duration.zero),
+      templatesRepository:
+          templates ?? FixtureTemplatesRepository(delay: Duration.zero),
       objectId: 7,
       year: 2027,
+      modelId: 1,
     );
 
 /// Программа на двенадцать позиций одного вида ТО — телу события всё равно,
@@ -400,6 +407,109 @@ void main() {
     expect(loaded.isReloading, isFalse);
     expect(repository.asked, <int?>[null]);
   });
+
+  // ------------------------------------------------- шаблон из предпросмотра
+
+  test('сохранённый шаблон уходит в ручку с моделью и видом, за ним — заготовка',
+      () async {
+    final _Recorder repository = _Recorder();
+    final _TemplatesRecorder templates = _TemplatesRecorder();
+    final ScheduleWizardBloc bloc = _bloc(repository, templates: templates)
+      ..add(const WizardOpened());
+    addTearDown(bloc.close);
+
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardLoaded,
+    );
+    bloc.add(const WizardAnchorChanged(5));
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) =>
+          state is ScheduleWizardLoaded && !state.isReloading,
+    );
+
+    bloc.add(const WizardTemplateSaved(
+      typeActId: 6,
+      steps: <String>['Осмотр', 'Смазка'],
+    ));
+    final ScheduleWizardLoaded loaded = await bloc.stream.firstWhere(
+      (ScheduleWizardState state) =>
+          state is ScheduleWizardLoaded && !state.isReloading,
+    ) as ScheduleWizardLoaded;
+
+    // Модель — та, с которой открыт мастер; «нет шаблона» гасит сервер, и
+    // выбранный человеком месяц перезапрос не сбивает.
+    expect(templates.saved, <String>['1:6:Осмотр|Смазка']);
+    expect(loaded.anchorMonth, 5);
+    expect(repository.asked, <int?>[null, 1, 5, null, 5]);
+  });
+
+  test('неудача записи шаблона оставляет заготовку и показывает причину',
+      () async {
+    final _Recorder repository = _Recorder(knownAnchor: 3);
+    final ScheduleWizardBloc bloc = _bloc(
+      repository,
+      templates: _TemplatesRecorder(failure: 'Шаг 2: пустой'),
+    )..add(const WizardOpened());
+    addTearDown(bloc.close);
+
+    await bloc.stream.firstWhere(
+      (ScheduleWizardState state) => state is ScheduleWizardLoaded,
+    );
+
+    bloc.add(const WizardTemplateSaved(typeActId: 6, steps: <String>['']));
+    final ScheduleWizardLoaded loaded = await bloc.stream.firstWhere(
+      (ScheduleWizardState state) =>
+          state is ScheduleWizardLoaded && state.error != null,
+    ) as ScheduleWizardLoaded;
+
+    expect(loaded.error, 'Шаг 2: пустой');
+    expect(loaded.isReloading, isFalse);
+    expect(repository.asked, <int?>[null]);
+  });
+}
+
+/// Репозиторий шаблонов, который помнит, что в него сохраняли. Остальное
+/// блоку не нужно — списком и копированием занимается редактор.
+class _TemplatesRecorder implements TemplatesRepository {
+  _TemplatesRecorder({this.failure});
+
+  final String? failure;
+
+  /// `modelId:typeActId:шаги через |` — по записи на сохранение.
+  final List<String> saved = <String>[];
+
+  @override
+  Future<void> save({
+    required int modelId,
+    required int typeActId,
+    required List<String> steps,
+  }) async {
+    final String? message = failure;
+    if (message != null) throw SchedulesException(message);
+    saved.add('$modelId:$typeActId:${steps.join('|')}');
+  }
+
+  @override
+  Future<List<ModelTemplates>> loadAll() async => const <ModelTemplates>[];
+
+  @override
+  Future<void> addTypeAct({required int modelId, required String name}) async {}
+
+  @override
+  Future<void> removeTypeAct({
+    required int modelId,
+    required int typeActId,
+    bool force = false,
+  }) async {}
+
+  @override
+  Future<void> restoreTypeAct({
+    required int modelId,
+    required int typeActId,
+  }) async {}
+
+  @override
+  Future<List<TemplateSource>> sources() async => const <TemplateSource>[];
 }
 
 /// Программа, которую ручка не принимает: 422 со списком непрошедших позиций.
@@ -414,6 +524,9 @@ class _FailingProgramRepository implements MaintenanceProgramRepository {
 
   @override
   Future<List<TypeAct>> typeActs() async => const <TypeAct>[];
+
+  @override
+  Future<TypeAct> createTypeAct(String name) async => TypeAct(id: 1, name: name);
 
   @override
   Future<void> save(MaintenanceProgram program) async {

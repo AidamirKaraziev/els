@@ -27,11 +27,13 @@ class FixtureMaintenanceProgramRepository implements MaintenanceProgramRepositor
     1, 1, 2, 1, 1, 3, 1, 1, 2, 1, 1, 4,
   ];
 
-  static const List<TypeAct> _typeActs = <TypeAct>[
-    TypeAct(id: 1, name: 'ТО 1'),
-    TypeAct(id: 2, name: 'ТО 3'),
-    TypeAct(id: 3, name: 'ТО 6'),
-    TypeAct(id: 4, name: 'ТО 12'),
+  /// Справочник. Заведённый в окне вид дописывается сюда — с `id`, как
+  /// сделал бы сервер.
+  final List<TypeAct> _typeActs = <TypeAct>[
+    const TypeAct(id: 1, name: 'ТО 1'),
+    const TypeAct(id: 2, name: 'ТО 3'),
+    const TypeAct(id: 3, name: 'ТО 6'),
+    const TypeAct(id: 4, name: 'ТО 12'),
   ];
 
   @override
@@ -52,7 +54,15 @@ class FixtureMaintenanceProgramRepository implements MaintenanceProgramRepositor
   @override
   Future<List<TypeAct>> typeActs() async {
     await _wait();
-    return _typeActs;
+    return List<TypeAct>.unmodifiable(_typeActs);
+  }
+
+  @override
+  Future<TypeAct> createTypeAct(String name) async {
+    await _wait();
+    final TypeAct act = TypeAct(id: _typeActs.length + 1, name: name);
+    _typeActs.add(act);
+    return act;
   }
 
   @override
@@ -76,7 +86,7 @@ class FixtureMaintenanceProgramRepository implements MaintenanceProgramRepositor
     );
   }
 
-  static String _nameOf(int id) =>
+  String _nameOf(int id) =>
       _typeActs.firstWhere((TypeAct act) => act.id == id).name;
 
   Future<void> _wait() async {
