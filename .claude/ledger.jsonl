@@ -40,4 +40,4 @@
 {"date": "2026-09-18", "epic": "E08", "stage": "S01 POST и PUT /type-acts/ — вид ТО создаётся и переименовывается", "area": "back", "status": "закрыт", "branch": "E08-S01", "session": "6ebf629f", "commits": ["22df98d"]}
 {"date": "2026-09-20", "epic": "E08", "stage": "S02 шаблоны: список по модели, steps как массив, канонический step_list", "area": "back", "status": "закрыт", "branch": "E08-S02", "session": "2da76a1c", "commits": ["ae7a274"]}
 {"date": "2026-09-20", "epic": "E08", "stage": "S04 редактор шаблона на живом API", "area": "front", "status": "закрыт", "branch": "E08-S04", "session": "644e13bc", "commits": ["86774dd"]}
-{"date": "2026-09-21", "epic": "E08", "stage": "S05 вид ТО заводится по-настоящему, «Создать шаблон» в мастере", "area": "front", "status": "закрыт", "branch": "E08-S05", "session": "5de26a4b", "commits": []}
+{"date": "2026-09-21", "epic": "E08", "stage": "S05 вид ТО заводится по-настоящему, «Создать шаблон» в мастере", "area": "front", "status": "закрыт", "branch": "E08-S05", "session": "5de26a4b", "commits": ["de1a7e0"]}
